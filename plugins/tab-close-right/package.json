@@ -1,0 +1,43 @@
+{
+  "name": "bb-plugin-tab-close-right",
+  "version": "0.1.0",
+  "description": "Keep tab icons visible and move close buttons to the right in BB.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bb": ">=0.46.1",
+    "bbPluginSdk": ">=0.6.49 <0.7.0"
+  },
+  "bb": {
+    "name": "Tab Close Right",
+    "description": "Keep tab icons on the left and close buttons on the right. Active tabs always show the close button; other tabs show it on hover or keyboard focus.",
+    "branding": {
+      "icon": "./assets/icon.svg"
+    },
+    "server": "./server.ts",
+    "app": "./app.tsx",
+    "skills": []
+  },
+  "files": [
+    "app.tsx",
+    "server.ts",
+    "assets/",
+    "README.md",
+    "PLUGIN_OVERVIEW.md",
+    "LICENSE",
+    "dist/app.js",
+    "dist/app.css",
+    "dist/app.meta.json",
+    "dist/server.js",
+    "dist/server.meta.json"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "bb plugin build ."
+  },
+  "devDependencies": {
+    "@get-bb/plugin-sdk": "0.6.49",
+    "typescript": "5.9.3",
+    "@types/react": "19.2.2"
+  }
+}
