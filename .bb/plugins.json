@@ -6,6 +6,10 @@
     {
       "name": "tab-close-right",
       "source": "./plugins/tab-close-right"
+    },
+    {
+      "name": "sessions-switcher",
+      "source": "./plugins/sessions-switcher"
     }
   ]
 }
