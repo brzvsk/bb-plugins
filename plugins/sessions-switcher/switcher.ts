@@ -19,7 +19,7 @@ export function mountSwitcher(options: {
   signal: AbortSignal;
   load(ids: string[]): Promise<Session[]>;
   navigate(session: Session): void;
-  setStatusTargets?(targets: readonly StatusTarget[], heading?: HTMLElement): void;
+  setStatusTargets?(targets: readonly StatusTarget[]): void;
 }) {
   let disposed = false;
   let root: HTMLDivElement | null = null;
@@ -61,8 +61,6 @@ export function mountSwitcher(options: {
     root.addEventListener('pointerdown', e => { if (e.target === root) close(); });
     const panel = document.createElement('div'); panel.className = 'sessions-switcher-panel';
     panel.setAttribute('role', 'listbox'); panel.setAttribute('aria-label', 'Recent sessions'); panel.tabIndex = -1;
-    const heading = document.createElement('div'); heading.className = 'sessions-switcher-heading';
-    panel.append(heading);
     if (message) { const text = document.createElement('p'); text.setAttribute('role', 'status'); text.textContent = message; panel.append(text); }
     const statusTargets: StatusTarget[] = [];
     rows.forEach((row, i) => {
@@ -83,7 +81,7 @@ export function mountSwitcher(options: {
     });
     const footer = document.createElement('div'); footer.className = 'sessions-switcher-footer';
     footer.textContent = hold ? `Release ${hold === 'Meta' ? '⌘' : hold} to open · ↑↓ move · Esc cancel` : '↑↓ move · Enter open · Esc close';
-    panel.append(footer); root.append(panel); document.body.append(root); options.setStatusTargets?.(statusTargets, heading); select(0); panel.focus({ preventScroll: true });
+    panel.append(footer); root.append(panel); document.body.append(root); options.setStatusTargets?.(statusTargets); select(0); panel.focus({ preventScroll: true });
   }
   async function open(persistent = false) {
     if (disposed || options.signal.aborted) return;
