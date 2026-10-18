@@ -1,11 +1,21 @@
-.sessions-switcher { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; padding: 24px; background: #0005; backdrop-filter: blur(7px); }
-.sessions-switcher-panel { width: min(520px, 100%); max-height: 85vh; overflow: auto; padding: 12px; border-radius: 18px; border: 1px solid color-mix(in srgb, currentColor 16%, transparent); background: var(--background, #18181b); color: var(--foreground, #fafafa); box-shadow: 0 24px 90px #0005; outline: none; font: 13px/1.5 system-ui, sans-serif; }
-.sessions-switcher-panel button { display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px; margin: 2px 0; border: 1px solid transparent; border-radius: 10px; background: transparent; color: inherit; text-align: left; cursor: pointer; }
-.sessions-switcher-panel button[aria-selected=true] { background: color-mix(in srgb, currentColor 10%, transparent); border-color: color-mix(in srgb, currentColor 15%, transparent); }
-.sessions-switcher-provider { display: inline-flex; align-items: center; justify-content: center; width: 22px; flex-shrink: 0; }
-.sessions-switcher-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; }
-.sessions-switcher-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 500; }
-.sessions-switcher-detail { font-size: 11px; opacity: .5; }
-.sessions-switcher-status { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; flex-shrink: 0; }
-.sessions-switcher-footer { padding: 12px 10px 3px; font-size: 11px; opacity: .45; }
+.sessions-switcher, .sessions-switcher-exit { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; padding: 24px; background: #0005; backdrop-filter: blur(7px); }
+.sessions-switcher { animation: sessions-fade-in 120ms ease-out both; }
+.sessions-switcher-exit { pointer-events: none; animation: sessions-fade-out 80ms ease-in both; }
+.sessions-switcher-panel { width: max-content; max-width: 100%; max-height: 85dvh; overflow: auto; padding: 14px; border-radius: 20px; border: 1px solid color-mix(in srgb, currentColor 16%, transparent); background: var(--background, #18181b); color: var(--foreground, #fafafa); box-shadow: 0 24px 90px #0005; outline: none; font: 13px/1.5 system-ui, sans-serif; }
+.sessions-switcher > .sessions-switcher-panel { animation: sessions-scale-in 120ms ease-out both; }
+.sessions-switcher-cards { display: flex; gap: 10px; max-width: min(1280px, calc(100vw - 78px)); overflow-x: auto; padding: 3px; overscroll-behavior-x: contain; scrollbar-width: thin; }
+.sessions-switcher-panel button { position: relative; display: flex; flex-direction: column; align-items: flex-start; flex: 0 0 172px; min-width: 0; height: 182px; gap: 18px; padding: 18px 16px 14px; border: 1px solid color-mix(in srgb, currentColor 9%, transparent); border-radius: 13px; background: color-mix(in srgb, currentColor 3%, transparent); color: inherit; text-align: left; cursor: pointer; transition: background-color 80ms ease-out, border-color 80ms ease-out; }
+.sessions-switcher-panel button[aria-selected=true] { background: color-mix(in srgb, currentColor 11%, transparent); border-color: color-mix(in srgb, currentColor 55%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 14%, transparent); }
+.sessions-switcher-provider { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; flex-shrink: 0; }
+.sessions-switcher-provider > * { width: 28px; height: 28px; }
+.sessions-switcher-copy { display: flex; flex: 1; width: 100%; min-height: 0; min-width: 0; flex-direction: column; gap: 8px; }
+.sessions-switcher-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; overflow-wrap: anywhere; font-size: 13px; line-height: 1.4; font-weight: 500; }
+.sessions-switcher-detail { margin-top: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; opacity: .5; }
+.sessions-switcher-status { position: absolute; top: 18px; right: 14px; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; }
+.sessions-switcher-footer { padding: 13px 3px 0; font-size: 11px; opacity: .45; }
 .sessions-switcher-panel p { padding: 12px; }
+@keyframes sessions-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sessions-scale-in { from { transform: scale(.97); } to { transform: scale(1); } }
+@keyframes sessions-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@media (max-width: 480px) { .sessions-switcher, .sessions-switcher-exit { padding: 12px; } .sessions-switcher-cards { max-width: calc(100vw - 54px); } .sessions-switcher-panel button { flex-basis: 156px; } }
+@media (prefers-reduced-motion: reduce) { .sessions-switcher, .sessions-switcher-exit, .sessions-switcher > .sessions-switcher-panel { animation: none; } .sessions-switcher-panel button { transition: none; } }

@@ -76,3 +76,25 @@ it('publishes status targets only for displayed rows and releases them on close'
  expect(setStatusTargets.mock.lastCall?.[0].every((target: any) => target.element.isConnected)).toBe(true);
  key('keydown', 'Escape'); expect(setStatusTargets).toHaveBeenLastCalledWith([]);
 });
+it('cycles cards horizontally and navigates immediately while the old surface fades', async () => {
+ vi.useFakeTimers();
+ try {
+  const c = setup(); key('keydown', '`', { metaKey: true }); await c.open();
+  key('keydown', 'ArrowRight', { metaKey: true });
+  expect(document.querySelector('[aria-selected=true]')?.textContent).toContain('Session c');
+  key('keydown', 'ArrowLeft', { metaKey: true });
+  key('keyup', 'Meta');
+  expect(c.navigate).toHaveBeenCalledExactlyOnceWith(rows[1]);
+  expect(document.querySelector('.sessions-switcher')).toBeNull();
+  expect(document.querySelector('.sessions-switcher-exit')?.getAttribute('aria-hidden')).toBe('true');
+  await vi.advanceTimersByTimeAsync(80);
+  expect(document.querySelector('.sessions-switcher-exit')).toBeNull();
+ } finally { vi.useRealTimers(); }
+});
+it('reopening and disposal clear an in-progress exit animation', async () => {
+ const c = setup(); await c.open(true); key('keydown', 'Escape');
+ expect(document.querySelector('.sessions-switcher-exit')).not.toBeNull();
+ await c.open(true); expect(document.querySelector('.sessions-switcher-exit')).toBeNull();
+ key('keydown', 'Escape'); c.dispose();
+ expect(document.querySelector('.sessions-switcher-exit')).toBeNull();
+});

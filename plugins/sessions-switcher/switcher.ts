@@ -22,6 +22,8 @@ export function mountSwitcher(options: {
   setStatusTargets?(targets: readonly StatusTarget[]): void;
 }) {
   let disposed = false;
+  const exiting = new Map<HTMLElement, number>();
+  const clearExits = () => { exiting.forEach((timeout, node) => { window.clearTimeout(timeout); node.remove(); }); exiting.clear(); };
   let root: HTMLDivElement | null = null;
   let rows: Session[] = [];
   let index = 0;
@@ -36,7 +38,16 @@ export function mountSwitcher(options: {
   const track = () => { const id = currentId(); if (id && id !== lastId) { visit(id); lastId = id; } };
   const timer = window.setInterval(track, 250);
   track();
-  function close() {
+  function close(animate = true) {
+    if (animate && root && rows.length && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      // A non-interactive visual snapshot can fade while navigation starts now.
+      const ghost = root.cloneNode(true) as HTMLElement;
+      ghost.className = 'sessions-switcher-exit'; ghost.inert = true;
+      ghost.setAttribute('aria-hidden', 'true');
+      ghost.querySelectorAll('[id]').forEach(node => node.removeAttribute('id'));
+      document.body.append(ghost);
+      exiting.set(ghost, window.setTimeout(() => { ghost.remove(); exiting.delete(ghost); }, 80));
+    }
     options.setStatusTargets?.([]);
     generation++; pending = false; root?.remove(); root = null; rows = []; presses = 0; hold = null;
     if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
@@ -51,24 +62,27 @@ export function mountSwitcher(options: {
     index = (index + step + rows.length) % rows.length;
     root?.querySelectorAll<HTMLButtonElement>('[role=option]').forEach((el, i) => {
       el.setAttribute('aria-selected', String(i === index));
-      if (i === index) el.scrollIntoView?.({ block: 'nearest' });
+      if (i === index) el.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
     });
     root?.querySelector('[role=listbox]')?.setAttribute('aria-activedescendant', `session-choice-${index}`);
   }
   function render(message?: string) {
-    root?.remove();
-    root = document.createElement('div'); root.className = 'sessions-switcher';
-    root.addEventListener('pointerdown', e => { if (e.target === root) close(); });
+    if (!root) {
+      root = document.createElement('div'); root.className = 'sessions-switcher';
+      root.addEventListener('pointerdown', e => { if (e.target === root) close(); });
+      document.body.append(root);
+    }
     const panel = document.createElement('div'); panel.className = 'sessions-switcher-panel';
-    panel.setAttribute('role', 'listbox'); panel.setAttribute('aria-label', 'Recent sessions'); panel.tabIndex = -1;
+    panel.setAttribute('role', 'listbox'); panel.setAttribute('aria-orientation', 'horizontal'); panel.setAttribute('aria-label', 'Recent sessions'); panel.tabIndex = -1;
     if (message) { const text = document.createElement('p'); text.setAttribute('role', 'status'); text.textContent = message; panel.append(text); }
+    const cards = document.createElement('div'); cards.className = 'sessions-switcher-cards';
     const statusTargets: StatusTarget[] = [];
     rows.forEach((row, i) => {
       const button = document.createElement('button'); button.type = 'button'; button.tabIndex = -1;
       button.id = `session-choice-${i}`; button.setAttribute('role', 'option');
       const provider = document.createElement('span'); provider.className = 'sessions-switcher-provider';
       const copy = document.createElement('span'); copy.className = 'sessions-switcher-copy';
-      const title = document.createElement('span'); title.className = 'sessions-switcher-title'; title.textContent = row.title;
+      const title = document.createElement('span'); title.className = 'sessions-switcher-title'; title.textContent = row.title; button.title = row.title;
       const detail = document.createElement('span'); detail.className = 'sessions-switcher-detail'; detail.textContent = row.project;
       const status = document.createElement('span'); status.className = 'sessions-switcher-status'; statusTargets.push({ id: row.id, element: status, providerElement: provider });
       copy.append(title, detail); button.append(provider, copy, status);
@@ -77,15 +91,16 @@ export function mountSwitcher(options: {
       button.addEventListener('pointermove', event => {
         if (event.pointerType !== 'touch' && index !== i) select(i - index);
       });
-      button.addEventListener('click', () => { index = i; commit(); }); panel.append(button);
+      button.addEventListener('click', () => { index = i; commit(); }); cards.append(button);
     });
     const footer = document.createElement('div'); footer.className = 'sessions-switcher-footer';
-    footer.textContent = hold ? `Release ${hold === 'Meta' ? '⌘' : hold} to open · ↑↓ move · Esc cancel` : '↑↓ move · Enter open · Esc close';
-    panel.append(footer); root.append(panel); document.body.append(root); options.setStatusTargets?.(statusTargets); select(0); panel.focus({ preventScroll: true });
+    footer.textContent = hold ? `Release ${hold === 'Meta' ? '⌘' : hold} to open · ←→ move · Esc cancel` : '←→ move · Enter open · Esc close';
+    panel.append(cards, footer); root.replaceChildren(panel); options.setStatusTargets?.(statusTargets); select(0); panel.focus({ preventScroll: true });
   }
   async function open(persistent = false) {
     if (disposed || options.signal.aborted) return;
     if (root && rows.length) { select(1); return; }
+    clearExits();
     presses++;
     if (pending) return;
     previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -113,8 +128,8 @@ export function mountSwitcher(options: {
     if (!root) return;
     if (e.key === 'Escape') { consume(e); close(); }
     else if (e.key === 'Enter' && rows.length) { consume(e); commit(); }
-    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Tab') {
-      consume(e); select(e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey) ? -1 : 1);
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Tab') {
+      consume(e); select(e.key === 'ArrowUp' || e.key === 'ArrowLeft' || (e.key === 'Tab' && e.shiftKey) ? -1 : 1);
     }
   };
   const up = (e: KeyboardEvent) => {
@@ -125,7 +140,7 @@ export function mountSwitcher(options: {
   window.addEventListener('keydown', down, true); window.addEventListener('keyup', up, true); window.addEventListener('blur', blur);
   function dispose() {
     if (disposed) return; disposed = true;
-    window.clearInterval(timer); window.removeEventListener('keydown', down, true); window.removeEventListener('keyup', up, true); window.removeEventListener('blur', blur); close();
+    window.clearInterval(timer); window.removeEventListener('keydown', down, true); window.removeEventListener('keyup', up, true); window.removeEventListener('blur', blur); close(false); clearExits();
   }
   options.signal.addEventListener('abort', dispose, { once: true });
   return { open, dispose };
