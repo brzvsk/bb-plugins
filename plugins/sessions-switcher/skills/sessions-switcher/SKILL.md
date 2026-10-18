@@ -2,7 +2,7 @@
 name: sessions-switcher
 description: Configure the Sessions’ switcher shortcut or explain recent-session switching in BB.
 ---
-Hold Command and tap backtick (Control on non-Mac platforms), then release to open the selected session. Arrow keys move the selection; Escape cancels. The command palette opens the switcher for mouse/Enter selection. Seven sessions are shown; visited sessions precede recently updated fallback candidates. Visit history is local to this browser profile; archived/hidden/deleted threads are excluded. With a visible Browser tab the switcher opens beside it, because native pages paint above plugin overlays.
+Hold Command and tap backtick (Control on non-Mac platforms), then release to open the selected session. Arrow keys move the selection; Escape cancels. The command palette opens the switcher for mouse/Enter selection. Seven sessions are shown; visited sessions precede recently updated fallback candidates. Visit history is local to this browser profile; archived/hidden/deleted threads are excluded. Provider icons follow the sidebar’s Organize → Rows → Provider icons setting. With a visible Browser tab the switcher opens beside it, because native pages paint above plugin overlays.
 
 Change the shortcut in Settings → Keyboard → Switch recent sessions, or:
 

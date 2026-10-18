@@ -11,6 +11,14 @@ export function readHistory(): string[] {
 export function visit(id: string) {
   try { localStorage.setItem(STORE, JSON.stringify([id, ...readHistory().filter(x => x !== id)].slice(0, 50))); } catch { /* private storage */ }
 }
+// Follow the sidebar's Organize → Rows → Provider icons. The built-in Thread
+// list plugin mirrors its synced preferences here; missing means its default.
+export function showProviderIcons(): boolean {
+  try {
+    const prefs: unknown = JSON.parse(localStorage.getItem('bb.thread-list.preferences.v1') ?? '{}');
+    return (prefs as { showProviderIcons?: unknown })?.showProviderIcons !== false;
+  } catch { return true; }
+}
 export function currentId() { return location.pathname.match(/\/threads\/([^/]+)/)?.[1] ?? null; }
 export function heldKey(event: KeyboardEvent | null): HeldKey | null {
   return event?.metaKey ? 'Meta' : event?.ctrlKey ? 'Control' : event?.altKey ? 'Alt' : null;
@@ -110,6 +118,7 @@ export function mountSwitcher(options: {
     if (message) { const text = document.createElement('p'); text.setAttribute('role', 'status'); text.textContent = message; panel.append(text); }
     const cards = document.createElement('div'); cards.className = 'sessions-switcher-cards';
     const statusTargets: StatusTarget[] = [];
+    const icons = showProviderIcons();
     rows.forEach((row, i) => {
       const button = document.createElement('button'); button.type = 'button'; button.tabIndex = -1;
       button.id = `session-choice-${i}`; button.setAttribute('role', 'option');
@@ -117,8 +126,8 @@ export function mountSwitcher(options: {
       const copy = document.createElement('span'); copy.className = 'sessions-switcher-copy';
       const title = document.createElement('span'); title.className = 'sessions-switcher-title'; title.textContent = row.title; button.title = row.title;
       const detail = document.createElement('span'); detail.className = 'sessions-switcher-detail'; detail.textContent = row.project;
-      const status = document.createElement('span'); status.className = 'sessions-switcher-status'; statusTargets.push({ id: row.id, element: status, providerElement: provider });
-      copy.append(title, detail); button.append(provider, copy, status);
+      const status = document.createElement('span'); status.className = 'sessions-switcher-status'; statusTargets.push({ id: row.id, element: status, providerElement: icons ? provider : undefined });
+      copy.append(title, detail); button.append(...(icons ? [provider] : []), copy, status);
       // Pointer movement selects without navigating. A stationary cursor must
       // not steal the keyboard selection when the overlay first appears.
       button.addEventListener('pointermove', event => {
