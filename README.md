@@ -33,3 +33,7 @@ Use independent immutable tags such as `tab-close-right/v0.1.0`. A separate BB C
 ## New Thread Layout
 
 `plugins/new-thread-layout` moves the New thread composer to the lower middle of the screen under a "Working on <project>" picker. Local only; not published to the marketplace.
+
+## Play Continue
+
+`plugins/play-continue` ports the DSH Play Continue plugin: double Escape stops the running thread, and a Play button in the Send position continues a stopped or failed turn. Local only; not published to the marketplace.

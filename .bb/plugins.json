@@ -26,6 +26,10 @@
     {
       "name": "new-thread-layout",
       "source": "./plugins/new-thread-layout"
+    },
+    {
+      "name": "play-continue",
+      "source": "./plugins/play-continue"
     }
   ]
 }
