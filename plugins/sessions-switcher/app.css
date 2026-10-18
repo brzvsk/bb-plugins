@@ -7,8 +7,6 @@
 .sessions-switcher-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; }
 .sessions-switcher-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 500; }
 .sessions-switcher-detail { font-size: 11px; opacity: .5; }
-.sessions-switcher-status { width: 6px; height: 6px; flex-shrink: 0; border-radius: 50%; background: currentColor; opacity: .2; }
-.sessions-switcher-status[data-status=active], .sessions-switcher-status[data-status=starting] { background: #34d399; opacity: 1; }
-.sessions-switcher-status[data-status=error] { background: #f87171; opacity: 1; }
+.sessions-switcher-status { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; flex-shrink: 0; }
 .sessions-switcher-footer { padding: 12px 10px 3px; font-size: 11px; opacity: .45; }
 .sessions-switcher-panel p { padding: 12px; }

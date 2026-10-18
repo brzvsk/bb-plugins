@@ -2,7 +2,7 @@
 
 An emoji-free switcher for seven recent BB sessions, inspired by [Arc Switcher](https://getbb.app/marketplace/arc-switcher). Independent implementation using BB's native rebindable command API.
 
-Hold **Cmd**, tap **`** to cycle, release Cmd to switch. On Windows/Linux the default modifier is Control. Move the pointer over a row to select it; releasing the held modifier opens that selection. Arrow keys move in either direction; Escape cancels. The sidebar footer and command palette also open the list for click/Enter selection. No emoji is assigned to threads or inserted in the sidebar/header; existing thread titles stay unchanged.
+Hold **Cmd**, tap **`** to cycle, release Cmd to switch. On Windows/Linux the default modifier is Control. Move the pointer over a row to select it; releasing the held modifier opens that selection. Arrow keys move in either direction; Escape cancels. The sidebar footer and command palette also open the list for click/Enter selection. Status indicators use BB’s own live sidebar state and `experimental_ThreadStatusGlyph`: running spinner, unread success/error, waiting for input, and other sidebar statuses. No emoji is assigned to threads or inserted in the sidebar/header; existing thread titles stay unchanged.
 
 Change the binding in **Settings → Keyboard → Switch recent sessions**. The command ID is `plugin:sessions-switcher/cycle`. Overrides are owned by BB and survive plugin reload. Conflicting defaults remain unbound. A shortcut without a held modifier opens a persistent chooser.
 

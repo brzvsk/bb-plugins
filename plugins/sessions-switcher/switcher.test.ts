@@ -68,3 +68,11 @@ it('retains the held modifier across the host command dispatch microtask', async
  expect(c.navigate).toHaveBeenCalledExactlyOnceWith(rows[2]);
  expect(document.querySelector('.sessions-switcher')).toBeNull();
 });
+it('publishes status targets only for displayed rows and releases them on close', async () => {
+ const setStatusTargets = vi.fn();
+ const c = mountSwitcher({ signal: abort.signal, load: async () => rows, navigate: vi.fn(), setStatusTargets });
+ await c.open(true);
+ expect(setStatusTargets.mock.lastCall?.[0].map((target: any) => target.id)).toEqual(['a', 'b', 'c']);
+ expect(setStatusTargets.mock.lastCall?.[0].every((target: any) => target.element.isConnected)).toBe(true);
+ key('keydown', 'Escape'); expect(setStatusTargets).toHaveBeenLastCalledWith([]);
+});

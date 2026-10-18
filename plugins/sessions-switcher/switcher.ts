@@ -1,4 +1,5 @@
 export type Session = { id: string; projectId: string; title: string; project: string; status: string };
+export type StatusTarget = { id: string; element: HTMLElement };
 export type HeldKey = 'Meta' | 'Control' | 'Alt';
 const STORE = 'sessions-switcher:recent:v1';
 export function readHistory(): string[] {
@@ -18,6 +19,7 @@ export function mountSwitcher(options: {
   signal: AbortSignal;
   load(ids: string[]): Promise<Session[]>;
   navigate(session: Session): void;
+  setStatusTargets?(targets: readonly StatusTarget[]): void;
 }) {
   let disposed = false;
   let root: HTMLDivElement | null = null;
@@ -35,6 +37,7 @@ export function mountSwitcher(options: {
   const timer = window.setInterval(track, 250);
   track();
   function close() {
+    options.setStatusTargets?.([]);
     generation++; pending = false; root?.remove(); root = null; rows = []; presses = 0; hold = null;
     if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
     previousFocus = null;
@@ -61,6 +64,7 @@ export function mountSwitcher(options: {
     const heading = document.createElement('div'); heading.className = 'sessions-switcher-heading'; heading.textContent = 'Recent sessions';
     panel.append(heading);
     if (message) { const text = document.createElement('p'); text.setAttribute('role', 'status'); text.textContent = message; panel.append(text); }
+    const statusTargets: StatusTarget[] = [];
     rows.forEach((row, i) => {
       const button = document.createElement('button'); button.type = 'button'; button.tabIndex = -1;
       button.id = `session-choice-${i}`; button.setAttribute('role', 'option');
@@ -68,7 +72,7 @@ export function mountSwitcher(options: {
       const copy = document.createElement('span'); copy.className = 'sessions-switcher-copy';
       const title = document.createElement('span'); title.className = 'sessions-switcher-title'; title.textContent = row.title;
       const detail = document.createElement('span'); detail.className = 'sessions-switcher-detail'; detail.textContent = row.project;
-      const status = document.createElement('span'); status.className = 'sessions-switcher-status'; status.dataset.status = row.status; status.title = row.status;
+      const status = document.createElement('span'); status.className = 'sessions-switcher-status'; statusTargets.push({ id: row.id, element: status });
       copy.append(title, detail); button.append(number, copy, status);
       // Pointer movement selects without navigating. A stationary cursor must
       // not steal the keyboard selection when the overlay first appears.
@@ -79,7 +83,7 @@ export function mountSwitcher(options: {
     });
     const footer = document.createElement('div'); footer.className = 'sessions-switcher-footer';
     footer.textContent = hold ? `Release ${hold === 'Meta' ? '⌘' : hold} to open · ↑↓ move · Esc cancel` : '↑↓ move · Enter open · Esc close';
-    panel.append(footer); root.append(panel); document.body.append(root); select(0); panel.focus({ preventScroll: true });
+    panel.append(footer); root.append(panel); document.body.append(root); options.setStatusTargets?.(statusTargets); select(0); panel.focus({ preventScroll: true });
   }
   async function open(persistent = false) {
     if (disposed || options.signal.aborted) return;
