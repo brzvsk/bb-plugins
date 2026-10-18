@@ -71,7 +71,7 @@ export function ThreadSearchBar() {
   };
 
   return (
-    <div data-thread-search="" className="flex w-full min-w-0 items-center gap-0.5 pb-1">
+    <div data-thread-search="" className="flex w-full min-w-0 items-center gap-0.5 px-2 pb-1">
       {isEditing ? (
         <label
           className={cn(
