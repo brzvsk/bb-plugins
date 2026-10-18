@@ -1,6 +1,6 @@
 {
   "name": "bb-plugin-browser-gestures",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Two-finger trackpad swipes go back and forward in the BB desktop browser.",
   "license": "MIT",
   "type": "module",

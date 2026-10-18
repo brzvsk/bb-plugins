@@ -6,9 +6,8 @@ Two-finger trackpad swipes go back and forward in the BB desktop browser, like C
 - A dark arrow slides in from the edge as you swipe. Navigation happens when you lift your fingers with the arrow fully out; pull back to cancel.
 - Horizontal scrollers keep the swipe while they can still scroll in that direction. At their edge, a new swipe navigates.
 - Vertical scrolling, swipes with modifier keys and swipes with no history in that direction are ignored.
-- The **↔** button in the browser toolbar turns gestures off for that tab; hover it to see the last gesture decision.
 
-Disable everywhere with `bb plugin disable browser-gestures`.
+Nothing is added to the toolbar. Turn gestures off with `bb plugin disable browser-gestures`.
 
 ## Limits
 

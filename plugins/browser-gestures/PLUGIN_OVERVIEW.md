@@ -3,7 +3,7 @@
 - **Back and forward by swipe.** Swipe two fingers right to go back, left to go forward, in any BB desktop browser tab.
 - **A Chrome-style arrow.** A dark circle slides in from the edge as you swipe. It turns solid when the swipe is long enough, and navigation happens when you lift your fingers. Pull back before lifting to cancel.
 - **Scrolling stays scrolling.** Vertical scrolling is never treated as a gesture. Carousels, code blocks and other horizontal scrollers keep the swipe while they can still move; at their edge, a fresh swipe navigates.
-- **A per-tab switch.** The ↔ button in the browser toolbar turns gestures off for that tab.
+- **Nothing to configure.** No toolbar button or settings; disable the plugin to turn gestures off.
 
 ## Limits
 
