@@ -56,3 +56,15 @@ it('stationary hover does not steal keyboard selection and Escape cancels pointe
  row.dispatchEvent(new MouseEvent('pointermove', { bubbles: true }));
  key('keydown', 'Escape'); key('keyup', 'Meta'); expect(c.navigate).not.toHaveBeenCalled();
 });
+it('retains the held modifier across the host command dispatch microtask', async () => {
+ const c = setup();
+ key('keydown', 'Meta', { metaKey: true });
+ key('keydown', '`', { metaKey: true });
+ // Native event dispatch can checkpoint microtasks between listeners.
+ await Promise.resolve();
+ await c.open();
+ document.querySelectorAll('[role=option]')[2].dispatchEvent(new MouseEvent('pointermove', { bubbles: true }));
+ key('keyup', 'Meta');
+ expect(c.navigate).toHaveBeenCalledExactlyOnceWith(rows[2]);
+ expect(document.querySelector('.sessions-switcher')).toBeNull();
+});

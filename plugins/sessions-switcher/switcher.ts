@@ -29,7 +29,7 @@ export function mountSwitcher(options: {
   let hold: HeldKey | null = null;
   let released = false;
   let previousFocus: HTMLElement | null = null;
-  let keyEvent: KeyboardEvent | null = null;
+  let activeModifier: HeldKey | null = null;
   let lastId: string | null = null;
   const track = () => { const id = currentId(); if (id && id !== lastId) { visit(id); lastId = id; } };
   const timer = window.setInterval(track, 250);
@@ -87,7 +87,7 @@ export function mountSwitcher(options: {
     presses++;
     if (pending) return;
     previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    hold = persistent ? null : heldKey(keyEvent); released = false;
+    hold = persistent ? null : activeModifier; released = false;
     pending = true; const request = ++generation; track();
     render('Loading sessions…');
     try {
@@ -105,8 +105,9 @@ export function mountSwitcher(options: {
   }
   const consume = (e: KeyboardEvent) => { e.preventDefault(); e.stopImmediatePropagation(); };
   const down = (e: KeyboardEvent) => {
-    keyEvent = e;
-    queueMicrotask(() => { if (keyEvent === e) keyEvent = null; });
+    // Track physical modifier state, not the lifetime of one event dispatch.
+    // BB may invoke its command after a microtask checkpoint.
+    activeModifier = heldKey(e);
     if (!root) return;
     if (e.key === 'Escape') { consume(e); close(); }
     else if (e.key === 'Enter' && rows.length) { consume(e); commit(); }
@@ -114,8 +115,11 @@ export function mountSwitcher(options: {
       consume(e); select(e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey) ? -1 : 1);
     }
   };
-  const up = (e: KeyboardEvent) => { if (e.key === hold) { released = true; if (!pending && rows.length) commit(); } };
-  const blur = () => { keyEvent = null; close(); };
+  const up = (e: KeyboardEvent) => {
+    activeModifier = heldKey(e);
+    if (e.key === hold) { released = true; if (!pending && rows.length) commit(); }
+  };
+  const blur = () => { activeModifier = null; close(); };
   window.addEventListener('keydown', down, true); window.addEventListener('keyup', up, true); window.addEventListener('blur', blur);
   function dispose() {
     if (disposed) return; disposed = true;
