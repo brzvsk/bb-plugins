@@ -17,10 +17,12 @@ export function heldKey(event: KeyboardEvent | null): HeldKey | null {
 }
 export function mountSwitcher(options: {
   signal: AbortSignal;
+  layout?: 'horizontal' | 'vertical';
   load(ids: string[]): Promise<Session[]>;
   navigate(session: Session): void;
   setStatusTargets?(targets: readonly StatusTarget[]): void;
 }) {
+  let layout = options.layout ?? 'horizontal';
   let disposed = false;
   const exiting = new Map<HTMLElement, number>();
   const clearExits = () => { exiting.forEach((timeout, node) => { window.clearTimeout(timeout); node.remove(); }); exiting.clear(); };
@@ -72,8 +74,9 @@ export function mountSwitcher(options: {
       root.addEventListener('pointerdown', e => { if (e.target === root) close(); });
       document.body.append(root);
     }
+    root.dataset.layout = layout;
     const panel = document.createElement('div'); panel.className = 'sessions-switcher-panel';
-    panel.setAttribute('role', 'listbox'); panel.setAttribute('aria-orientation', 'horizontal'); panel.setAttribute('aria-label', 'Recent sessions'); panel.tabIndex = -1;
+    panel.setAttribute('role', 'listbox'); panel.setAttribute('aria-orientation', layout); panel.setAttribute('aria-label', 'Recent sessions'); panel.tabIndex = -1;
     if (message) { const text = document.createElement('p'); text.setAttribute('role', 'status'); text.textContent = message; panel.append(text); }
     const cards = document.createElement('div'); cards.className = 'sessions-switcher-cards';
     const statusTargets: StatusTarget[] = [];
@@ -94,7 +97,8 @@ export function mountSwitcher(options: {
       button.addEventListener('click', () => { index = i; commit(); }); cards.append(button);
     });
     const footer = document.createElement('div'); footer.className = 'sessions-switcher-footer';
-    footer.textContent = hold ? `Release ${hold === 'Meta' ? '⌘' : hold} to open · ←→ move · Esc cancel` : '←→ move · Enter open · Esc close';
+    const arrows = layout === 'vertical' ? '↑↓' : '←→';
+    footer.textContent = hold ? `Release ${hold === 'Meta' ? '⌘' : hold} to open · ${arrows} move · Esc cancel` : `${arrows} move · Enter open · Esc close`;
     panel.append(cards, footer); root.replaceChildren(panel); options.setStatusTargets?.(statusTargets); select(0); panel.focus({ preventScroll: true });
   }
   async function open(persistent = false) {
@@ -143,5 +147,14 @@ export function mountSwitcher(options: {
     window.clearInterval(timer); window.removeEventListener('keydown', down, true); window.removeEventListener('keyup', up, true); window.removeEventListener('blur', blur); close(false); clearExits();
   }
   options.signal.addEventListener('abort', dispose, { once: true });
-  return { open, dispose };
+  function setLayout(next: 'horizontal' | 'vertical') {
+    layout = next;
+    if (!root) return;
+    root.dataset.layout = layout;
+    root.querySelector('[role=listbox]')?.setAttribute('aria-orientation', layout);
+    const footer = root.querySelector('.sessions-switcher-footer');
+    if (footer) footer.textContent = footer.textContent?.replace(/←→|↑↓/, layout === 'vertical' ? '↑↓' : '←→') ?? '';
+    select(0);
+  }
+  return { open, dispose, setLayout };
 }

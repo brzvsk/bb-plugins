@@ -98,3 +98,15 @@ it('reopening and disposal clear an in-progress exit animation', async () => {
  key('keydown', 'Escape'); c.dispose();
  expect(document.querySelector('.sessions-switcher-exit')).toBeNull();
 });
+
+it('changes layout without losing selection or held-modifier commit', async () => {
+ const c = setup(); key('keydown', '`', { metaKey: true }); await c.open();
+ expect(document.querySelector('[role=listbox]')?.getAttribute('aria-orientation')).toBe('horizontal');
+ c.setLayout('vertical');
+ expect(document.querySelector('.sessions-switcher')?.getAttribute('data-layout')).toBe('vertical');
+ expect(document.querySelector('[role=listbox]')?.getAttribute('aria-orientation')).toBe('vertical');
+ expect(document.querySelector('[aria-selected=true]')?.textContent).toContain('Session b');
+ key('keydown', 'ArrowDown', { metaKey: true }); key('keyup', 'Meta');
+ expect(c.navigate).toHaveBeenCalledExactlyOnceWith(rows[2]);
+ expect(document.querySelector('.sessions-switcher-exit')?.getAttribute('data-layout')).toBe('vertical');
+});

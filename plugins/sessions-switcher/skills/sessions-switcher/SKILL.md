@@ -12,3 +12,7 @@ bb settings keyboard reset plugin:sessions-switcher/cycle
 ```
 
 BB resolves shortcut conflicts. A modifier-free binding stays open until Enter/click. Terminal or embedded-browser focus may reserve keys for its own surface. Disable/reload removes the switcher and pending navigation.
+
+Choose **Horizontal cards** (default) or **Vertical list** in **Settings → Installed plugins → Sessions’ switcher → Layout**. The setting applies immediately and preserves the current selection.
+
+Known desktop limitation: a native embedded Browser surface can cover this overlay. BB's browser-dimming hook is not exposed to plugins in SDK 0.6.49; fixing that requires a host API change.

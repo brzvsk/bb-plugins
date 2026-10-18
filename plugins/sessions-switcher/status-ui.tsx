@@ -3,11 +3,12 @@ import {
   experimental_ProviderIcon as ProviderIcon,
   experimental_useProviders as useProviders,
   experimental_useSidebarThreads as useSidebarThreads,
+  useSettings,
   useSidebarThreadDraft,
   useSidebarThreadRowStatus,
   type PluginSidebarThreadIndicator,
 } from '@get-bb/plugin-sdk/app';
-import { useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import type { StatusTarget } from './switcher';
 
@@ -41,7 +42,7 @@ function LiveStatuses({ targets }: { targets: readonly StatusTarget[] }) {
     ];
   })}</>;
 }
-export function createStatusBridge() {
+export function createStatusBridge(onLayout?: (layout: 'horizontal' | 'vertical') => void) {
   let targets: readonly StatusTarget[] = [];
   const listeners = new Set<() => void>();
   const subscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
@@ -49,6 +50,9 @@ export function createStatusBridge() {
   return {
     setTargets(next: readonly StatusTarget[]) { targets = next; listeners.forEach(listener => listener()); },
     Component() {
+      const { values } = useSettings();
+      const layout = values?.layout === 'vertical' ? 'vertical' : 'horizontal';
+      useEffect(() => { onLayout?.(layout); }, [layout]);
       const current = useSyncExternalStore(subscribe, snapshot);
       return current.length ? <LiveStatuses targets={current} /> : null;
     },

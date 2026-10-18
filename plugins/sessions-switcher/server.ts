@@ -8,6 +8,13 @@ export const rpcContract = defineRpcContract({
   },
 });
 export default function plugin(bb: BbPluginApi) {
+  bb.settings.define({
+    layout: {
+      type: 'select', label: 'Layout', options: ['horizontal', 'vertical'],
+      experimental_optionLabels: { horizontal: 'Horizontal cards', vertical: 'Vertical list' },
+      default: 'horizontal',
+    },
+  });
   bb.rpc.register(rpcContract, {
     async recent({ ids }) {
       const [threads, projects] = await Promise.all([

@@ -25,3 +25,7 @@ Live checks: quick Cmd+backtick twice toggles between two sessions; hold/repeat/
 Uses the SDK's experimental header slot for router access; compose/settings routes fall back to a sidebar link or canonical URL. Shortcut scope follows BB; embedded terminals and browsers can reserve keys. No global macOS keyboard preferences are changed.
 
 The surface fades/scales in over 120 ms and fades out over 80 ms. Navigation starts immediately on release. The card strip scrolls to keep the selection visible, and reduced-motion preferences disable the animations.
+
+Choose **Horizontal cards** (default) or **Vertical list** in **Settings → Installed plugins → Sessions’ switcher → Layout**. The setting applies immediately and preserves the current selection.
+
+Known desktop limitation: a native embedded Browser surface can cover this overlay. BB's browser-dimming hook is not exposed to plugins in SDK 0.6.49; fixing that requires a host API change.
