@@ -6,6 +6,10 @@
     {
       "name": "tab-close-right",
       "source": "./plugins/tab-close-right"
+    },
+    {
+      "name": "browser-gestures",
+      "source": "./plugins/browser-gestures"
     }
   ]
 }
