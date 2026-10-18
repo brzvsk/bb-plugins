@@ -32,4 +32,4 @@ Use independent immutable tags such as `tab-close-right/v0.1.0`. A separate BB C
 
 ## New Thread Layout
 
-`plugins/new-thread-layout` moves the New thread composer to the lower middle of the screen. Local only; not published to the marketplace.
+`plugins/new-thread-layout` moves the New thread composer to the lower middle of the screen under a weekday/time greeting and a "Working on <project>" picker. Local only; not published to the marketplace.
