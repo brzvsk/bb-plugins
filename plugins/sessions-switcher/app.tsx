@@ -24,7 +24,6 @@ export default definePluginApp(app => {
   app.slots.experimental_appOverlay({ id: 'session-statuses', component: statuses.Component });
   let controller: ReturnType<typeof mountSwitcher> | null = null;
   app.commands.register({ id: 'cycle', title: 'Switch recent sessions', defaultShortcut: { key: '`', mod: true }, run() { void controller?.open(); } });
-  app.slots.sidebarFooterAction({ id: 'open', title: 'Sessions’ switcher', icon: 'Layers', run() { void controller?.open(true); } });
   app.slots.experimental_threadHeaderAction({ id: 'navigation', title: 'Sessions navigation', component: NavigationBridge });
   app.contentScripts.register({ id: 'switcher', mount({ pluginId, signal }) {
     const instance = mountSwitcher({ signal, navigate, setStatusTargets: statuses.setTargets, async load(ids) {
