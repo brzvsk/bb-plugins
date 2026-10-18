@@ -1,3 +1,3 @@
-# Sessions’ switcher (like Alt+Tab)
+# Sessions’ switcher
 
-Switch between recent sessions with a hold/cycle/release shortcut, without emoji markers. Default: Cmd+backtick on Mac; change it in Settings → Keyboard. The command palette also opens the list.
+Switch between recent sessions like Alt+Tab with a hold/cycle/release shortcut, without emoji markers. Default: Cmd+backtick on Mac; change it in Settings → Keyboard. The command palette also opens the list.

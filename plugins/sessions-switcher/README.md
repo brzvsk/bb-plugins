@@ -1,6 +1,6 @@
-# Sessions’ switcher (like Alt+Tab)
+# Sessions’ switcher
 
-An emoji-free horizontal card switcher for seven recent BB sessions, inspired by [Arc Switcher](https://getbb.app/marketplace/arc-switcher). Independent implementation using BB's native rebindable command API.
+An Alt+Tab-style, emoji-free horizontal card switcher for seven recent BB sessions, inspired by [Arc Switcher](https://getbb.app/marketplace/arc-switcher). Independent implementation using BB's native rebindable command API.
 
 Hold **Cmd**, tap **`** to cycle, release Cmd to switch. On Windows/Linux the default modifier is Control. Move the pointer over a row to select it; releasing the held modifier opens that selection. Left/right arrow keys move through the cards (up/down also work); Escape cancels. The command palette also opens the list for click/Enter selection. Status indicators use BB’s own live sidebar state and `experimental_ThreadStatusGlyph`: running spinner, unread success/error, waiting for input, and other sidebar statuses. No emoji is assigned to threads or inserted in the sidebar/header; existing thread titles stay unchanged.
 

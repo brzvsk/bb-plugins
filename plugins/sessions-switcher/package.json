@@ -8,8 +8,8 @@
     "bbPluginSdk": ">=0.6.49 <0.7.0"
   },
   "bb": {
-    "name": "Sessions’ switcher (like Alt+Tab)",
-    "description": "Hold, cycle and release to switch recent sessions. No emoji markers; rebind in Settings → Keyboard.",
+    "name": "Sessions’ switcher",
+    "description": "Alt+Tab-style switching for recent sessions: hold, cycle and release. No emoji markers; rebind in Settings → Keyboard.",
     "branding": {
       "icon": "Layers"
     },
