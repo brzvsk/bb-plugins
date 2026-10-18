@@ -22,6 +22,10 @@
     {
       "name": "auto-hide-panel",
       "source": "./plugins/auto-hide-panel"
+    },
+    {
+      "name": "new-thread-layout",
+      "source": "./plugins/new-thread-layout"
     }
   ]
 }

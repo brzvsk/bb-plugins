@@ -29,3 +29,7 @@ Use independent immutable tags such as `tab-close-right/v0.1.0`. A separate BB C
 ## Auto-hide Panel
 
 `plugins/auto-hide-panel` hides the right panel after its last content tab closes. Independent of Tab Close Right. Released with tags such as `auto-hide-panel/v0.1.0`.
+
+## New Thread Layout
+
+`plugins/new-thread-layout` moves the New thread composer to the lower middle of the screen. Local only; not published to the marketplace.

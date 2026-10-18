@@ -1,0 +1,42 @@
+{
+  "name": "bb-plugin-new-thread-layout",
+  "version": "0.1.0",
+  "description": "Place the New thread composer in the lower middle of the screen.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "bb": ">=0.46.1",
+    "bbPluginSdk": ">=0.6.49 <0.7.0"
+  },
+  "bb": {
+    "name": "New Thread Layout",
+    "description": "Moves the New thread composer from the top to the lower middle of the screen.",
+    "branding": {
+      "icon": "PanelBottom"
+    },
+    "server": "./server.ts",
+    "app": "./app.tsx",
+    "skills": []
+  },
+  "files": [
+    "app.tsx",
+    "server.ts",
+    "README.md",
+    "LICENSE",
+    "dist/app.js",
+    "dist/app.css",
+    "dist/app.meta.json",
+    "dist/server.js",
+    "dist/server.meta.json"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "bb plugin build ."
+  },
+  "devDependencies": {
+    "@get-bb/plugin-sdk": "0.6.49",
+    "typescript": "5.9.3",
+    "@types/react": "19.2.2"
+  }
+}
