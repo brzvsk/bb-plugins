@@ -11,7 +11,7 @@
   },
   "bb": {
     "name": "New Thread Layout",
-    "description": "Moves the New thread composer to the lower middle of the screen under a "Working on <project>" picker.",
+    "description": "Moves the New thread composer to the lower middle of the screen under a Working on project picker.",
     "branding": {
       "icon": "PanelBottom"
     },

@@ -7,9 +7,9 @@ const trigger = "[data-promptbox-project-control]";
 
 const css = `
 .ntl-heading {
-  margin: max(2rem, calc(58vh - 140px - 4.5rem)) 0 1.75rem;
+  margin: max(2rem, calc(58vh - 140px - 3.5rem)) 0 1.25rem;
   padding: 0 0.25rem;
-  font-size: 2rem;
+  font-size: 1.5rem;
   line-height: 1.25;
   font-weight: 500;
   letter-spacing: -0.02em;
