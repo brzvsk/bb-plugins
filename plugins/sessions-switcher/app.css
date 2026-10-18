@@ -1,0 +1,14 @@
+.sessions-switcher { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; padding: 24px; background: #0005; backdrop-filter: blur(7px); }
+.sessions-switcher-panel { width: min(520px, 100%); max-height: 85vh; overflow: auto; padding: 12px; border-radius: 18px; border: 1px solid color-mix(in srgb, currentColor 16%, transparent); background: var(--background, #18181b); color: var(--foreground, #fafafa); box-shadow: 0 24px 90px #0005; outline: none; font: 13px/1.5 system-ui, sans-serif; }
+.sessions-switcher-heading { padding: 6px 10px 12px; font-size: 11px; font-weight: 600; opacity: .55; text-transform: uppercase; letter-spacing: .08em; }
+.sessions-switcher-panel button { display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px; margin: 2px 0; border: 1px solid transparent; border-radius: 10px; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.sessions-switcher-panel button[aria-selected=true] { background: color-mix(in srgb, currentColor 10%, transparent); border-color: color-mix(in srgb, currentColor 15%, transparent); }
+.sessions-switcher-number { width: 22px; flex-shrink: 0; font: 12px ui-monospace, monospace; opacity: .45; }
+.sessions-switcher-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; }
+.sessions-switcher-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 500; }
+.sessions-switcher-detail { font-size: 11px; opacity: .5; }
+.sessions-switcher-status { width: 6px; height: 6px; flex-shrink: 0; border-radius: 50%; background: currentColor; opacity: .2; }
+.sessions-switcher-status[data-status=active], .sessions-switcher-status[data-status=starting] { background: #34d399; opacity: 1; }
+.sessions-switcher-status[data-status=error] { background: #f87171; opacity: 1; }
+.sessions-switcher-footer { padding: 12px 10px 3px; font-size: 11px; opacity: .45; }
+.sessions-switcher-panel p { padding: 12px; }
