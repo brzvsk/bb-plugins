@@ -18,6 +18,10 @@
     {
       "name": "sessions-switcher",
       "source": "./plugins/sessions-switcher"
+    },
+    {
+      "name": "auto-hide-panel",
+      "source": "./plugins/auto-hide-panel"
     }
   ]
 }
