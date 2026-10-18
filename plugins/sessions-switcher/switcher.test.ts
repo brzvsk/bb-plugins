@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { freeArea, mountSwitcher, showProviderIcons, readHistory, visit, type Session } from './switcher';
+import { freeArea, mountSwitcher, readHistory, visit, type Session } from './switcher';
 const rows: Session[] = ['a', 'b', 'c'].map(id => ({ id, projectId: 'p', title: `Session ${id}`, project: 'Project', status: 'idle' }));
 let abort: AbortController;
 // Node's built-in localStorage is undefined without --localstorage-file and shadows jsdom's.
@@ -132,11 +132,10 @@ it('positions the overlay beside a visible Browser tab and restores full width w
  key('keydown', 'Escape'); browser.remove(); await c.open(true);
  expect(document.querySelector<HTMLElement>('.sessions-switcher')?.style.inset).toBe('');
 });
-it('follows the sidebar provider-icons preference', async () => {
- expect(showProviderIcons()).toBe(true);
- const c = setup(); await c.open(true); expect(document.querySelectorAll('.sessions-switcher-provider')).toHaveLength(rows.length); key('keydown', 'Escape');
- localStorage.setItem('bb.thread-list.preferences.v1', JSON.stringify({ showProviderIcons: false })); expect(showProviderIcons()).toBe(false);
- await c.open(true);
- expect(document.querySelector('.sessions-switcher-provider')).toBeNull();
- localStorage.setItem('bb.thread-list.preferences.v1', '{'); expect(showProviderIcons()).toBe(true);
+it('follows the sidebar provider-icons preference and keeps the last value on failure', async () => {
+ const providerIcons = vi.fn(async () => true);
+ const c = mountSwitcher({ signal: abort.signal, load: async () => rows, navigate: vi.fn(), providerIcons });
+ await c.open(true); expect(document.querySelectorAll('.sessions-switcher-provider')).toHaveLength(rows.length); key('keydown', 'Escape');
+ providerIcons.mockResolvedValueOnce(false); await c.open(true); expect(document.querySelector('.sessions-switcher-provider')).toBeNull(); key('keydown', 'Escape');
+ providerIcons.mockRejectedValueOnce(new Error('offline')); await c.open(true); expect(document.querySelector('.sessions-switcher-provider')).toBeNull();
 });

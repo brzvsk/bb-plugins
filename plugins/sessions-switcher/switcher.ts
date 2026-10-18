@@ -11,14 +11,6 @@ export function readHistory(): string[] {
 export function visit(id: string) {
   try { localStorage.setItem(STORE, JSON.stringify([id, ...readHistory().filter(x => x !== id)].slice(0, 50))); } catch { /* private storage */ }
 }
-// Follow the sidebar's Organize → Rows → Provider icons. The built-in Thread
-// list plugin mirrors its synced preferences here; missing means its default.
-export function showProviderIcons(): boolean {
-  try {
-    const prefs: unknown = JSON.parse(localStorage.getItem('bb.thread-list.preferences.v1') ?? '{}');
-    return (prefs as { showProviderIcons?: unknown })?.showProviderIcons !== false;
-  } catch { return true; }
-}
 export function currentId() { return location.pathname.match(/\/threads\/([^/]+)/)?.[1] ?? null; }
 export function heldKey(event: KeyboardEvent | null): HeldKey | null {
   return event?.metaKey ? 'Meta' : event?.ctrlKey ? 'Control' : event?.altKey ? 'Alt' : null;
@@ -56,6 +48,8 @@ export function mountSwitcher(options: {
   signal: AbortSignal;
   layout?: 'horizontal' | 'vertical';
   load(ids: string[]): Promise<Session[]>;
+  // Sidebar Organize → Rows → Provider icons; failures keep the last known value.
+  providerIcons?(): Promise<boolean>;
   navigate(session: Session): void;
   setStatusTargets?(targets: readonly StatusTarget[]): void;
 }) {
@@ -74,6 +68,7 @@ export function mountSwitcher(options: {
   let previousFocus: HTMLElement | null = null;
   let activeModifier: HeldKey | null = null;
   let lastId: string | null = null;
+  let icons = true;
   const track = () => { const id = currentId(); if (id && id !== lastId) { visit(id); lastId = id; } };
   const timer = window.setInterval(track, 250);
   track();
@@ -118,7 +113,6 @@ export function mountSwitcher(options: {
     if (message) { const text = document.createElement('p'); text.setAttribute('role', 'status'); text.textContent = message; panel.append(text); }
     const cards = document.createElement('div'); cards.className = 'sessions-switcher-cards';
     const statusTargets: StatusTarget[] = [];
-    const icons = showProviderIcons();
     rows.forEach((row, i) => {
       const button = document.createElement('button'); button.type = 'button'; button.tabIndex = -1;
       button.id = `session-choice-${i}`; button.setAttribute('role', 'option');
@@ -152,9 +146,12 @@ export function mountSwitcher(options: {
     pending = true; const request = ++generation; track();
     render('Loading sessions…');
     try {
-      const result = await options.load(readHistory());
+      const [result, showIcons] = await Promise.all([
+        options.load(readHistory()),
+        options.providerIcons?.().catch(() => icons) ?? icons,
+      ]);
       if (request !== generation || options.signal.aborted) return;
-      pending = false; rows = result;
+      pending = false; rows = result; icons = showIcons;
       const first = rows.length > 1 && rows[0]?.id === currentId() ? 1 : 0;
       index = rows.length ? (first + presses - 1) % rows.length : 0;
       render(rows.length ? undefined : 'No recent sessions');

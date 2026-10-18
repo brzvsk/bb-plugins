@@ -32,6 +32,12 @@ export default definePluginApp(app => {
       const data = await response.json();
       if (!response.ok || !data.ok) throw new Error('Could not load sessions');
       return data.result;
+    }, async providerIcons() {
+      // The built-in Thread list plugin owns this preference; read it through its RPC.
+      const response = await fetch('/api/v1/plugins/thread-list/rpc/listPreferences', { method: 'POST', headers: { 'content-type': 'application/json' }, body: 'null', signal });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error('Could not read thread list preferences');
+      return data.result?.preferences?.showProviderIcons !== false;
     } });
     controller = instance;
     return () => { instance.dispose(); if (controller === instance) controller = null; };
