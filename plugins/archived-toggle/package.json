@@ -1,0 +1,37 @@
+{
+  "name": "bb-plugin-archived-toggle",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "A sidebar footer button that shows or hides archived threads in bb's thread list.",
+  "engines": {
+    "bb": ">=0.46.1",
+    "bbPluginSdk": ">=0.6.49 <0.7.0"
+  },
+  "bb": {
+    "name": "Archived Threads Toggle",
+    "description": "One click in the sidebar footer shows or hides archived threads in bb's thread list.",
+    "branding": {
+      "icon": "Archive"
+    },
+    "server": "./server.ts",
+    "app": "./app.tsx",
+    "skills": [
+      "skills"
+    ]
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "bb plugin build ."
+  },
+  "devDependencies": {
+    "@get-bb/plugin-sdk": "0.6.49",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "react": "^19.0.0",
+    "sonner": "^1.7.4",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

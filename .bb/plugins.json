@@ -6,6 +6,10 @@
     {
       "name": "tab-close-right",
       "source": "./plugins/tab-close-right"
+    },
+    {
+      "name": "archived-toggle",
+      "source": "./plugins/archived-toggle"
     }
   ]
 }
