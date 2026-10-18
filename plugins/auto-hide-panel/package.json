@@ -1,6 +1,6 @@
 {
   "name": "bb-plugin-auto-hide-panel",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Hide the BB right panel when its last content tab closes.",
   "license": "MIT",
   "type": "module",
@@ -12,7 +12,7 @@
     "name": "Auto-hide Panel",
     "description": "Hide the right panel when its last content tab closes. Manually opened Info stays available.",
     "branding": {
-      "icon": "PanelRightClose"
+      "icon": "PanelRight"
     },
     "server": "./server.ts",
     "app": "./app.tsx",
