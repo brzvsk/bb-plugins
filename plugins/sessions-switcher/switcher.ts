@@ -15,6 +15,35 @@ export function currentId() { return location.pathname.match(/\/threads\/([^/]+)
 export function heldKey(event: KeyboardEvent | null): HeldKey | null {
   return event?.metaKey ? 'Meta' : event?.ctrlKey ? 'Control' : event?.altKey ? 'Alt' : null;
 }
+export type Box = { left: number; top: number; right: number; bottom: number };
+// Native Browser views paint above all DOM. Pick the largest viewport band that
+// no visible Browser tab covers; null keeps the full-viewport overlay.
+export function freeArea(view: Box, blocked: readonly Box[], min = { width: 280, height: 260 }): Box | null {
+  const boxes = blocked
+    .map(b => ({ left: Math.max(b.left, view.left), top: Math.max(b.top, view.top), right: Math.min(b.right, view.right), bottom: Math.min(b.bottom, view.bottom) }))
+    .filter(b => b.right > b.left && b.bottom > b.top);
+  if (!boxes.length) return null;
+  const overlaps = (a: Box) => boxes.some(b => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom);
+  const edges = (lo: number, hi: number, keys: ('left' | 'right' | 'top' | 'bottom')[]) =>
+    [...new Set([lo, hi, ...boxes.flatMap(b => keys.map(k => b[k]))])].sort((a, b) => a - b);
+  const xs = edges(view.left, view.right, ['left', 'right']), ys = edges(view.top, view.bottom, ['top', 'bottom']);
+  const candidates: Box[] = [];
+  xs.forEach((a, i) => xs.slice(i + 1).forEach(b => candidates.push({ left: a, top: view.top, right: b, bottom: view.bottom })));
+  ys.forEach((a, i) => ys.slice(i + 1).forEach(b => candidates.push({ left: view.left, top: a, right: view.right, bottom: b })));
+  const area = (b: Box) => (b.right - b.left) * (b.bottom - b.top);
+  return candidates
+    .filter(b => b.right - b.left >= min.width && b.bottom - b.top >= min.height && !overlaps(b))
+    .sort((a, b) => area(b) - area(a))[0] ?? null;
+}
+function browserBoxes(): Box[] {
+  return Array.from(document.querySelectorAll<HTMLElement>('[data-app-browser]'))
+    .filter(el => el.checkVisibility?.() !== false)
+    .map(el => el.getBoundingClientRect());
+}
+function place(root: HTMLElement) {
+  const free = freeArea({ left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight }, browserBoxes());
+  root.style.inset = free ? `${free.top}px ${window.innerWidth - free.right}px ${window.innerHeight - free.bottom}px ${free.left}px` : '';
+}
 export function mountSwitcher(options: {
   signal: AbortSignal;
   layout?: 'horizontal' | 'vertical';
@@ -74,6 +103,7 @@ export function mountSwitcher(options: {
       root.addEventListener('pointerdown', e => { if (e.target === root) close(); });
       document.body.append(root);
     }
+    place(root);
     root.dataset.layout = layout;
     const panel = document.createElement('div'); panel.className = 'sessions-switcher-panel';
     panel.setAttribute('role', 'listbox'); panel.setAttribute('aria-orientation', layout); panel.setAttribute('aria-label', 'Recent sessions'); panel.tabIndex = -1;
@@ -141,10 +171,11 @@ export function mountSwitcher(options: {
     if (e.key === hold) { released = true; if (!pending && rows.length) commit(); }
   };
   const blur = () => { activeModifier = null; close(); };
-  window.addEventListener('keydown', down, true); window.addEventListener('keyup', up, true); window.addEventListener('blur', blur);
+  const resize = () => { if (root) place(root); };
+  window.addEventListener('keydown', down, true); window.addEventListener('keyup', up, true); window.addEventListener('blur', blur); window.addEventListener('resize', resize);
   function dispose() {
     if (disposed) return; disposed = true;
-    window.clearInterval(timer); window.removeEventListener('keydown', down, true); window.removeEventListener('keyup', up, true); window.removeEventListener('blur', blur); close(false); clearExits();
+    window.clearInterval(timer); window.removeEventListener('keydown', down, true); window.removeEventListener('keyup', up, true); window.removeEventListener('blur', blur); window.removeEventListener('resize', resize); close(false); clearExits();
   }
   options.signal.addEventListener('abort', dispose, { once: true });
   function setLayout(next: 'horizontal' | 'vertical') {

@@ -9,7 +9,7 @@
   },
   "bb": {
     "name": "Sessions’ switcher",
-    "description": "Alt+Tab-style switching for recent sessions: hold, cycle and release. No emoji markers; rebind in Settings → Keyboard.",
+    "description": "Alt+Tab-style switching for recent sessions: hold, cycle and release. Rebind in Settings → Keyboard.",
     "branding": {
       "icon": "Layers"
     },

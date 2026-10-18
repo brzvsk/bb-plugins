@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { mountSwitcher, readHistory, visit, type Session } from './switcher';
+import { freeArea, mountSwitcher, readHistory, visit, type Session } from './switcher';
 const rows: Session[] = ['a', 'b', 'c'].map(id => ({ id, projectId: 'p', title: `Session ${id}`, project: 'Project', status: 'idle' }));
 let abort: AbortController;
-beforeEach(() => { abort = new AbortController(); vi.stubGlobal("localStorage", window.localStorage); localStorage.clear(); history.replaceState(null, '', '/threads/a'); });
+// Node's built-in localStorage is undefined without --localstorage-file and shadows jsdom's.
+function memoryStorage() { const m = new Map<string, string>(); return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, String(v)), removeItem: (k: string) => void m.delete(k), clear: () => m.clear() }; }
+beforeEach(() => { abort = new AbortController(); vi.stubGlobal("localStorage", memoryStorage()); localStorage.clear(); history.replaceState(null, '', '/threads/a'); });
 afterEach(() => { abort.abort(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
 function setup(load = vi.fn(async () => rows)) { const navigate = vi.fn(); return { ...mountSwitcher({ signal: abort.signal, load, navigate }), navigate }; }
 function key(type: string, key: string, modifiers = {}) { window.dispatchEvent(new KeyboardEvent(type, { key, bubbles: true, cancelable: true, ...modifiers })); }
@@ -109,4 +111,24 @@ it('changes layout without losing selection or held-modifier commit', async () =
  key('keydown', 'ArrowDown', { metaKey: true }); key('keyup', 'Meta');
  expect(c.navigate).toHaveBeenCalledExactlyOnceWith(rows[2]);
  expect(document.querySelector('.sessions-switcher-exit')?.getAttribute('data-layout')).toBe('vertical');
+});
+const view = { left: 0, top: 0, right: 1400, bottom: 900 };
+it('keeps the full viewport without a visible Browser tab', () => {
+ expect(freeArea(view, [])).toBeNull(); expect(freeArea(view, [{ left: 2000, top: 0, right: 2400, bottom: 900 }])).toBeNull();
+});
+it('uses the largest band no Browser tab covers, including between two Browser tabs', () => {
+ expect(freeArea(view, [{ left: 900, top: 40, right: 1400, bottom: 900 }])).toEqual({ left: 0, top: 0, right: 900, bottom: 900 });
+ expect(freeArea(view, [{ left: 0, top: 0, right: 400, bottom: 900 }, { left: 1000, top: 0, right: 1400, bottom: 900 }])).toEqual({ left: 400, top: 0, right: 1000, bottom: 900 });
+ expect(freeArea(view, [{ left: 300, top: 500, right: 1400, bottom: 900 }])).toEqual({ left: 0, top: 0, right: 1400, bottom: 500 });
+});
+it('falls back to the full viewport when no free band is large enough', () => {
+ expect(freeArea(view, [{ left: 200, top: 0, right: 1400, bottom: 900 }])).toBeNull();
+});
+it('positions the overlay beside a visible Browser tab and restores full width without it', async () => {
+ const browser = document.createElement('div'); browser.dataset.appBrowser = ''; document.body.append(browser);
+ vi.spyOn(browser, 'getBoundingClientRect').mockReturnValue({ left: 700, top: 0, right: window.innerWidth, bottom: window.innerHeight } as DOMRect);
+ const c = setup(); await c.open(true);
+ expect(document.querySelector<HTMLElement>('.sessions-switcher')?.style.inset).toBe(`0px ${window.innerWidth - 700}px 0px 0px`);
+ key('keydown', 'Escape'); browser.remove(); await c.open(true);
+ expect(document.querySelector<HTMLElement>('.sessions-switcher')?.style.inset).toBe('');
 });
