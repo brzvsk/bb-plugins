@@ -2,6 +2,10 @@ import { useMemo } from "react";
 import { useAtomValue } from "jotai";
 import { sidebarThreadLifecyclesAtom } from "../preferences/atoms.js";
 import {
+  filterSidebarThreadsState,
+  threadSearchQueryAtom,
+} from "../search/thread-search.js";
+import {
   experimental_useSidebarThreads,
   type PluginSidebarProject,
   type PluginSidebarSection,
@@ -189,9 +193,14 @@ export function useSidebarProjectName(
 
 export function useSidebarData() {
   const lifecycles = useAtomValue(sidebarThreadLifecyclesAtom);
-  const state = experimental_useSidebarThreads({
+  const query = useAtomValue(threadSearchQueryAtom);
+  const unfiltered = experimental_useSidebarThreads({
     experimental_lifecycles: lifecycles,
   });
+  const state = useMemo(
+    () => filterSidebarThreadsState(unfiltered, query),
+    [unfiltered, query],
+  );
   return useMemo(
     () => ({ ...getSidebarData(state), archived: state.experimental_archived }),
     [state],

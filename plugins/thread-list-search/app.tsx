@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { PreferencesSync } from "./app/preferences/PreferencesSync.js";
 import { ProjectList } from "./app/list/ProjectList.js";
 import { useSidebarThreadReveal } from "./app/list/useSidebarThreadReveal.js";
-import { moveThreadAction } from "./app/rows/moveThreadAction.js";
+import { ThreadSearchBar } from "./app/search/ThreadSearchBar.js";
 
 function ThreadList({
   activeThreadId,
@@ -16,6 +16,7 @@ function ThreadList({
     <CompactViewportOverrideProvider isCompactViewport={isCompactViewport}>
       <TooltipProvider>
         <PreferencesSync />
+        <ThreadSearchBar />
         <ProjectList
           activeThreadId={activeThreadId}
           onProjectSelect={onNavigate}
@@ -27,11 +28,12 @@ function ThreadList({
 
 export default definePluginApp((app) => {
   app.slots.experimental_threadList({
-    id: "thread-list",
-    title: "Thread list",
+    id: "thread-list-search",
+    title: "Thread list with search",
     description:
-      "Pinned threads, custom sections, projects, machines, and nested threads.",
+      "bb's thread list with a title search and an Include archived toggle.",
     component: ThreadList,
   });
-  app.slots.experimental_threadAction(moveThreadAction);
+  // bb's Thread list plugin stays enabled as the owner of layout preferences
+  // and already registers the Move action, so it is not registered twice.
 });

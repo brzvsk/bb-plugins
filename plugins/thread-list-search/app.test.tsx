@@ -330,17 +330,25 @@ describe("thread-list plugin", () => {
   });
 
   it("keys its slot and preferences mirror by its own plugin id", async () => {
-    window.localStorage.clear();
-    expect(registration.id).toBe("thread-list");
-    renderList({ organizationMode: "machine" }, { pluginId: "thread-list" });
+    const storage = new Map<string, string>();
+    setPreferencesMirrorStorageForTest({
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => void storage.set(key, value),
+      removeItem: (key: string) => void storage.delete(key),
+    } as Storage);
+    expect(registration.id).toBe("thread-list-search");
+    renderList(
+      { organizationMode: "machine" },
+      { pluginId: "thread-list-search" },
+    );
 
     await screen.findByText("Pinned thread");
-    expect(
-      JSON.parse(
-        window.localStorage.getItem("bb.thread-list.preferences.v1") ?? "{}",
-      ).organizationMode,
-    ).toBe("machine");
-    window.localStorage.clear();
+    await waitFor(() =>
+      expect(
+        JSON.parse(storage.get("bb.thread-list-search.preferences.v1") ?? "{}")
+          .organizationMode,
+      ).toBe("machine"),
+    );
   });
 
   it.each([true, false])(
