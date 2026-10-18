@@ -1,0 +1,45 @@
+{
+  "name": "bb-plugin-browser-gestures",
+  "version": "0.1.0",
+  "description": "Two-finger trackpad swipes go back and forward in the BB desktop browser.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bb": ">=0.46.1",
+    "bbPluginSdk": ">=0.6.49 <0.7.0"
+  },
+  "bb": {
+    "name": "Browser Gestures",
+    "description": "Swipe two fingers on the trackpad to go back or forward in the BB desktop browser, with a Chrome-style arrow that commits when you lift your fingers.",
+    "branding": {
+      "icon": "./assets/icon.svg"
+    },
+    "server": "./server.ts",
+    "app": "./app.tsx",
+    "skills": []
+  },
+  "files": [
+    "app.tsx",
+    "page-script.ts",
+    "server.ts",
+    "assets/",
+    "README.md",
+    "PLUGIN_OVERVIEW.md",
+    "LICENSE",
+    "dist/app.js",
+    "dist/app.css",
+    "dist/app.meta.json",
+    "dist/server.js",
+    "dist/server.meta.json"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "bb plugin build .",
+    "test": "node --test gesture.test.mjs"
+  },
+  "devDependencies": {
+    "@get-bb/plugin-sdk": "0.6.49",
+    "typescript": "5.9.3",
+    "@types/react": "19.2.2"
+  }
+}
