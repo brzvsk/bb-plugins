@@ -70,6 +70,11 @@ export function mountSwitcher(options: {
       const detail = document.createElement('span'); detail.className = 'sessions-switcher-detail'; detail.textContent = row.project;
       const status = document.createElement('span'); status.className = 'sessions-switcher-status'; status.dataset.status = row.status; status.title = row.status;
       copy.append(title, detail); button.append(number, copy, status);
+      // Pointer movement selects without navigating. A stationary cursor must
+      // not steal the keyboard selection when the overlay first appears.
+      button.addEventListener('pointermove', event => {
+        if (event.pointerType !== 'touch' && index !== i) select(i - index);
+      });
       button.addEventListener('click', () => { index = i; commit(); }); panel.append(button);
     });
     const footer = document.createElement('div'); footer.className = 'sessions-switcher-footer';

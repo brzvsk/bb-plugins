@@ -37,3 +37,22 @@ it('stores bounded deduplicated visit history and tolerates malformed storage', 
  localStorage.setItem('sessions-switcher:recent:v1', '{'); expect(readHistory()).toEqual([]);
  visit('b'); visit('a'); visit('b'); expect(readHistory()).toEqual(['b', 'a']);
 });
+
+it('hover selects the final row and modifier release opens exactly that session', async () => {
+ const c = setup(); key('keydown', '`', { metaKey: true }); await c.open();
+ const buttons = document.querySelectorAll('[role=option]');
+ buttons[2].dispatchEvent(new MouseEvent('pointermove', { bubbles: true }));
+ buttons[0].dispatchEvent(new MouseEvent('pointermove', { bubbles: true }));
+ expect(document.querySelector('[aria-selected=true]')?.textContent).toContain('Session a');
+ expect(document.querySelector('[role=listbox]')?.getAttribute('aria-activedescendant')).toBe('session-choice-0');
+ expect(c.navigate).not.toHaveBeenCalled();
+ key('keyup', 'Meta'); expect(c.navigate).toHaveBeenCalledExactlyOnceWith(rows[0]);
+});
+it('stationary hover does not steal keyboard selection and Escape cancels pointer selection', async () => {
+ const c = setup(); key('keydown', '`', { metaKey: true }); await c.open();
+ const row = document.querySelectorAll('[role=option]')[2];
+ row.dispatchEvent(new MouseEvent('pointerenter'));
+ expect(document.querySelector('[aria-selected=true]')?.textContent).toContain('Session b');
+ row.dispatchEvent(new MouseEvent('pointermove', { bubbles: true }));
+ key('keydown', 'Escape'); key('keyup', 'Meta'); expect(c.navigate).not.toHaveBeenCalled();
+});
