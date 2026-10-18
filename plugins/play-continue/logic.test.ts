@@ -43,11 +43,11 @@ function composerDom(running: boolean, disabled = true) {
   document.body.innerHTML = `
     <div data-promptbox>
       <div contenteditable="true"></div>
-      <div data-promptbox-submit-group>
+      <div data-promptbox-submit-group><div data-promptbox-send-menu>
         ${running
           ? '<button data-promptbox-submit-action aria-label="Stop run" class="stop"><svg></svg></button>'
           : `<button data-promptbox-submit-action aria-label="Submit" class="send" ${disabled ? 'disabled' : ''}><svg></svg></button>`}
-      </div>
+      </div></div>
     </div>`;
   return document.querySelector('[data-promptbox]')!;
 }
@@ -145,6 +145,10 @@ describe('playButton', () => {
     const button = root.querySelector<HTMLButtonElement>('[data-play-continue]')!;
     expect(send.style.display).toBe('none');
     expect(button.className).toBe('send');
+    expect(button.style.padding).toBe('0px');
+    expect(button.style.marginLeft).toBe('0px');
+    const menu = root.querySelector<HTMLElement>('[data-promptbox-send-menu]')!;
+    expect(menu.style.opacity).toBe('1');
     expect(button.previousElementSibling).toBe(send);
     button.click();
     expect(click).toHaveBeenCalledOnce();
@@ -152,6 +156,7 @@ describe('playButton', () => {
     play.sync(root, true, false);
     expect(root.querySelector('[data-play-continue]')).toBeNull();
     expect(send.style.display).toBe('');
+    expect(menu.style.opacity).toBe('');
   });
   it('never hides Stop or shows when ineligible', () => {
     const play = playButton(() => {});

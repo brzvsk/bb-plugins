@@ -135,10 +135,12 @@ export function playButton(onClick: () => void): {
 } {
   let play: HTMLButtonElement | null = null;
   let native: HTMLButtonElement | null = null;
+  let menu: HTMLElement | null = null;
   const restore = () => {
     play?.remove();
     if (native) native.style.display = '';
-    native = null;
+    if (menu) menu.style.opacity = '';
+    native = menu = null;
   };
   const sync = (root: Element | null, show: boolean, busy: boolean) => {
     const target = root?.querySelector<HTMLButtonElement>(`${SUBMIT}:not([data-play-continue])`);
@@ -146,8 +148,11 @@ export function playButton(onClick: () => void): {
     if (native !== target) {
       restore();
       native = target;
+      // The send-menu pill dims itself while Send is disabled.
+      menu = target.closest<HTMLElement>('[data-promptbox-send-menu]');
     }
     if (target.style.display !== 'none') target.style.display = 'none';
+    if (menu && menu.style.opacity !== '1') menu.style.opacity = '1';
     if (!play) {
       play = target.ownerDocument.createElement('button');
       play.type = 'button';
@@ -155,6 +160,9 @@ export function playButton(onClick: () => void): {
       play.innerHTML = PLAY_ICON;
       play.title = 'Continue the interrupted turn';
       play.setAttribute('aria-label', 'Continue');
+      // The pill drops Send's margin by its data attribute, which Play lacks;
+      // keep Play square at Send's size.
+      play.style.cssText = 'margin-left:0;aspect-ratio:1/1;padding:0;justify-content:center;';
       play.addEventListener('click', onClick);
     }
     if (play.className !== target.className) play.className = target.className;
