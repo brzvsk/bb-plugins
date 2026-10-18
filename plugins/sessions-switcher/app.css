@@ -22,5 +22,9 @@
 
 [data-layout=vertical] .sessions-switcher-panel { width: min(480px, 100%); }
 [data-layout=vertical] .sessions-switcher-cards { flex-direction: column; max-height: calc(85cqh - 90px); overflow-x: hidden; overflow-y: auto; }
-[data-layout=vertical] .sessions-switcher-panel button { flex: 0 0 auto; width: 100%; height: auto; gap: 4px; padding: 10px 12px; }
+[data-layout=vertical] .sessions-switcher-panel button { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; flex: 0 0 auto; width: 100%; height: auto; gap: 4px 12px; padding: 10px 12px; }
+[data-layout=vertical] .sessions-switcher-meta { display: contents; }
+[data-layout=vertical] .sessions-switcher-title { grid-area: 1 / 1; }
+[data-layout=vertical] .sessions-switcher-status { grid-area: 1 / 2; margin-top: 1px; }
+[data-layout=vertical] .sessions-switcher-detail { grid-area: 2 / 1 / 3 / 3; }
 [data-layout=vertical] .sessions-switcher-title { -webkit-line-clamp: 2; }
