@@ -4,14 +4,14 @@
 .sessions-switcher-panel { width: max-content; max-width: 100%; max-height: 85cqh; overflow: auto; padding: 14px; border-radius: 20px; border: 1px solid color-mix(in srgb, currentColor 16%, transparent); background: var(--background, #18181b); color: var(--foreground, #fafafa); box-shadow: 0 24px 90px #0005; outline: none; font: 13px/1.5 system-ui, sans-serif; }
 .sessions-switcher > .sessions-switcher-panel { animation: sessions-scale-in 120ms ease-out both; }
 .sessions-switcher-cards { display: flex; gap: 10px; max-width: min(1280px, calc(100cqw - 30px)); overflow-x: auto; padding: 3px; overscroll-behavior-x: contain; scrollbar-width: thin; }
-.sessions-switcher-panel button { position: relative; display: flex; flex-direction: column; align-items: flex-start; flex: 0 0 172px; min-width: 0; height: 182px; gap: 18px; padding: 18px 16px 14px; border: 1px solid color-mix(in srgb, currentColor 9%, transparent); border-radius: 13px; background: color-mix(in srgb, currentColor 3%, transparent); color: inherit; text-align: left; cursor: pointer; transition: background-color 80ms ease-out, border-color 80ms ease-out; }
+.sessions-switcher-panel button { position: relative; display: flex; flex-direction: column; justify-content: space-between; flex: 0 0 172px; min-width: 0; height: 112px; gap: 10px; padding: 14px 14px 12px; border: 1px solid color-mix(in srgb, currentColor 9%, transparent); border-radius: 13px; background: color-mix(in srgb, currentColor 3%, transparent); color: inherit; text-align: left; cursor: pointer; transition: background-color 80ms ease-out, border-color 80ms ease-out; }
 .sessions-switcher-panel button[aria-selected=true] { background: color-mix(in srgb, currentColor 11%, transparent); border-color: color-mix(in srgb, currentColor 55%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 14%, transparent); }
-.sessions-switcher-provider { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; flex-shrink: 0; }
-.sessions-switcher-provider > * { width: 28px; height: 28px; }
-.sessions-switcher-copy { display: flex; flex: 1; width: 100%; min-height: 0; min-width: 0; flex-direction: column; gap: 8px; }
+.sessions-switcher-provider { display: inline-flex; vertical-align: -2px; width: 14px; height: 14px; margin-right: 6px; }
+.sessions-switcher-provider > * { width: 14px; height: 14px; }
+.sessions-switcher-meta { display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; }
 .sessions-switcher-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; overflow-wrap: anywhere; font-size: 13px; line-height: 1.4; font-weight: 500; }
-.sessions-switcher-detail { margin-top: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; opacity: .5; }
-.sessions-switcher-status { position: absolute; top: 18px; right: 14px; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; }
+.sessions-switcher-detail { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; opacity: .5; }
+.sessions-switcher-status { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 16px; height: 16px; }
 .sessions-switcher-footer { padding: 13px 3px 0; font-size: 11px; opacity: .45; }
 .sessions-switcher-panel p { padding: 12px; }
 @keyframes sessions-fade-in { from { opacity: 0; } to { opacity: 1; } }
@@ -22,9 +22,5 @@
 
 [data-layout=vertical] .sessions-switcher-panel { width: min(480px, 100%); }
 [data-layout=vertical] .sessions-switcher-cards { flex-direction: column; max-height: calc(85cqh - 90px); overflow-x: hidden; overflow-y: auto; }
-[data-layout=vertical] .sessions-switcher-panel button { flex: 0 0 auto; width: 100%; height: auto; min-height: 64px; flex-direction: row; align-items: center; gap: 12px; padding: 12px; }
-[data-layout=vertical] .sessions-switcher-copy { gap: 3px; }
+[data-layout=vertical] .sessions-switcher-panel button { flex: 0 0 auto; width: 100%; height: auto; gap: 4px; padding: 10px 12px; }
 [data-layout=vertical] .sessions-switcher-title { -webkit-line-clamp: 2; }
-[data-layout=vertical] .sessions-switcher-provider { width: 24px; height: 24px; }
-[data-layout=vertical] .sessions-switcher-provider > * { width: 22px; height: 22px; }
-[data-layout=vertical] .sessions-switcher-status { position: static; flex-shrink: 0; }

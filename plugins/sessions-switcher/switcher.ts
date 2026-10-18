@@ -123,11 +123,12 @@ export function mountSwitcher(options: {
       const button = document.createElement('button'); button.type = 'button'; button.tabIndex = -1;
       button.id = `session-choice-${i}`; button.setAttribute('role', 'option');
       const provider = document.createElement('span'); provider.className = 'sessions-switcher-provider';
-      const copy = document.createElement('span'); copy.className = 'sessions-switcher-copy';
-      const title = document.createElement('span'); title.className = 'sessions-switcher-title'; title.textContent = row.title; button.title = row.title;
+      const title = document.createElement('span'); title.className = 'sessions-switcher-title'; button.title = row.title;
+      const name = document.createElement('span'); name.textContent = row.title; title.append(...(icons ? [provider] : []), name);
+      const meta = document.createElement('span'); meta.className = 'sessions-switcher-meta';
       const detail = document.createElement('span'); detail.className = 'sessions-switcher-detail'; detail.textContent = row.project;
       const status = document.createElement('span'); status.className = 'sessions-switcher-status'; statusTargets.push({ id: row.id, element: status, providerElement: icons ? provider : undefined });
-      copy.append(title, detail); button.append(...(icons ? [provider] : []), copy, status);
+      meta.append(detail, status); button.append(title, meta);
       // Pointer movement selects without navigating. A stationary cursor must
       // not steal the keyboard selection when the overlay first appears.
       button.addEventListener('pointermove', event => {
