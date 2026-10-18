@@ -1,6 +1,6 @@
 {
   "name": "bb-plugin-new-thread-layout",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Place the New thread composer in the lower middle of the screen.",
   "license": "MIT",
   "private": true,
@@ -11,7 +11,7 @@
   },
   "bb": {
     "name": "New Thread Layout",
-    "description": "Moves the New thread composer to the lower middle of the screen under a time-of-day greeting and a Working on project picker.",
+    "description": "Moves the New thread composer to the lower middle of the screen under a "Working on <project>" picker.",
     "branding": {
       "icon": "PanelBottom"
     },

@@ -7,7 +7,7 @@ const trigger = "[data-promptbox-project-control]";
 
 const css = `
 .ntl-heading {
-  margin: max(2rem, calc(58vh - 140px - 7.5rem)) 0 2rem;
+  margin: max(2rem, calc(58vh - 140px - 4.5rem)) 0 1.75rem;
   padding: 0 0.25rem;
   font-size: 2rem;
   line-height: 1.25;
@@ -43,31 +43,6 @@ const folderIcon =
   '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9' +
   'A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>';
 
-const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
-export function greeting(now: Date): string {
-  const day = now.getDay();
-  const name = days[day]!;
-  const hour = now.getHours();
-  const weekend = day === 0 || day === 6;
-  if (hour < 5) return weekend ? `Late ${name} night` : "Burning the midnight oil";
-  if (hour < 12) {
-    if (day === 1) return "Good morning. Fresh week";
-    if (day === 5) return "Good morning. It's Friday";
-    return weekend ? `Slow ${name} morning` : "Good morning";
-  }
-  if (hour < 17) {
-    if (day === 5 || weekend) return `${name} afternoon`;
-    return "Good afternoon";
-  }
-  if (hour < 22) {
-    if (day === 5) return "Friday evening";
-    if (day === 0) return "Sunday evening. Week ahead";
-    return weekend ? `${name} evening` : "Good evening";
-  }
-  return weekend ? `Late ${name} night` : "Working late";
-}
-
 export default definePluginApp(app => {
   app.contentScripts.register({
     id: "new-thread-layout",
@@ -79,9 +54,7 @@ export default definePluginApp(app => {
 
       const heading = document.createElement("header");
       heading.className = "ntl-heading";
-      const title = document.createElement("h1");
-      title.className = "ntl-line";
-      const sub = document.createElement("p");
+      const sub = document.createElement("h1");
       sub.className = "ntl-line ntl-sub";
       const project = document.createElement("button");
       project.type = "button";
@@ -91,30 +64,28 @@ export default definePluginApp(app => {
       project.append(projectName);
       const lead = document.createTextNode("");
       sub.append(lead, project);
-      heading.append(title, sub);
+      heading.append(sub);
 
       let target: HTMLButtonElement | null = null;
       let restore: (() => void) | null = null;
       let frame = 0;
 
-      // Shift the hidden native trigger onto the heading label so BB's own
-      // project popover anchors under the heading, then put it back on close.
+      // BB's project popover anchors to its trigger's bounding rect. While it
+      // is open from the heading, report the heading label's rect instead;
+      // the native chip itself stays visible and untouched.
       const open = () => {
         if (!target || target.disabled || restore) return;
         const native = target;
-        const from = native.getBoundingClientRect();
-        const to = project.getBoundingClientRect();
-        const dx = to.left - from.left;
-        const dy = to.bottom - from.bottom;
-        native.style.transform = `translate(${dx}px, ${dy}px)`;
-        native.style.opacity = "0";
+        native.getBoundingClientRect = () => {
+          const to = project.getBoundingClientRect();
+          return new DOMRect(to.left, to.top, to.width, to.height);
+        };
         const watcher = new MutationObserver(() => {
           if (native.getAttribute("data-state") !== "open") restore?.();
         });
         restore = () => {
           watcher.disconnect();
-          native.style.transform = "";
-          native.style.opacity = "";
+          delete (native as { getBoundingClientRect?: unknown }).getBoundingClientRect;
           restore = null;
         };
         watcher.observe(native, { attributes: true, attributeFilter: ["data-state"] });
@@ -136,8 +107,6 @@ export default definePluginApp(app => {
           return;
         }
         if (host.firstElementChild !== heading) host.prepend(heading);
-        const text = greeting(new Date());
-        if (title.textContent !== text) title.textContent = text;
         target = document.querySelector<HTMLButtonElement>(`${panel} ${trigger}`);
         const native = target?.querySelector("[data-promptbox-full-label]")?.textContent?.trim();
         const none = !native || native === "No project";
@@ -152,12 +121,10 @@ export default definePluginApp(app => {
       };
       const observer = new MutationObserver(schedule);
       observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-      const clock = setInterval(schedule, 60_000);
       sync();
 
       return () => {
         observer.disconnect();
-        clearInterval(clock);
         cancelAnimationFrame(frame);
         restore?.();
         project.removeEventListener("click", open);
