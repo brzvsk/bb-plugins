@@ -1,5 +1,5 @@
 export type Session = { id: string; projectId: string; title: string; project: string; status: string };
-export type StatusTarget = { id: string; element: HTMLElement };
+export type StatusTarget = { id: string; element: HTMLElement; providerElement?: HTMLElement };
 export type HeldKey = 'Meta' | 'Control' | 'Alt';
 const STORE = 'sessions-switcher:recent:v1';
 export function readHistory(): string[] {
@@ -66,12 +66,12 @@ export function mountSwitcher(options: {
     rows.forEach((row, i) => {
       const button = document.createElement('button'); button.type = 'button'; button.tabIndex = -1;
       button.id = `session-choice-${i}`; button.setAttribute('role', 'option');
-      const number = document.createElement('span'); number.className = 'sessions-switcher-number'; number.textContent = String(i + 1);
+      const provider = document.createElement('span'); provider.className = 'sessions-switcher-provider';
       const copy = document.createElement('span'); copy.className = 'sessions-switcher-copy';
       const title = document.createElement('span'); title.className = 'sessions-switcher-title'; title.textContent = row.title;
       const detail = document.createElement('span'); detail.className = 'sessions-switcher-detail'; detail.textContent = row.project;
-      const status = document.createElement('span'); status.className = 'sessions-switcher-status'; statusTargets.push({ id: row.id, element: status });
-      copy.append(title, detail); button.append(number, copy, status);
+      const status = document.createElement('span'); status.className = 'sessions-switcher-status'; statusTargets.push({ id: row.id, element: status, providerElement: provider });
+      copy.append(title, detail); button.append(provider, copy, status);
       // Pointer movement selects without navigating. A stationary cursor must
       // not steal the keyboard selection when the overlay first appears.
       button.addEventListener('pointermove', event => {

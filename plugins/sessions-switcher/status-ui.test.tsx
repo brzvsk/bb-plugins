@@ -5,6 +5,8 @@ import { expect, it, vi } from 'vitest';
 const live = vi.hoisted(() => ({ threads: [{ id: 'a', indicator: 'runtime' }], draft: false, rowStatus: null as object | null }));
 vi.mock('@get-bb/plugin-sdk/app', () => ({
  experimental_useSidebarThreads: () => ({ threads: live.threads }),
+ experimental_useProviders: () => ({ providers: [] }),
+ experimental_ProviderIcon: ({ provider }: any) => <span data-provider={provider.id} />,
  useSidebarThreadDraft: () => ({ hasUnsubmittedDraft: live.draft }),
  useSidebarThreadRowStatus: () => live.rowStatus,
  experimental_ThreadStatusGlyph: ({ indicator, rowStatus }: any) => <span data-host-glyph={indicator} data-row-status={rowStatus?.label} />,

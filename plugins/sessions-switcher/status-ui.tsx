@@ -1,5 +1,7 @@
 import {
   experimental_ThreadStatusGlyph as ThreadStatusGlyph,
+  experimental_ProviderIcon as ProviderIcon,
+  experimental_useProviders as useProviders,
   experimental_useSidebarThreads as useSidebarThreads,
   useSidebarThreadDraft,
   useSidebarThreadRowStatus,
@@ -24,9 +26,20 @@ function Status({ id, indicator }: { id: string; indicator: PluginSidebarThreadI
 function LiveStatuses({ targets }: { targets: readonly StatusTarget[] }) {
   const { threads } = useSidebarThreads();
   const byId = new Map(threads.map(thread => [thread.id, thread]));
-  return <>{targets.map(({ id, element }) => createPortal(
-    <Status id={id} indicator={byId.get(id)?.indicator ?? 'none'} />, element, id,
-  ))}</>;
+  const { providers } = useProviders();
+  const providerById = new Map(providers.map(provider => [provider.id, provider]));
+  return <>{targets.flatMap(({ id, element, providerElement }) => {
+    const thread = byId.get(id);
+    const provider = providerById.get(thread?.providerId ?? '');
+    return [
+      createPortal(<Status id={id} indicator={thread?.indicator ?? 'none'} />, element, `${id}:status`),
+      providerElement ? createPortal(
+        <ProviderIcon providerKind="agent" provider={provider ?? { id: thread?.providerId ?? 'unknown' }}
+          className="size-4" aria-label={provider?.displayName ?? thread?.providerId ?? 'Agent provider'} />,
+        providerElement, `${id}:provider`,
+      ) : null,
+    ];
+  })}</>;
 }
 export function createStatusBridge() {
   let targets: readonly StatusTarget[] = [];
