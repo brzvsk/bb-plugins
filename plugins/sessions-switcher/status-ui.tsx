@@ -8,6 +8,7 @@ import {
 import { useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import type { StatusTarget } from './switcher';
+import { CardTitle } from './components/ui/card';
 
 // The host already resolves unread, runtime, pending input and queued work.
 // Only composer drafts are client-local and need the same overlay as the sidebar.
@@ -29,15 +30,18 @@ function LiveStatuses({ targets }: { targets: readonly StatusTarget[] }) {
   ))}</>;
 }
 export function createStatusBridge() {
-  let targets: readonly StatusTarget[] = [];
+  let state: { targets: readonly StatusTarget[]; heading: HTMLElement | null } = { targets: [], heading: null };
   const listeners = new Set<() => void>();
   const subscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
-  const snapshot = () => targets;
+  const snapshot = () => state;
   return {
-    setTargets(next: readonly StatusTarget[]) { targets = next; listeners.forEach(listener => listener()); },
+    setTargets(next: readonly StatusTarget[], heading: HTMLElement | null = null) { state = { targets: next, heading }; listeners.forEach(listener => listener()); },
     Component() {
       const current = useSyncExternalStore(subscribe, snapshot);
-      return current.length ? <LiveStatuses targets={current} /> : null;
+      return <>
+        {current.heading && createPortal(<CardTitle className="text-base" role="heading" aria-level={2}>Sessions’ switcher</CardTitle>, current.heading)}
+        {current.targets.length > 0 && <LiveStatuses targets={current.targets} />}
+      </>;
     },
   };
 }

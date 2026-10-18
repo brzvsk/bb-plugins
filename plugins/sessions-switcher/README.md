@@ -23,3 +23,5 @@ Node 25's experimental global Web Storage can conflict with jsdom. On that Node 
 Live checks: quick Cmd+backtick twice toggles between two sessions; hold/repeat/release cycles; Escape cancels; rebind in Keyboard then verify the new combination; disable/reload leaves no overlay or stale listeners.
 
 Uses the SDK's experimental header slot for router access; compose/settings routes fall back to a sidebar link or canonical URL. Shortcut scope follows BB; embedded terminals and browsers can reserve keys. No global macOS keyboard preferences are changed.
+
+The heading uses `CardTitle` vendored from BB’s desktop-v0.46.1 component registry (`components/ui/card.tsx`, `lib/utils.ts`).

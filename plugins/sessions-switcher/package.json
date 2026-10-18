@@ -8,8 +8,8 @@
     "bbPluginSdk": ">=0.6.49 <0.7.0"
   },
   "bb": {
-    "name": "Sessions\u2019 switcher (like Alt+Tab)",
-    "description": "Hold, cycle and release to switch recent sessions. No emoji markers; rebind in Settings \u2192 Keyboard.",
+    "name": "Sessions’ switcher (like Alt+Tab)",
+    "description": "Hold, cycle and release to switch recent sessions. No emoji markers; rebind in Settings → Keyboard.",
     "branding": {
       "icon": "Layers"
     },
@@ -25,17 +25,19 @@
     "build": "bb plugin build ."
   },
   "dependencies": {
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.7.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
     "@get-bb/plugin-sdk": "0.6.49",
-    "typescript": "^5.9.3",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "jsdom": "^26.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "vitest": "^3.2.4",
-    "jsdom": "^26.1.0"
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   }
 }
