@@ -1,0 +1,53 @@
+{
+  "name": "bb-plugin-pinned-project-line",
+  "version": "0.1.0",
+  "description": "Show each pinned thread's project on a second line in the BB sidebar.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bb": ">=0.46.1",
+    "bbPluginSdk": ">=0.6.49 <0.7.0"
+  },
+  "bb": {
+    "name": "Pinned Project Line",
+    "description": "Pinned threads show their project name under the title, in a smaller second line.",
+    "branding": {
+      "icon": "Pin"
+    },
+    "server": "./server.ts",
+    "app": "./app.tsx",
+    "skills": [
+      "skills"
+    ]
+  },
+  "files": [
+    "app.tsx",
+    "app.css",
+    "server.ts",
+    "rows.ts",
+    "skills/",
+    "README.md",
+    "LICENSE",
+    "dist/app.js",
+    "dist/app.css",
+    "dist/app.meta.json",
+    "dist/server.js",
+    "dist/server.meta.json"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "bb plugin build ."
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@get-bb/plugin-sdk": "0.6.49",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "jsdom": "^26.1.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

@@ -1,0 +1,25 @@
+[data-pinned-project-line] {
+  height: calc(var(--bb-sidebar-row-height) + 12px) !important;
+}
+
+[data-pinned-project-line] .bb-thread-title {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+/* Column flex items keep min-width: auto, which stops the title from truncating under hover actions. */
+[data-pinned-project-line] .bb-thread-title > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.pinned-project-line {
+  overflow: hidden;
+  color: color-mix(in oklab, var(--muted-foreground) 70%, transparent);
+  font-size: 11px;
+  line-height: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
