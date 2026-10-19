@@ -1,0 +1,54 @@
+{
+  "name": "bb-plugin-plan-tab",
+  "version": "0.1.0",
+  "description": "Open a pending plan review in a BB panel tab.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bb": ">=0.46.1",
+    "bbPluginSdk": ">=0.6.49 <0.7.0"
+  },
+  "bb": {
+    "name": "Plan Tab",
+    "description": "Adds an underlined Open link next to the plan file path in Plan review, opening the plan as a panel tab.",
+    "branding": {
+      "icon": "FileText"
+    },
+    "server": "./server.ts",
+    "app": "./app.tsx",
+    "skills": [
+      "skills"
+    ]
+  },
+  "files": [
+    "app.tsx",
+    "app.css",
+    "server.ts",
+    "banner.ts",
+    "skills/",
+    "README.md",
+    "LICENSE",
+    "dist/app.js",
+    "dist/app.css",
+    "dist/app.meta.json",
+    "dist/server.js",
+    "dist/server.meta.json"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "bb plugin build ."
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@get-bb/plugin-sdk": "0.6.49",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "jsdom": "^26.1.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4",
+    "react": "^19.0.0"
+  }
+}

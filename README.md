@@ -41,3 +41,7 @@ Use independent immutable tags such as `tab-close-right/v0.1.0`. A separate BB C
 ## Pinned Project Line
 
 `plugins/pinned-project-line` adds a smaller, muted second line with the project name (including its emoji) under each pinned thread in the sidebar. Local only; not published to the marketplace.
+
+## Plan Tab
+
+`plugins/plan-tab` makes the plan file path in BB's Plan review banner clickable and adds an underlined **Open** link after it; both open the plan as a panel tab while the review stays pending. Stopgap for get-bb/bb#4379. Local only; not published to the marketplace.
