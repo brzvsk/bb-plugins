@@ -45,3 +45,7 @@ Use independent immutable tags such as `tab-close-right/v0.1.0`. A separate BB C
 ## Plan Tab
 
 `plugins/plan-tab` makes the plan file path in BB's Plan review banner clickable and adds an underlined **Open** link after it; both open the plan as a panel tab while the review stays pending. Stopgap for get-bb/bb#4379. Local only; not published to the marketplace.
+
+## Browser No Drag
+
+`plugins/browser-no-drag` stops pages in the BB desktop browser from dragging the BB window through their `-webkit-app-region: drag` CSS, which makes Linear issue pages unclickable. Workaround for get-bb/bb#5862; remove it once BB ships a fix. Local only; not published to the marketplace.

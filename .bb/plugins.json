@@ -30,6 +30,10 @@
     {
       "name": "play-continue",
       "source": "./plugins/play-continue"
+    },
+    {
+      "name": "browser-no-drag",
+      "source": "./plugins/browser-no-drag"
     }
   ]
 }
