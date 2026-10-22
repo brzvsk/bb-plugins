@@ -1,7 +1,6 @@
 import { type ComponentPropsWithoutRef, type ReactNode, useEffect, useState } from "react";
 import { budgetFraction, budgetState } from "../../src/budget.js";
 import {
-  formatAgo,
   formatAmount,
   formatBudget,
   formatClock,
@@ -169,9 +168,6 @@ export function familyLine(answer: UsageAnswer): string | null {
   return `${formatAmount(family.total, family.estimated)} with ${count} child ${count === 1 ? "thread" : "threads"}`;
 }
 
-const updatedText = (answer: UsageAnswer | null, now: number): string =>
-  answer?.reportedAt == null ? "not reported yet" : `updated ${formatAgo(answer.reportedAt, now)} ago`;
-
 const meta = (report: UsageReport): string =>
   report.calls === 0
     ? "No model calls yet"
@@ -229,13 +225,12 @@ export interface BurnCardProps {
   defaultBudget: number | null;
   /** Some discount in Burn's settings is not 0. */
   discounted: boolean;
-  now: number;
   onOpenDetails: () => void;
   onCopy: () => Promise<boolean>;
 }
 
 /** The chip's popover: what the thread cost, against its budget, where it went and on which models. */
-export function BurnCard({ answer, threadId, defaultBudget, discounted, now, onOpenDetails, onCopy }: BurnCardProps): ReactNode {
+export function BurnCard({ answer, threadId, defaultBudget, discounted, onOpenDetails, onCopy }: BurnCardProps): ReactNode {
   const [editing, setEditing] = useState(false);
   const [copied, copy] = useCopied();
   const report = answer?.report ?? null;
@@ -246,16 +241,14 @@ export function BurnCard({ answer, threadId, defaultBudget, discounted, now, onO
     </div>
   ) : null;
   const points = report ? callPoints(report) : [];
-  const updated = updatedText(answer, now);
   const withChildren = answer ? familyLine(answer) : null;
   return (
     <div className="flex w-[440px] max-w-full flex-col text-xs" data-testid="burn-card">
-      <div className="flex items-center justify-between px-3 pt-2.5 text-[11.5px] text-muted-foreground">
+      <div className="flex items-center px-3 pt-2.5 text-[11.5px] text-muted-foreground">
         <span className="flex items-center gap-1.5 font-semibold text-foreground">
           <FlameIcon className="text-muted-foreground" />
           Burn
         </span>
-        <span>{updated}</span>
       </div>
       {report === null ? (
         <div className="px-3 py-2.5">

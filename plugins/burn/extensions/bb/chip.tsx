@@ -159,7 +159,6 @@ function BurnChip({ threadId, answer, placement }: { threadId: string; answer: U
           threadId={threadId}
           defaultBudget={prefs.threadBudget}
           discounted={prefs.discounted}
-          now={now}
           onOpenDetails={() => {
             setOpen(false);
             openPanelIn(navigate, null);

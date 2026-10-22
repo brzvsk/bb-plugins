@@ -301,7 +301,6 @@ describe("the chip's popover", () => {
     const text = card.getByTestId("burn-card").textContent ?? "";
     for (const part of [
       "Burn",
-      "updated 12s ago",
       "$4.82",
       "23 calls · 4 prompts · 1h 12m",
       "48% of the $10 thread budget",
@@ -333,11 +332,10 @@ describe("the chip's popover", () => {
     expect(models).toContain("claude-haiku5 calls$0.51");
   });
 
-  it("adds the child threads' cost, and says when the figures last changed wherever they come from", async () => {
+  it("adds the child threads' cost without naming where the figures came from", async () => {
     const slot = await renderChip(backend(() => answer({ source: "log", family: FAMILY })));
     const card = await openCard(slot);
     expect(card.getByTestId("with-children").textContent).toBe("$49.97 with 2 child threads");
-    expect(card.getByText(/^updated \d+s ago$/)).toBeTruthy();
     expect(card.queryByText(/from pi's log|restart/i)).toBeNull();
     expect(card.queryByTestId("estimated")).toBeNull();
   });
