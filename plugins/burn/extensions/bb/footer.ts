@@ -15,8 +15,16 @@ const CIRCLE_SELECTOR = ':scope > button[aria-label^="Context window"]';
  * circle (cortex's memory icon, Thread Spend) never makes the two move each other in a loop.
  */
 export function placeInFooter(node: HTMLElement, pane: ParentNode): boolean {
-  const group = pane.querySelector(FOOTER_SELECTOR)?.lastElementChild;
-  if (!(group instanceof HTMLElement)) {
+  const footer = pane.querySelector(FOOTER_SELECTOR);
+  if (!(footer instanceof HTMLElement)) {
+    node.remove();
+    return false;
+  }
+  const group = footer.lastElementChild;
+  // While the footer is half-rendered its only child is the left group; inserting there would put
+  // the chip beside the thread's environment instead of beside the permission picker.
+  const rightGroup = footer.children.length >= 2 || (group instanceof HTMLElement && group.querySelector(CIRCLE_SELECTOR) !== null);
+  if (!(group instanceof HTMLElement) || !rightGroup) {
     node.remove();
     return false;
   }
@@ -42,15 +50,22 @@ export function useFooterMount(anchor: HTMLElement | null): HTMLElement | null {
     for (const [name, value] of Object.entries(pluginScopeAttributes())) node.setAttribute(name, value);
     node.className = "inline-flex shrink-0 items-center";
     let frame = 0;
+    const inRightGroup = (): boolean => {
+      const footer = pane.querySelector(FOOTER_SELECTOR);
+      if (!(footer instanceof HTMLElement)) return false;
+      const group = footer.lastElementChild;
+      const rightGroup = footer.children.length >= 2 || (group instanceof HTMLElement && group.querySelector(CIRCLE_SELECTOR) !== null);
+      return rightGroup && group instanceof HTMLElement && node.parentElement === group;
+    };
     const place = (): void => {
       frame = 0;
       setMount(placeInFooter(node, pane) ? node : null);
     };
     place();
     const observer = new MutationObserver(() => {
-      // A streaming timeline changes the pane all the time: a node still in the footer costs one check,
-      // and a search runs at most once a frame.
-      if (node.isConnected && node.parentElement?.parentElement?.matches(FOOTER_SELECTOR)) return;
+      // A streaming timeline changes the pane all the time: a node still in the right group costs one
+      // check, and a search runs at most once a frame. A node in the left group must move back.
+      if (inRightGroup()) return;
       if (frame === 0) frame = requestAnimationFrame(place);
     });
     observer.observe(pane, { childList: true, subtree: true });

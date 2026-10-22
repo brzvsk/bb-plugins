@@ -43,6 +43,17 @@ describe("placeInFooter", () => {
     expect([...p.group.children]).toEqual([node, other, p.circle]);
   });
 
+  it("waits for the right group instead of inserting into the left one", () => {
+    const p = pane();
+    p.footer.removeChild(p.group);
+    const node = document.createElement("span");
+    expect(placeInFooter(node, p.pane)).toBe(false);
+    expect(node.isConnected).toBe(false);
+    p.footer.append(p.group);
+    expect(placeInFooter(node, p.pane)).toBe(true);
+    expect(node.parentElement).toBe(p.group);
+  });
+
   it("removes the node and says false when the pane has no footer", () => {
     const empty = document.createElement("div");
     const node = document.createElement("span");
@@ -72,6 +83,21 @@ describe("useFooterMount", () => {
       await new Promise((r) => requestAnimationFrame(() => r(null)));
     });
     expect(mount.parentElement).toBe(next.footer.lastElementChild);
+  });
+
+  it("moves the chip back when bb leaves it in the footer's left group", async () => {
+    const p = pane();
+    const anchor = document.createElement("span");
+    p.pane.append(anchor);
+    const { result } = renderHook(() => useFooterMount(anchor));
+    const mount = result.current as HTMLElement;
+    const left = p.footer.firstElementChild as HTMLElement;
+    left.append(mount);
+    p.group.append(document.createElement("i"));
+    await act(async () => {
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+    });
+    expect(mount.parentElement).toBe(p.group);
   });
 
   it("is null without an anchor or a pane", () => {
