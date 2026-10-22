@@ -49,3 +49,12 @@ Use independent immutable tags such as `tab-close-right/v0.1.0`. A separate BB C
 ## Browser No Drag
 
 `plugins/browser-no-drag` stops pages in the BB desktop browser from dragging the BB window through their `-webkit-app-region: drag` CSS, which makes Linear issue pages unclickable. Workaround for get-bb/bb#5862; remove it once BB ships a fix. Local only; not published to the marketplace.
+
+## Burn
+
+`plugins/burn` shows what each thread costs: a chip under the prompt box, per-prompt and per-model breakdowns, budgets, and a spend page. Fork of
+[kalindudc/burn](https://github.com/kalindudc/burn) by Kalindu De Costa, maintained here; it adds OpenCode usage from opencode's own database, DeepSeek peak-hour pricing, and token counts. MIT; see its [README](plugins/burn/README.md) and [credits](plugins/burn/README.md#credits).
+
+```sh
+bb plugin install . --plugin burn
+```

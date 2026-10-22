@@ -1,0 +1,12 @@
+/* Motion for the chip while pi works. Attribute selectors only: this file is not scoped to the plugin like its utilities. */
+@keyframes burn-pulse {
+  50% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 25%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-burn-running-dot] {
+    animation: burn-pulse 1.6s ease-in-out infinite;
+  }
+}

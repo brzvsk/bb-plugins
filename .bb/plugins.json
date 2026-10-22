@@ -34,6 +34,10 @@
     {
       "name": "browser-no-drag",
       "source": "./plugins/browser-no-drag"
+    },
+    {
+      "name": "burn",
+      "source": "./plugins/burn"
     }
   ]
 }

@@ -1,0 +1,102 @@
+{
+  "name": "bb-plugin-burn",
+  "version": "0.5.4",
+  "description": "See what each thread has cost: a pill in pi's footer and in bb's prompt-box footer, per-prompt breakdowns, budgets, and spend across threads.",
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-extension",
+    "bb-plugin",
+    "cost",
+    "usage"
+  ],
+  "license": "MIT",
+  "engines": {
+    "bb": ">=0.46",
+    "bbPluginSdk": ">=0.6.49 <0.7.0"
+  },
+  "bb": {
+    "name": "Burn",
+    "description": "See what each thread has cost, per prompt and across threads, with budgets.",
+    "branding": {
+      "icon": "./assets/icon.svg"
+    },
+    "server": "./extensions/bb/server.ts",
+    "app": "./extensions/bb/app.tsx",
+    "host": "./extensions/bb/host/entry.ts",
+    "skills": []
+  },
+  "pi": {
+    "extensions": [
+      "./extensions/pi/index.ts"
+    ]
+  },
+  "files": [
+    "src/",
+    "extensions/pi/",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit",
+    "build": "bb plugin build ."
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "peerDependenciesMeta": {
+    "@earendil-works/pi-ai": {
+      "optional": true
+    },
+    "@earendil-works/pi-coding-agent": {
+      "optional": true
+    },
+    "@earendil-works/pi-tui": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@earendil-works/pi-ai": "1.3.0",
+    "@earendil-works/pi-coding-agent": "1.3.0",
+    "@earendil-works/pi-tui": "1.3.0",
+    "@get-bb/plugin-sdk": "0.6.49",
+    "@radix-ui/react-popover": "^1.3.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "better-sqlite3": "^12.0.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cron-parser": "^5.10.2",
+    "hono": "^4.11.9",
+    "jsdom": "^29.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "sonner": "^1.7.4",
+    "tailwind-merge": "^3.4.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
+  },
+  "private": true,
+  "author": "Kalindu De Costa (https://github.com/kalindudc)",
+  "contributors": [
+    {
+      "name": "brzvsk",
+      "url": "https://github.com/brzvsk"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/brzvsk/bb-plugins.git",
+    "directory": "plugins/burn"
+  }
+}
