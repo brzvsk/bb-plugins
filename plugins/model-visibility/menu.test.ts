@@ -7,6 +7,7 @@ import {
   HIDDEN_CLASS,
   ModelVisibilityMenu,
   TRIGGER_ATTR,
+  placePanel,
 } from './menu';
 
 function model(id: string, displayName = id, routeProviderId?: string): MenuModel {
@@ -248,7 +249,7 @@ describe('model visibility menu', () => {
     expect(document.querySelectorAll(`[${CONFIGURE_ATTR}]`)).toHaveLength(0);
   });
 
-  it('creates and owns a bounded More submenu when the native one is absent', () => {
+  it('creates a native-styled More trigger and bounded submenu when the native one is absent', () => {
     document.body.innerHTML = menuMarkup();
     const clicked: string[] = [];
     clickable('beta').addEventListener('click', () => clicked.push('beta'));
@@ -256,19 +257,76 @@ describe('model visibility menu', () => {
 
     const trigger = document.querySelector<HTMLButtonElement>(`[${TRIGGER_ATTR}]`)!;
     expect(trigger).not.toBeNull();
+    expect(trigger.className).toContain('rounded-sm');
+    expect(trigger.className).toContain('gap-1');
+    expect(trigger.querySelector('svg[data-icon="ChevronRight"]')).not.toBeNull();
+    expect(trigger.textContent?.trim()).toBe('More models');
     trigger.click();
     const panel = document.querySelector<HTMLElement>('.model-visibility-more-panel')!;
     expect(panel).not.toBeNull();
+    expect(panel.getAttribute('role')).toBe('dialog');
+    expect(panel.getAttribute('data-state')).toBe('open');
+    expect(panel.className).toContain('rounded-md');
+    expect(panel.className).toContain('bg-popover');
+    expect(panel.className).toContain('shadow-md');
+    expect(panel.className).toContain('p-1');
+    expect(panel.className).toContain('w-max');
+    expect(panel.className).toContain('min-w-64');
+    expect(panel.className).toContain('max-w-80');
     expect(panel.firstElementChild?.hasAttribute(CONFIGURE_ATTR)).toBe(true);
+    const configure = panel.querySelector<HTMLButtonElement>(`[${CONFIGURE_ATTR}]`)!;
+    expect(configure.className).toContain('justify-between');
+    expect(configure.querySelector('[title]')?.getAttribute('title')).toBe('Configure...');
+    expect(configure.querySelector('svg[data-icon="Check"]')).not.toBeNull();
     expect(panel.querySelectorAll(`[${CLONE_ATTR}]`)).toHaveLength(1);
 
-    panel.querySelector<HTMLButtonElement>(`[${CONFIGURE_ATTR}]`)!.click();
+    configure.click();
     expect(onConfigure).toHaveBeenCalledTimes(1);
     panel.querySelector<HTMLButtonElement>(`[${CLONE_ATTR}]`)!.click();
     expect(clicked).toEqual(['beta']);
+    expect(document.querySelector('.model-visibility-more-panel')).toBeNull();
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     expect(document.querySelector('.model-visibility-more-panel')).toBeNull();
+  });
+
+  it('opens the native-style submenu from the keyboard and returns focus on Escape', () => {
+    document.body.innerHTML = menuMarkup();
+    start();
+    const trigger = document.querySelector<HTMLButtonElement>(`[${TRIGGER_ATTR}]`)!;
+    trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    const panel = document.querySelector<HTMLElement>('.model-visibility-more-panel')!;
+    expect(panel).not.toBeNull();
+    expect(document.activeElement).toBe(panel.querySelector('button'));
+    panel.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    expect(document.querySelector('.model-visibility-more-panel')).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('places the custom submenu on the right, flips left, and clamps vertically', () => {
+    expect(placePanel({
+      trigger: { left: 100, right: 400, top: 50 },
+      panelWidth: 256,
+      panelHeight: 200,
+      viewportWidth: 800,
+      viewportHeight: 600,
+    })).toEqual({ left: 406, top: 50, side: 'right' });
+
+    expect(placePanel({
+      trigger: { left: 450, right: 590, top: 50 },
+      panelWidth: 256,
+      panelHeight: 200,
+      viewportWidth: 600,
+      viewportHeight: 600,
+    })).toEqual({ left: 188, top: 50, side: 'left' });
+
+    expect(placePanel({
+      trigger: { left: 100, right: 400, top: 500 },
+      panelWidth: 256,
+      panelHeight: 200,
+      viewportWidth: 800,
+      viewportHeight: 600,
+    })).toEqual({ left: 406, top: 392, side: 'right' });
   });
 
   it('resolves a handoff provider tab by its normalized title and does not hide other providers', () => {

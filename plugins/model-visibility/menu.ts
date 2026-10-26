@@ -1,7 +1,6 @@
 import type { Catalog, HiddenMap, MenuModel, MenuProvider } from './contract';
 
 export const HIDDEN_CLASS = 'model-visibility-hidden';
-export const ROW_CLASS = 'model-visibility-menu-row';
 export const TRIGGER_CLASS = 'model-visibility-more-trigger';
 export const PANEL_CLASS = 'model-visibility-more-panel';
 export const CLONE_ATTR = 'data-mv-clone';
@@ -12,6 +11,11 @@ export const ACTIVE_ATTR = 'data-mv-active';
 
 const COMPACT_QUERY = '(max-width: 767px)';
 const ROW_SELECTOR = 'button[id*="-opt-"]';
+const NATIVE_TRIGGER_CLASS = 'relative flex w-full cursor-default select-none items-center gap-1 rounded-sm px-2 py-[0.3125rem] text-xs text-muted-foreground outline-none hover:bg-state-hover hover:text-foreground transition-none data-[last-hovered]:bg-state-hover data-[last-hovered]:text-foreground';
+const NATIVE_ROW_CLASS = 'relative flex w-full cursor-default select-none items-center justify-between gap-3 rounded-sm px-2 text-xs outline-none hover:bg-state-hover hover:text-foreground transition-none data-[last-hovered]:bg-state-hover data-[last-hovered]:text-foreground py-[0.3125rem] max-md:pointer-coarse:py-2';
+const NATIVE_CONTENT_CLASS = 'z-50 rounded-md border bg-popover text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 max-h-[min(20rem,var(--radix-popover-content-available-height),calc(100dvh-0.5rem))] overflow-y-auto overscroll-contain p-1 data-[state=closed]:animate-none w-max min-w-64 max-w-80';
+const CHEVRON_RIGHT_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" color="currentColor" class="size-3.5 shrink-0" data-icon="ChevronRight" data-icon-root=""><path d="M9.00005 6C9.00005 6 15 10.4189 15 12C15 13.5812 9 18 9 18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>';
+const CHECK_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" color="currentColor" class="size-4 shrink-0 max-md:pointer-coarse:size-5 text-subtle-foreground opacity-0" data-icon="Check" data-icon-root=""><path d="M5 14L8.5 17.5L19 6.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>';
 
 type RowMeta = {
   tabIndex: string | null;
@@ -149,7 +153,7 @@ function showRow(row: HTMLButtonElement): void {
 
 function findNativeMoreTrigger(root: HTMLElement): HTMLButtonElement | null {
   return Array.from(root.querySelectorAll<HTMLButtonElement>('button[aria-haspopup="menu"]'))
-    .find((button) => button.textContent?.trim() === 'More models') ?? null;
+    .find((button) => !button.hasAttribute(TRIGGER_ATTR) && button.textContent?.trim() === 'More models') ?? null;
 }
 
 function findOpenSubmenu(
@@ -184,14 +188,54 @@ function findOpenSubmenu(
 function makeConfigureButton(onConfigure: () => void): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = ROW_CLASS;
+  button.className = NATIVE_ROW_CLASS;
   button.setAttribute(CONFIGURE_ATTR, '');
-  button.textContent = 'Configure...';
+  const label = document.createElement('span');
+  label.className = 'truncate';
+  label.title = 'Configure...';
+  label.textContent = 'Configure...';
+  const gutter = document.createElement('span');
+  gutter.className = 'flex shrink-0 items-center gap-1.5';
+  gutter.innerHTML = CHECK_SVG;
+  button.append(label, gutter);
   button.addEventListener('click', () => onConfigure());
   return button;
 }
 
-function cloneRow(row: HTMLButtonElement): HTMLButtonElement {
+export interface PanelPlacement {
+  left: number;
+  top: number;
+  side: 'left' | 'right';
+}
+
+/** Match Radix's sideOffset=6, align=start placement and viewport flip. */
+export function placePanel({
+  trigger,
+  panelWidth,
+  panelHeight,
+  viewportWidth,
+  viewportHeight,
+}: {
+  trigger: { left: number; right: number; top: number };
+  panelWidth: number;
+  panelHeight: number;
+  viewportWidth: number;
+  viewportHeight: number;
+}): PanelPlacement {
+  const gap = 6;
+  const margin = 8;
+  let side: 'left' | 'right' = 'right';
+  let left = trigger.right + gap;
+  if (left + panelWidth > viewportWidth - margin) {
+    side = 'left';
+    left = trigger.left - gap - panelWidth;
+  }
+  left = Math.max(margin, Math.min(left, viewportWidth - panelWidth - margin));
+  const top = Math.max(margin, Math.min(trigger.top, viewportHeight - panelHeight - margin));
+  return { left, top, side };
+}
+
+function cloneRow(row: HTMLButtonElement, afterClick?: () => void): HTMLButtonElement {
   const clone = row.cloneNode(true) as HTMLButtonElement;
   clone.removeAttribute('id');
   clone.removeAttribute('role');
@@ -207,6 +251,7 @@ function cloneRow(row: HTMLButtonElement): HTMLButtonElement {
   clone.addEventListener('click', (event) => {
     event.preventDefault();
     row.click();
+    afterClick?.();
   });
   return clone;
 }
@@ -237,6 +282,7 @@ export class ModelVisibilityMenu {
   private ownTrigger: HTMLButtonElement | null = null;
   private ownPanel: HTMLElement | null = null;
   private panelSignature = '';
+  private panelCloseTimer = 0;
   private observer: MutationObserver | null = null;
   private frame = 0;
   private started = false;
@@ -455,12 +501,27 @@ export class ModelVisibilityMenu {
     if (this.ownTrigger?.isConnected) return;
     const trigger = document.createElement('button');
     trigger.type = 'button';
-    trigger.className = `${TRIGGER_CLASS} ${ROW_CLASS}`;
+    trigger.className = `${NATIVE_TRIGGER_CLASS} ${TRIGGER_CLASS}`;
     trigger.setAttribute(TRIGGER_ATTR, '');
     trigger.setAttribute('aria-haspopup', 'menu');
     trigger.setAttribute('aria-expanded', 'false');
-    trigger.innerHTML = '<span>More models</span><span aria-hidden="true">›</span>';
-    trigger.addEventListener('click', () => this.toggleOwnPanel(trigger));
+    trigger.innerHTML = `<span>More models</span>${CHEVRON_RIGHT_SVG}`;
+    trigger.addEventListener('click', () => this.openOwnPanel(trigger));
+    trigger.addEventListener('pointerenter', () => this.openOwnPanel(trigger));
+    trigger.addEventListener('pointerleave', () => this.scheduleOwnPanelClose());
+    trigger.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar' || event.key === 'ArrowRight') {
+        event.preventDefault();
+        this.openOwnPanel(trigger);
+        this.ownPanel?.querySelector<HTMLButtonElement>('button')?.focus();
+        return;
+      }
+      if (event.key === 'Escape' || event.key === 'ArrowLeft') {
+        event.preventDefault();
+        this.closeOwnPanel();
+        trigger.focus();
+      }
+    });
     const container = root.querySelector<HTMLElement>('[role="listbox"]')
       ?? root.querySelector<HTMLElement>('[class*="overflow-y-auto"]')
       ?? root;
@@ -468,30 +529,36 @@ export class ModelVisibilityMenu {
     this.ownTrigger = trigger;
   }
 
-  private toggleOwnPanel(trigger: HTMLButtonElement): void {
-    if (this.ownPanel) {
-      this.closeOwnPanel();
-      return;
-    }
+  private openOwnPanel(trigger: HTMLButtonElement): void {
+    if (this.ownPanel) return;
     const panel = document.createElement('div');
-    panel.className = PANEL_CLASS;
-    panel.setAttribute('role', 'menu');
+    panel.className = `${NATIVE_CONTENT_CLASS} ${PANEL_CLASS}`;
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('data-state', 'open');
+    panel.setAttribute('data-align', 'start');
+    panel.tabIndex = -1;
     panel.append(makeConfigureButton(this.onConfigure));
-    for (const row of this.hiddenRows) panel.append(cloneRow(row));
-
-    const rect = trigger.getBoundingClientRect();
+    for (const row of this.hiddenRows) panel.append(cloneRow(row, () => this.closeOwnPanel()));
     panel.style.position = 'fixed';
-    panel.style.top = `${rect.top}px`;
-    panel.style.left = `${Math.min(rect.right + 6, this.win.innerWidth - 320)}px`;
+    panel.style.maxHeight = 'min(20rem, calc(100dvh - 0.5rem))';
+    panel.style.visibility = 'hidden';
+    panel.addEventListener('pointerenter', () => this.cancelOwnPanelClose());
+    panel.addEventListener('pointerleave', () => this.scheduleOwnPanelClose());
 
-    const closeOnPointer = (event: MouseEvent) => {
+    const closeOnPointer = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (panel.contains(target) || trigger.contains(target)) return;
+      this.closeOwnPanel();
+    };
+    const closeOnFocus = (event: FocusEvent) => {
       const target = event.target;
       if (!(target instanceof Node)) return;
       if (panel.contains(target) || trigger.contains(target)) return;
       this.closeOwnPanel();
     };
     const closeOnKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      if (event.key === 'Escape' || event.key === 'ArrowLeft') {
         event.preventDefault();
         this.closeOwnPanel();
         trigger.focus();
@@ -506,12 +573,14 @@ export class ModelVisibilityMenu {
       buttons[next]?.focus();
     };
 
-    this.doc.addEventListener('mousedown', closeOnPointer, true);
+    this.doc.addEventListener('pointerdown', closeOnPointer, true);
+    this.doc.addEventListener('focusin', closeOnFocus, true);
     this.doc.addEventListener('keydown', closeOnKey, true);
     this.win.addEventListener('resize', this.closePanelListener);
     this.win.addEventListener('scroll', this.closePanelListener, true);
     this.panelCleanup = () => {
-      this.doc.removeEventListener('mousedown', closeOnPointer, true);
+      this.doc.removeEventListener('pointerdown', closeOnPointer, true);
+      this.doc.removeEventListener('focusin', closeOnFocus, true);
       this.doc.removeEventListener('keydown', closeOnKey, true);
       this.win.removeEventListener('resize', this.closePanelListener);
       this.win.removeEventListener('scroll', this.closePanelListener, true);
@@ -520,12 +589,47 @@ export class ModelVisibilityMenu {
     this.ownPanel = panel;
     this.panelSignature = [...this.hiddenRows].map((row) => row.id).join('|');
     trigger.setAttribute('aria-expanded', 'true');
+    this.positionOwnPanel(panel, trigger);
+    panel.style.visibility = '';
     panel.querySelector<HTMLButtonElement>('button')?.focus();
+  }
+
+  private positionOwnPanel(panel: HTMLElement, trigger: HTMLButtonElement): void {
+    const rect = trigger.getBoundingClientRect();
+    const placement = placePanel({
+      trigger: { left: rect.left, right: rect.right, top: rect.top },
+      panelWidth: panel.offsetWidth || 256,
+      panelHeight: panel.offsetHeight || 0,
+      viewportWidth: this.win.innerWidth,
+      viewportHeight: this.win.innerHeight,
+    });
+    panel.style.left = `${placement.left}px`;
+    panel.style.top = `${placement.top}px`;
+    panel.setAttribute('data-side', placement.side);
+  }
+
+  private cancelOwnPanelClose(): void {
+    if (this.panelCloseTimer) {
+      this.win.clearTimeout(this.panelCloseTimer);
+      this.panelCloseTimer = 0;
+    }
+  }
+
+  private scheduleOwnPanelClose(): void {
+    if (!this.ownPanel) return;
+    this.cancelOwnPanelClose();
+    this.panelCloseTimer = this.win.setTimeout(() => {
+      this.panelCloseTimer = 0;
+      if (!this.ownPanel) return;
+      if (this.ownPanel.matches(':hover') || this.ownTrigger?.matches(':hover')) return;
+      this.closeOwnPanel();
+    }, 100);
   }
 
   private closePanelListener = (): void => this.closeOwnPanel();
 
   private closeOwnPanel(): void {
+    this.cancelOwnPanelClose();
     this.panelCleanup?.();
     this.panelCleanup = null;
     this.ownPanel?.remove();
@@ -536,17 +640,13 @@ export class ModelVisibilityMenu {
 
   private renderOwnPanel(): void {
     if (!this.ownPanel) return;
-    const position = this.ownTrigger?.getBoundingClientRect();
-    if (position) {
-      this.ownPanel.style.top = `${position.top}px`;
-      this.ownPanel.style.left = `${Math.min(position.right + 6, this.win.innerWidth - 320)}px`;
-    }
+    if (this.ownTrigger) this.positionOwnPanel(this.ownPanel, this.ownTrigger);
     const signature = [...this.hiddenRows].map((row) => row.id).join('|');
     if (signature === this.panelSignature) return;
     this.panelSignature = signature;
     this.ownPanel.replaceChildren(
       makeConfigureButton(this.onConfigure),
-      ...[...this.hiddenRows].map(cloneRow),
+      ...[...this.hiddenRows].map((row) => cloneRow(row, () => this.closeOwnPanel())),
     );
   }
 
