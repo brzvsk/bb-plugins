@@ -1,8 +1,8 @@
-# Model Visibility
+# Hide Models
 
 Moves chosen model IDs out of BB's main model list and into **More models**. Hidden models stay selectable from **More models** and from the picker search. New models stay visible until you hide them.
 
-Open **Settings → Plugins → Model Visibility** (or the plugin's detail page) to choose model IDs per enabled provider. Hidden IDs are stored per provider, so a provider disabled later keeps its choices and restores them when re-enabled.
+Open **Settings → Plugins → Hide Models** (or the plugin's detail page) to choose model IDs per enabled provider. Hidden IDs are stored per provider, so a provider disabled later keeps its choices and restores them when re-enabled.
 
 **More models** starts with **Configure...**, which opens the plugin settings page.
 

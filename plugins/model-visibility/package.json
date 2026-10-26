@@ -9,7 +9,7 @@
     "bbPluginSdk": ">=0.6.49 <0.7.0"
   },
   "bb": {
-    "name": "Model Visibility",
+    "name": "Hide Models",
     "description": "Choose which model IDs stay out of the main model picker. They remain available in More models and search.",
     "branding": {
       "icon": "EyeOff"
