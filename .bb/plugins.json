@@ -38,6 +38,10 @@
     {
       "name": "burn",
       "source": "./plugins/burn"
+    },
+    {
+      "name": "model-visibility",
+      "source": "./plugins/model-visibility"
     }
   ]
 }

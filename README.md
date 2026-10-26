@@ -58,3 +58,11 @@ Use independent immutable tags such as `tab-close-right/v0.1.0`. A separate BB C
 ```sh
 bb plugin install . --plugin burn
 ```
+
+## Model Visibility
+
+`plugins/model-visibility` moves chosen model IDs out of BB's main model list into **More models**, where they stay selectable alongside search. Each enabled provider has its own hidden-ID list in the plugin settings page, and **Configure...** at the top of More models opens that page. New models stay visible until hidden. Desktop picker and handoff are supported; compact viewports fail open. Local only; not published to the marketplace.
+
+```sh
+bb plugin install . --plugin model-visibility
+```
