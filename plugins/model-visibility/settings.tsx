@@ -4,25 +4,13 @@ import {
   hiddenMapSchema,
   type Catalog,
   type HiddenMap,
+  type MenuModel,
   type MenuProvider,
 } from './contract';
 import { SETTINGS_CHANGED_EVENT } from './content';
+import { clearProvider, hideAllForProvider, providerHidden, withModel } from './settings-model';
 
 const PLUGIN_ID = 'model-visibility';
-
-function providerHidden(hidden: HiddenMap, providerId: string): Set<string> {
-  return new Set(hidden[providerId] ?? []);
-}
-
-function withModel(hidden: HiddenMap, providerId: string, modelId: string, checked: boolean): HiddenMap {
-  const ids = providerHidden(hidden, providerId);
-  if (checked) ids.add(modelId);
-  else ids.delete(modelId);
-  const next: HiddenMap = { ...hidden };
-  if (ids.size === 0) delete next[providerId];
-  else next[providerId] = [...ids];
-  return next;
-}
 
 function modelMatches(provider: MenuProvider, model: MenuProvider['models'][number], query: string): boolean {
   if (query.length === 0) return true;
@@ -108,11 +96,14 @@ export function ModelVisibilitySettings() {
     void save(withModel(hidden, providerId, modelId, checked), hidden);
   };
 
-  const clearProvider = (providerId: string) => {
+  const showAll = (providerId: string) => {
     if (saving || !hidden[providerId]?.length) return;
-    const next = { ...hidden };
-    delete next[providerId];
-    void save(next, hidden);
+    void save(clearProvider(hidden, providerId), hidden);
+  };
+
+  const hideAll = (providerId: string, models: readonly MenuModel[]) => {
+    if (saving || models.length === 0) return;
+    void save(hideAllForProvider(hidden, providerId, models), hidden);
   };
 
   return (
@@ -141,6 +132,8 @@ export function ModelVisibilitySettings() {
 
       {visibleProviders.map(({ provider, models }) => {
         const hiddenForProvider = providerHidden(hidden, provider.id);
+        const allHidden = provider.models.length > 0
+          && provider.models.every((model) => hiddenForProvider.has(model.id));
         return (
           <section className="mv-provider" key={provider.id}>
             <header className="mv-provider-header">
@@ -152,14 +145,24 @@ export function ModelVisibilitySettings() {
                     : `${hiddenForProvider.size} hidden`}
                 </p>
               </div>
-              <button
-                type="button"
-                className="mv-settings-button"
-                onClick={() => clearProvider(provider.id)}
-                disabled={saving || hiddenForProvider.size === 0}
-              >
-                Show all
-              </button>
+              <div className="mv-provider-actions">
+                <button
+                  type="button"
+                  className="mv-settings-button"
+                  onClick={() => hideAll(provider.id, provider.models)}
+                  disabled={saving || provider.models.length === 0 || provider.error !== undefined || allHidden}
+                >
+                  Hide all
+                </button>
+                <button
+                  type="button"
+                  className="mv-settings-button"
+                  onClick={() => showAll(provider.id)}
+                  disabled={saving || hiddenForProvider.size === 0}
+                >
+                  Show all
+                </button>
+              </div>
             </header>
             {provider.error ? <p className="mv-settings-error">{provider.error}</p> : null}
             <ul className="mv-model-list">
@@ -188,6 +191,10 @@ export function ModelVisibilitySettings() {
         );
       })}
       {saving ? <p className="mv-settings-muted">Saving...</p> : null}
+      <details className="mv-settings-advanced">
+        <summary>Advanced: hidden model IDs (JSON)</summary>
+        <pre>{JSON.stringify(hidden, null, 2)}</pre>
+      </details>
     </div>
   );
 }

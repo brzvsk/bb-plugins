@@ -28,6 +28,7 @@
     "menu.ts",
     "settings.tsx",
     "server.ts",
+    "settings-model.ts",
     "skills/",
     "README.md",
     "LICENSE",
