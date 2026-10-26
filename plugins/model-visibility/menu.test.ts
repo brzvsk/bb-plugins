@@ -261,11 +261,14 @@ describe('model visibility menu', () => {
     expect(trigger.className).toContain('gap-1');
     expect(trigger.querySelector('svg[data-icon="ChevronRight"]')).not.toBeNull();
     expect(trigger.textContent?.trim()).toBe('More models');
+    trigger.focus();
     trigger.click();
+    expect(document.activeElement).toBe(trigger);
     const panel = document.querySelector<HTMLElement>('.model-visibility-more-panel')!;
     expect(panel).not.toBeNull();
     expect(panel.getAttribute('role')).toBe('dialog');
     expect(panel.getAttribute('data-state')).toBe('open');
+    expect(panel.style.pointerEvents).toBe('auto');
     expect(panel.className).toContain('rounded-md');
     expect(panel.className).toContain('bg-popover');
     expect(panel.className).toContain('shadow-md');
@@ -294,9 +297,11 @@ describe('model visibility menu', () => {
     document.body.innerHTML = menuMarkup();
     start();
     const trigger = document.querySelector<HTMLButtonElement>(`[${TRIGGER_ATTR}]`)!;
-    trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    trigger.dispatchEvent(new Event('pointerenter', { bubbles: true }));
     const panel = document.querySelector<HTMLElement>('.model-visibility-more-panel')!;
     expect(panel).not.toBeNull();
+    expect(document.activeElement).not.toBe(panel.querySelector('button'));
+    trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
     expect(document.activeElement).toBe(panel.querySelector('button'));
     panel.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
     expect(document.querySelector('.model-visibility-more-panel')).toBeNull();

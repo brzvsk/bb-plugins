@@ -283,6 +283,8 @@ export class ModelVisibilityMenu {
   private ownPanel: HTMLElement | null = null;
   private panelSignature = '';
   private panelCloseTimer = 0;
+  private panelPointerMove: ((event: PointerEvent) => void) | null = null;
+  private lastPointer = { x: 0, y: 0 };
   private observer: MutationObserver | null = null;
   private frame = 0;
   private started = false;
@@ -512,8 +514,7 @@ export class ModelVisibilityMenu {
     trigger.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar' || event.key === 'ArrowRight') {
         event.preventDefault();
-        this.openOwnPanel(trigger);
-        this.ownPanel?.querySelector<HTMLButtonElement>('button')?.focus();
+        this.openOwnPanel(trigger, true);
         return;
       }
       if (event.key === 'Escape' || event.key === 'ArrowLeft') {
@@ -529,8 +530,11 @@ export class ModelVisibilityMenu {
     this.ownTrigger = trigger;
   }
 
-  private openOwnPanel(trigger: HTMLButtonElement): void {
-    if (this.ownPanel) return;
+  private openOwnPanel(trigger: HTMLButtonElement, focusFirst = false): void {
+    if (this.ownPanel) {
+      if (focusFirst) this.ownPanel.querySelector<HTMLButtonElement>('button')?.focus();
+      return;
+    }
     const panel = document.createElement('div');
     panel.className = `${NATIVE_CONTENT_CLASS} ${PANEL_CLASS}`;
     panel.setAttribute('role', 'dialog');
@@ -540,6 +544,7 @@ export class ModelVisibilityMenu {
     panel.append(makeConfigureButton(this.onConfigure));
     for (const row of this.hiddenRows) panel.append(cloneRow(row, () => this.closeOwnPanel()));
     panel.style.position = 'fixed';
+    panel.style.pointerEvents = 'auto';
     panel.style.maxHeight = 'min(20rem, calc(100dvh - 0.5rem))';
     panel.style.visibility = 'hidden';
     panel.addEventListener('pointerenter', () => this.cancelOwnPanelClose());
@@ -548,14 +553,29 @@ export class ModelVisibilityMenu {
     const closeOnPointer = (event: PointerEvent) => {
       const target = event.target;
       if (!(target instanceof Node)) return;
-      if (panel.contains(target) || trigger.contains(target)) return;
+      if (panel.contains(target)) {
+        // Keep the native main popover from treating a click in this portal as outside.
+        event.stopImmediatePropagation();
+        return;
+      }
+      if (trigger.contains(target)) return;
       this.closeOwnPanel();
     };
     const closeOnFocus = (event: FocusEvent) => {
       const target = event.target;
       if (!(target instanceof Node)) return;
-      if (panel.contains(target) || trigger.contains(target)) return;
+      if (panel.contains(target)) {
+        // Keyboard focus inside the submenu must not dismiss the native main popover.
+        event.stopImmediatePropagation();
+        return;
+      }
+      if (trigger.contains(target) || this.root?.contains(target)) return;
       this.closeOwnPanel();
+    };
+    const keepFocusOut = (event: FocusEvent) => {
+      if (event.relatedTarget instanceof Node && panel.contains(event.relatedTarget)) {
+        event.stopImmediatePropagation();
+      }
     };
     const closeOnKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape' || event.key === 'ArrowLeft') {
@@ -575,13 +595,25 @@ export class ModelVisibilityMenu {
 
     this.doc.addEventListener('pointerdown', closeOnPointer, true);
     this.doc.addEventListener('focusin', closeOnFocus, true);
+    this.doc.addEventListener('focusout', keepFocusOut, true);
     this.doc.addEventListener('keydown', closeOnKey, true);
+    this.panelPointerMove = (event) => {
+      this.lastPointer = { x: event.clientX, y: event.clientY };
+      if (this.pointerInCorridor(event.clientX, event.clientY)) this.cancelOwnPanelClose();
+      else this.scheduleOwnPanelClose();
+    };
+    this.doc.addEventListener('pointermove', this.panelPointerMove, true);
     this.win.addEventListener('resize', this.closePanelListener);
     this.win.addEventListener('scroll', this.closePanelListener, true);
     this.panelCleanup = () => {
       this.doc.removeEventListener('pointerdown', closeOnPointer, true);
       this.doc.removeEventListener('focusin', closeOnFocus, true);
+      this.doc.removeEventListener('focusout', keepFocusOut, true);
       this.doc.removeEventListener('keydown', closeOnKey, true);
+      if (this.panelPointerMove) {
+        this.doc.removeEventListener('pointermove', this.panelPointerMove, true);
+        this.panelPointerMove = null;
+      }
       this.win.removeEventListener('resize', this.closePanelListener);
       this.win.removeEventListener('scroll', this.closePanelListener, true);
     };
@@ -591,7 +623,7 @@ export class ModelVisibilityMenu {
     trigger.setAttribute('aria-expanded', 'true');
     this.positionOwnPanel(panel, trigger);
     panel.style.visibility = '';
-    panel.querySelector<HTMLButtonElement>('button')?.focus();
+    if (focusFirst) panel.querySelector<HTMLButtonElement>('button')?.focus();
   }
 
   private positionOwnPanel(panel: HTMLElement, trigger: HTMLButtonElement): void {
@@ -615,21 +647,41 @@ export class ModelVisibilityMenu {
     }
   }
 
+  private pointerInCorridor(x: number, y: number): boolean {
+    if (!this.ownPanel || !this.ownTrigger) return false;
+    const trigger = this.ownTrigger.getBoundingClientRect();
+    const panel = this.ownPanel.getBoundingClientRect();
+    const pad = 14;
+    const inside = (rect: DOMRect) => x >= rect.left - pad && x <= rect.right + pad
+      && y >= rect.top - pad && y <= rect.bottom + pad;
+    if (inside(trigger) || inside(panel)) return true;
+    const left = Math.min(trigger.left, panel.left) - pad;
+    const right = Math.max(trigger.right, panel.right) + pad;
+    const top = Math.min(trigger.top, panel.top) - pad;
+    const bottom = Math.max(trigger.bottom, panel.bottom) + pad;
+    return x >= left && x <= right && y >= top && y <= bottom;
+  }
+
   private scheduleOwnPanelClose(): void {
     if (!this.ownPanel) return;
     this.cancelOwnPanelClose();
     this.panelCloseTimer = this.win.setTimeout(() => {
       this.panelCloseTimer = 0;
       if (!this.ownPanel) return;
+      if (this.pointerInCorridor(this.lastPointer.x, this.lastPointer.y)) return;
       if (this.ownPanel.matches(':hover') || this.ownTrigger?.matches(':hover')) return;
       this.closeOwnPanel();
-    }, 100);
+    }, 180);
   }
 
   private closePanelListener = (): void => this.closeOwnPanel();
 
   private closeOwnPanel(): void {
     this.cancelOwnPanelClose();
+    if (this.panelPointerMove) {
+      this.doc.removeEventListener('pointermove', this.panelPointerMove, true);
+      this.panelPointerMove = null;
+    }
     this.panelCleanup?.();
     this.panelCleanup = null;
     this.ownPanel?.remove();
