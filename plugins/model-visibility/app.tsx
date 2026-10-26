@@ -6,8 +6,6 @@ import { ModelVisibilitySettings } from './settings';
 export default definePluginApp((app) => {
   app.slots.settingsSection({
     id: 'model-visibility',
-    title: 'Model visibility',
-    description: 'Choose which model IDs stay out of the main picker.',
     component: ModelVisibilitySettings,
   });
 

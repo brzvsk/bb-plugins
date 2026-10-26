@@ -14,10 +14,17 @@
       "node"
     ],
     "noEmit": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    }
   },
   "include": [
     "*.ts",
-    "*.tsx"
+    "*.tsx",
+    "components",
+    "lib"
   ]
 }
