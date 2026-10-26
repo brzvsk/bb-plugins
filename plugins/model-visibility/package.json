@@ -39,7 +39,9 @@
     "dist/server.meta.json",
     "components/",
     "lib/",
-    "components.json"
+    "components.json",
+    "PLUGIN_OVERVIEW.md",
+    "tsconfig.json"
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
