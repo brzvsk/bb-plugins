@@ -216,7 +216,7 @@ export function tuck(root: ParentNode, state: SidebarState, handlers: Handlers):
       title.textContent = 'Automations';
       const number = document.createElement('span');
       number.className = 'sidebar-focus-count';
-      label.append(title, icon(CHEVRON, 'sidebar-focus-chevron'), number);
+      label.append(title, number, icon(CHEVRON, 'sidebar-focus-chevron'));
       label.addEventListener('pointerdown', event => event.stopPropagation());
       label.addEventListener('click', event => {
         event.stopPropagation();
