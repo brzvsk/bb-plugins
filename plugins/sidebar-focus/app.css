@@ -1,15 +1,18 @@
 .sidebar-focus-button {
+  position: relative;
+  z-index: 20;
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   margin: 0;
   padding: 0;
   border-radius: 6px;
   cursor: pointer;
   outline: none;
+  /* The chevron's tones: text-subtle-foreground, hover:text-muted-foreground. */
   color: var(--subtle-foreground, var(--muted-foreground));
   background: transparent;
 }
@@ -20,16 +23,16 @@
 }
 
 .sidebar-focus-button:focus-visible {
-  box-shadow: 0 0 0 1px var(--ring);
+  box-shadow: 0 0 0 2px var(--sidebar-ring, var(--ring));
 }
 
 .sidebar-focus-button[aria-pressed='true'] {
-  color: var(--foreground);
+  color: var(--muted-foreground);
 }
 
 .sidebar-focus-icon {
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   pointer-events: none;
 }
 

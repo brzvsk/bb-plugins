@@ -116,9 +116,9 @@ export function selectedThreadId(root: ParentNode, path: string): string | null 
 }
 
 /**
- * Puts one focus button on every top-level header. Unpressed it waits among the
- * header's hover actions, left of New thread; pressed it stays visible so the
- * focus can be left from the same place.
+ * Puts one focus button on every top-level header, right of its collapse
+ * chevron. Unpressed it shows on hover like the chevron; pressed it stays
+ * visible so the focus can be left from the same place.
  */
 export function placeButtons(root: ParentNode, focus: string | null, handlers: Handlers): void {
   const seen = new Set<Element>();
@@ -150,26 +150,15 @@ export function placeButtons(root: ParentNode, focus: string | null, handlers: H
       button.setAttribute('aria-label', text);
       button.title = text;
     }
-    const trailing = label.querySelector<HTMLElement>('[data-sidebar-trailing-controls]');
-    const controls = label.querySelector<HTMLElement>('[data-sidebar-row-controls]');
-    const hoverActions = trailing?.querySelector<HTMLElement>(`.${HOVER_ACTIONS}`) ?? null;
-    if (pressed) {
-      if (trailing) {
-        if (trailing.firstElementChild !== button) trailing.prepend(button);
-      } else if (button.parentElement !== label) {
-        label.append(button);
-      }
-      button.classList.remove(HOVER_ACTIONS);
-    } else if (controls) {
-      if (controls.firstElementChild !== button) controls.prepend(button);
-      button.classList.remove(HOVER_ACTIONS);
-    } else if (hoverActions) {
-      if (hoverActions.firstElementChild !== button) hoverActions.prepend(button);
-      button.classList.remove(HOVER_ACTIONS);
-    } else {
-      if (button.parentElement !== label) label.append(button);
-      button.classList.add(HOVER_ACTIONS);
+    // Right after bb's collapse chevron, in the title span; without one, at the end of the title.
+    const chevron = label.querySelector<HTMLElement>('button[aria-expanded]:not([aria-haspopup])');
+    const title = chevron?.parentElement ?? label.querySelector<HTMLElement>(':scope > span') ?? label;
+    if (chevron ? chevron.nextElementSibling !== button : title.lastElementChild !== button) {
+      if (chevron) chevron.after(button);
+      else title.append(button);
     }
+    // Like the chevron: a hover action until pressed, then always visible.
+    button.classList.toggle(HOVER_ACTIONS, !pressed);
   }
   for (const button of root.querySelectorAll(`.${BUTTON_CLASS}`)) {
     if (!seen.has(button)) button.remove();
