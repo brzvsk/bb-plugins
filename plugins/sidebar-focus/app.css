@@ -102,3 +102,44 @@
   font-variant-numeric: tabular-nums;
   opacity: 0.8;
 }
+
+/* Focus changes: groups slide, leave and arrive together. */
+::view-transition-group(*.sidebar-focus) {
+  animation-duration: 220ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  overflow: clip;
+}
+
+::view-transition-old(*.sidebar-focus),
+::view-transition-new(*.sidebar-focus) {
+  animation-duration: 160ms;
+  height: 100%;
+  object-fit: none;
+  object-position: top;
+}
+
+/* Leaving groups clear out first; arriving ones appear once the rest has
+   mostly moved, so nothing slides across text. */
+::view-transition-old(*.sidebar-focus):only-child {
+  animation: sidebar-focus-out 100ms ease-out both;
+}
+
+::view-transition-new(*.sidebar-focus):only-child {
+  animation: sidebar-focus-in 140ms ease-out 120ms both;
+}
+
+@keyframes sidebar-focus-out {
+  to { opacity: 0; }
+}
+
+@keyframes sidebar-focus-in {
+  from { opacity: 0; }
+}
+
+/* Everything that isn't a group switches at once instead of cross-fading. */
+html.sidebar-focus-transition::view-transition-old(root),
+html.sidebar-focus-transition::view-transition-new(root),
+html.sidebar-focus-transition [data-sidebar='content']::view-transition-old(root),
+html.sidebar-focus-transition [data-sidebar='content']::view-transition-new(root) {
+  animation: none;
+}

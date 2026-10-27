@@ -4,6 +4,7 @@ import {
   clear, focusCss, placeButtons, placeOf, selectedThreadId, setExpanded, topBlocks, tuck,
   type AutomationThread, type Handlers, type SidebarState,
 } from './sidebar';
+import { animateFocus } from './transition';
 
 const REFRESH_MS = 60_000;
 const FOCUS_KEY = 'sidebar-focus:focus';
@@ -44,15 +45,17 @@ export default definePluginApp(app => {
 
       const handlers: Handlers = {
         toggleFocus(key) {
-          const previous = state.focus;
-          // A group the focus expanded folds back when the focus leaves it, unless you already folded it.
-          const expandedByFocus = read(EXPANDED_KEY);
-          if (previous && expandedByFocus === previous) setExpanded(document, previous, false);
-          write(EXPANDED_KEY, null);
-          state.focus = previous === key ? null : key;
-          write(FOCUS_KEY, state.focus);
-          if (state.focus && setExpanded(document, state.focus, true)) write(EXPANDED_KEY, state.focus);
-          scan();
+          animateFocus(() => {
+            const previous = state.focus;
+            // A group the focus expanded folds back when the focus leaves it, unless you already folded it.
+            const expandedByFocus = read(EXPANDED_KEY);
+            if (previous && expandedByFocus === previous) setExpanded(document, previous, false);
+            write(EXPANDED_KEY, null);
+            state.focus = previous === key ? null : key;
+            write(FOCUS_KEY, state.focus);
+            if (state.focus && setExpanded(document, state.focus, true)) write(EXPANDED_KEY, state.focus);
+            scan();
+          });
         },
         toggleAutomations(key) {
           const open = new Set(state.automationsOpen);
