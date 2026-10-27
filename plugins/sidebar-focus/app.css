@@ -250,3 +250,12 @@ html.sidebar-focus-transition [data-sidebar='content']::view-transition-new(root
 .sidebar-focus-next-run:empty {
   display: none;
 }
+
+/* Project and section names stand above the threads and the small In progress / Scheduled / Done lines. */
+[data-bb-plugin='thread-list'] [data-sidebar-sticky-project-item] > [data-sidebar-sticky-group] > [data-sidebar-sticky-tier='label'],
+[data-bb-plugin='thread-list'] [data-sidebar-visibility-group] > [data-sidebar-sticky-group] > [data-sidebar-sticky-tier='label'],
+[data-bb-plugin='thread-list'] [data-sidebar-section-id] > [data-sidebar-sticky-tier='label'] {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+}
