@@ -90,7 +90,7 @@
   border-radius: 4px;
   font-size: 11px;
   line-height: 20px;
-  color: color-mix(in oklab, var(--muted-foreground) 80%, transparent);
+  color: color-mix(in oklab, var(--muted-foreground) 55%, transparent);
   cursor: pointer;
   user-select: none;
   outline: none;
@@ -251,11 +251,12 @@ html.sidebar-focus-transition [data-sidebar='content']::view-transition-new(root
   display: none;
 }
 
-/* Project and section names stand above the threads and the small In progress / Scheduled / Done lines. */
+/* Project and section names keep bb's size with a darker medium tone; the lines under them step back. */
 [data-bb-plugin='thread-list'] [data-sidebar-sticky-project-item] > [data-sidebar-sticky-group] > [data-sidebar-sticky-tier='label'],
 [data-bb-plugin='thread-list'] [data-sidebar-visibility-group] > [data-sidebar-sticky-group] > [data-sidebar-sticky-tier='label'],
 [data-bb-plugin='thread-list'] [data-sidebar-section-id] > [data-sidebar-sticky-tier='label'] {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--foreground);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: color-mix(in oklab, var(--foreground) 75%, transparent);
 }

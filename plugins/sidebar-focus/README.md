@@ -12,7 +12,7 @@ Two changes to BB's own sidebar thread list, layered on top of it rather than re
 
 The selected thread keeps the place it had when you opened it, so opening an unread automation thread doesn't move it, and a scheduled thread you open stays visible even while Scheduled is collapsed.
 
-Project and section names are set in 13px semibold foreground, so they stand above the threads and the small lines under them.
+Project and section names keep BB's size in a darker medium tone, and the small lines under them are set lighter, so the levels separate by tone rather than weight.
 
 This plugin replaces Automation Clock; don't install both.
 
