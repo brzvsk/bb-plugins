@@ -247,8 +247,13 @@ html.sidebar-focus-transition [data-sidebar='content']::view-transition-new(root
   height: 12px;
 }
 
-.sidebar-focus-next-run:empty {
+/* The run time only in Scheduled; in In progress the clock alone keeps the title readable (the tooltip still tells the time). */
+.sidebar-focus-next-run {
   display: none;
+}
+
+[data-sidebar-focus-tucked] .sidebar-focus-next-run:not(:empty) {
+  display: inline;
 }
 
 /* Project and section names keep bb's size with a darker medium tone; the lines under them step back. */
