@@ -1,6 +1,6 @@
 {
   "name": "bb-plugin-sidebar-focus",
-  "version": "0.6.7",
+  "version": "0.6.8",
   "private": true,
   "description": "Focus the sidebar on one project or section, and tuck read automation threads into an Automations block.",
   "license": "MIT",

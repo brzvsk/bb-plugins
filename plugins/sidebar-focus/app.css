@@ -260,3 +260,20 @@ html.sidebar-focus-transition [data-sidebar='content']::view-transition-new(root
   letter-spacing: 0.01em;
   color: color-mix(in oklab, var(--foreground) 75%, transparent);
 }
+
+/* A hairline between groups, inset like the thread rows. */
+[data-bb-plugin='thread-list'] [data-sidebar-visibility-group] ~ [data-sidebar-visibility-group] {
+  position: relative;
+  padding-top: 12px;
+}
+
+[data-bb-plugin='thread-list'] [data-sidebar-visibility-group] ~ [data-sidebar-visibility-group]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 8px;
+  right: 8px;
+  height: 1px;
+  background: color-mix(in oklab, var(--border) 60%, transparent);
+  pointer-events: none;
+}

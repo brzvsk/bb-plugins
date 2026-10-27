@@ -71,6 +71,7 @@ describe('focus css', () => {
     expect(css).toContain('[data-sidebar-visibility-group]:not([data-sidebar-visibility-group="project:p1"])');
     expect(css).toContain('[data-sidebar-section-id]:not([data-sidebar-visibility-group] *)');
     expect(css).toContain('sidebar-thread-list-more-trigger');
+    expect(css).toContain('[data-sidebar-visibility-group]::before { display: none !important; }');
   });
 
   it('keeps Pinned and hides every group', () => {

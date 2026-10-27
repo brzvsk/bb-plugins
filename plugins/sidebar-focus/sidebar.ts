@@ -89,7 +89,7 @@ function isGroupKey(key: string): boolean {
   return key === 'threads' || /^(project|section|machine):/.test(key);
 }
 
-/** CSS that shows only the focused block; empty when nothing is focused. */
+/** CSS that shows only the focused block, without the divider above it; empty when nothing is focused. */
 export function focusCss(focus: string | null): string {
   if (!focus) return '';
   const groupException = isGroupKey(focus) ? `:not([data-sidebar-visibility-group=${quote(focus)}])` : '';
@@ -99,7 +99,9 @@ export function focusCss(focus: string | null): string {
     `${LIST} ${SECTION}${sectionException}:not(${GROUP} *):not(${SECTION} *)`,
     `${LIST} ${MORE}`,
     `${LIST} :has(> ${MORE})`,
-  ].join(',\n')} { display: none !important; }`;
+  ].join(',\n')} { display: none !important; }
+${LIST} ${GROUP} { padding-top: 0 !important; }
+${LIST} ${GROUP}::before { display: none !important; }`;
 }
 
 function nativeRow(root: ParentNode, threadId: string): HTMLElement | null {
