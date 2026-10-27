@@ -42,10 +42,6 @@ Use independent immutable tags such as `tab-close-right/v0.1.0`. A separate BB C
 
 `plugins/pinned-project-line` adds a smaller, muted second line with the project name (including its emoji) under each pinned thread in the sidebar. Local only; not published to the marketplace.
 
-## Automation Clock
-
-`plugins/automation-clock` shows a small clock on sidebar threads that an enabled automation runs in (its target thread, or the latest run thread of one that starts a new thread per run): in the empty status slot, or left of a spinner, unread dot or draft. It hides on hover like bb's own status glyph, so hover actions show as usual. Released as `automation-clock/vX.Y.Z` tags for the Community marketplace.
-
 ## Plan Tab
 
 `plugins/plan-tab` makes the plan file path in BB's Plan review banner clickable and adds an underlined **Open** link after it; both open the plan as a panel tab while the review stays pending. Stopgap for get-bb/bb#4379. Local only; not published to the marketplace.
@@ -73,4 +69,4 @@ bb plugin install . --plugin model-visibility
 
 ## Sidebar Focus
 
-`plugins/sidebar-focus` adds a focus button to sidebar group headers that shows only that project or section, and tucks read automation threads to the end of their own project or section under a small Automations line until they need attention, and keeps threads archived in the last two days under a collapsed Recently archived line. Local only; not published to the marketplace.
+`plugins/sidebar-focus` adds a focus button to sidebar group headers that shows only that project or section, and splits each group into In progress, Scheduled (read automation threads with a clock and their next run, soonest first) and Done (threads archived in the last two days). It replaces the retired Automation Clock plugin. Local only; not published to the marketplace.

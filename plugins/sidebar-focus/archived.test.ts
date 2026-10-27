@@ -34,10 +34,10 @@ describe('recently archived', () => {
   it('adds a collapsed line at the end of each group, inside its row list when it has one', () => {
     renderArchived(document, archived, new Set(), null, handlers());
     const p1 = document.querySelector('#p1-rows > .sidebar-focus-archived')!;
-    expect(p1.textContent).toBe('Recently archived2');
+    expect(p1.textContent).toBe('Done2');
     expect(p1.querySelector('[aria-expanded]')?.getAttribute('aria-expanded')).toBe('false');
     expect(document.querySelector('#p1-rows')!.classList.contains('sidebar-focus-list')).toBe(true);
-    expect(document.querySelector('[data-sidebar-visibility-group="project:p2"] > .sidebar-focus-archived')).not.toBeNull();
+    expect(document.querySelector('[data-sidebar-visibility-group="project:p2"] > .sidebar-focus-empty-list > .sidebar-focus-archived')).not.toBeNull();
     expect(document.querySelectorAll(`.${ARCHIVED_CLASS}`)).toHaveLength(3);
   });
 

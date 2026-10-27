@@ -2,6 +2,8 @@
 export interface AutomationThread {
   threadId: string;
   unread: boolean;
+  names: string[];
+  nextRunAt: number | null;
 }
 
 export interface SidebarState {
@@ -19,6 +21,7 @@ export type Place = 'list' | 'block';
 export interface Handlers {
   toggleFocus(key: string): void;
   toggleAutomations(key: string): void;
+  newTask(group: HTMLElement | null): void;
 }
 
 const LIST = '[data-bb-plugin="thread-list"]';
@@ -32,6 +35,11 @@ const MORE = '[data-testid="sidebar-thread-list-more-trigger"]';
 
 export const BUTTON_CLASS = 'sidebar-focus-button';
 export const LABEL_CLASS = 'sidebar-focus-automations';
+export const PROGRESS_CLASS = 'sidebar-focus-progress';
+export const NEW_TASK_CLASS = 'sidebar-focus-new-task';
+export const EMPTY_LIST_CLASS = 'sidebar-focus-empty-list';
+/** Flex order of the Scheduled line; its sorted rows follow it. */
+const SCHEDULED_ORDER = 1000;
 export const FLEX_CLASS = 'sidebar-focus-list';
 export const TUCKED = 'data-sidebar-focus-tucked';
 const WRAPPER = '[data-sidebar-windowed-item]';
@@ -186,14 +194,20 @@ export function placeButtons(root: ParentNode, focus: string | null, handlers: H
  */
 export function tuck(root: ParentNode, state: SidebarState, handlers: Handlers): void {
   const containers = new Set<HTMLElement>();
+  // Scheduled runs soonest first; threads without an upcoming run go last.
+  const ranks = new Map([...state.automations.values()]
+    .sort((a, b) => (a.nextRunAt ?? Infinity) - (b.nextRunAt ?? Infinity))
+    .map((thread, index) => [thread.threadId, index]));
   for (const wrapper of root.querySelectorAll<HTMLElement>(`${LIST} ${WRAPPER}`)) {
     // The wrapper's first row is its root thread; child rows move with it.
     const anchor = wrapper.querySelector<HTMLElement>(ANCHOR);
     let tucked: boolean;
+    let rank: number | undefined;
     if (!anchor) {
       tucked = wrapper.hasAttribute(TUCKED);
     } else {
       const threadId = anchor.dataset.sidebarThreadId ?? '';
+      rank = ranks.get(threadId);
       const row = anchor.closest<HTMLElement>(ROW);
       tucked = state.automations.has(threadId) && (state.held?.threadId === threadId
         ? state.held.place === 'block'
@@ -202,7 +216,11 @@ export function tuck(root: ParentNode, state: SidebarState, handlers: Handlers):
     const container = wrapper.parentElement;
     if (!tucked || !container) {
       if (wrapper.hasAttribute(TUCKED)) wrapper.removeAttribute(TUCKED);
+      if (wrapper.style.order) wrapper.style.removeProperty('order');
       continue;
+    }
+    if (rank !== undefined && wrapper.style.order !== String(SCHEDULED_ORDER + 1 + rank)) {
+      wrapper.style.setProperty('order', String(SCHEDULED_ORDER + 1 + rank));
     }
     containers.add(container);
     const key = blockKeyOf(container);
@@ -225,7 +243,7 @@ export function tuck(root: ParentNode, state: SidebarState, handlers: Handlers):
       label.tabIndex = 0;
       const title = document.createElement('span');
       title.className = 'sidebar-focus-label-title';
-      title.textContent = 'Automations';
+      title.textContent = 'Scheduled';
       const number = document.createElement('span');
       number.className = 'sidebar-focus-count';
       label.append(title, number, icon(CHEVRON, 'sidebar-focus-chevron'));
@@ -253,9 +271,99 @@ export function tuck(root: ParentNode, state: SidebarState, handlers: Handlers):
     if (!containers.has(label.parentElement as HTMLElement)) label.remove();
   }
   for (const container of root.querySelectorAll<HTMLElement>(`.${FLEX_CLASS}`)) {
-    // Recently archived shares the ordering; it owns the class while it is there.
-    if (!containers.has(container) && !container.querySelector(':scope > .sidebar-focus-archived')) container.classList.remove(FLEX_CLASS);
+    // In progress and Done share the ordering; they own the class while they are there.
+    if (!containers.has(container) && !container.querySelector(`:scope > .sidebar-focus-archived, :scope > .${PROGRESS_CLASS}`)) container.classList.remove(FLEX_CLASS);
   }
+}
+
+/**
+ * Heads every project or section list with "In progress N" for the threads
+ * left in it, and offers a New Task row there when none are left. A group with
+ * no rows at all gets its own small list after the header for these lines.
+ */
+export function progress(root: ParentNode, handlers: Handlers): void {
+  const seen = new Set<Element>();
+  for (const { key, element } of topBlocks(root)) {
+    if (key === 'pinned' || isCollapsed(element)) continue;
+    const container = primaryList(element);
+    if (!container.classList.contains(FLEX_CLASS)) container.classList.add(FLEX_CLASS);
+    let label = container.querySelector<HTMLElement>(`:scope > .${PROGRESS_CLASS}`);
+    if (!label) {
+      label = document.createElement('div');
+      label.className = PROGRESS_CLASS;
+      const title = document.createElement('span');
+      title.textContent = 'In progress';
+      const number = document.createElement('span');
+      number.className = 'sidebar-focus-count';
+      label.append(title, number);
+    }
+    if (label.parentElement !== container) container.append(label);
+    seen.add(label);
+    const count = container.querySelectorAll(`:scope > ${WRAPPER}:not([${TUCKED}])`).length;
+    const number = label.querySelector('.sidebar-focus-count')!;
+    // An empty list says so with its New Task row instead of a zero.
+    const shown = count > 0 ? String(count) : '';
+    if (number.textContent !== shown) number.textContent = shown;
+
+    let task = container.querySelector<HTMLElement>(`:scope > .${NEW_TASK_CLASS}`);
+    if (count > 0) {
+      task?.remove();
+      continue;
+    }
+    if (!task) {
+      task = document.createElement('div');
+      task.className = NEW_TASK_CLASS;
+      task.setAttribute('role', 'button');
+      task.tabIndex = 0;
+      const plus = icon('<path d="M12 5v14M5 12h14"/>', 'sidebar-focus-icon');
+      const text = document.createElement('span');
+      text.textContent = 'New Task';
+      task.append(plus, text);
+      const start = (event: Event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        handlers.newTask(task!.closest<HTMLElement>(GROUP) ?? task!.closest<HTMLElement>(SECTION));
+      };
+      task.addEventListener('pointerdown', event => event.stopPropagation());
+      task.addEventListener('click', start);
+      task.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') start(event);
+      });
+    }
+    if (task.parentElement !== container) container.append(task);
+    seen.add(task);
+  }
+  for (const node of root.querySelectorAll(`.${PROGRESS_CLASS}, .${NEW_TASK_CLASS}`)) {
+    if (!seen.has(node)) node.remove();
+  }
+  for (const list of root.querySelectorAll(`.${EMPTY_LIST_CLASS}`)) {
+    if (!list.querySelector(`.${PROGRESS_CLASS}`) && !list.querySelector('.sidebar-focus-archived')) list.remove();
+  }
+}
+
+/** The list holding a group's own rows, or a plugin list after its header when it has none. */
+export function primaryList(group: HTMLElement): HTMLElement {
+  for (const wrapper of group.querySelectorAll<HTMLElement>(WRAPPER)) {
+    if (!wrapper.parentElement?.closest(WRAPPER)) return wrapper.parentElement!;
+  }
+  let list = group.querySelector<HTMLElement>(`.${EMPTY_LIST_CLASS}`);
+  if (!list) {
+    list = document.createElement('div');
+    list.className = EMPTY_LIST_CLASS;
+    group.append(list);
+  }
+  return list;
+}
+
+/** Starts a new thread in a group through bb's own New thread button in its header. */
+export function startNewTask(group: HTMLElement | null): boolean {
+  const button = group?.querySelector<HTMLElement>(`${LABEL} button[aria-label^="New thread in"]`);
+  button?.click();
+  return Boolean(button);
+}
+
+function isCollapsed(group: HTMLElement): boolean {
+  return group.querySelector(`${LABEL} button[aria-expanded]:not([aria-haspopup])`)?.getAttribute('aria-expanded') === 'false';
 }
 
 function blockKeyOf(element: HTMLElement): string {
@@ -265,7 +373,10 @@ function blockKeyOf(element: HTMLElement): string {
 }
 
 export function clear(root: ParentNode): void {
-  for (const node of root.querySelectorAll(`.${BUTTON_CLASS}, .${LABEL_CLASS}`)) node.remove();
-  for (const node of root.querySelectorAll(`[${TUCKED}]`)) node.removeAttribute(TUCKED);
+  for (const node of root.querySelectorAll(`.${BUTTON_CLASS}, .${LABEL_CLASS}, .${PROGRESS_CLASS}, .${NEW_TASK_CLASS}, .${EMPTY_LIST_CLASS}`)) node.remove();
+  for (const node of root.querySelectorAll<HTMLElement>(`[${TUCKED}]`)) {
+    node.removeAttribute(TUCKED);
+    node.style.removeProperty('order');
+  }
   for (const node of root.querySelectorAll(`.${FLEX_CLASS}`)) node.classList.remove(FLEX_CLASS);
 }

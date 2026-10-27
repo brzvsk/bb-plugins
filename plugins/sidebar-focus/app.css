@@ -46,16 +46,21 @@
   order: 0;
 }
 
-.sidebar-focus-list > .sidebar-focus-automations {
-  order: 1;
+.sidebar-focus-list > .sidebar-focus-progress {
+  order: -1;
 }
 
+.sidebar-focus-list > .sidebar-focus-automations {
+  order: 1000;
+}
+
+/* Sorted rows get their own order inline, right after 1000. */
 .sidebar-focus-list > [data-sidebar-focus-tucked] {
-  order: 2;
+  order: 1001;
 }
 
 .sidebar-focus-list > .sidebar-focus-archived {
-  order: 3;
+  order: 3000;
 }
 
 [data-sidebar-focus-tucked='closed'] {
@@ -69,7 +74,8 @@
 }
 
 .sidebar-focus-automations,
-.sidebar-focus-disclosure {
+.sidebar-focus-disclosure,
+.sidebar-focus-progress {
   display: flex;
   align-items: center;
   gap: 2px;
@@ -188,4 +194,75 @@ html.sidebar-focus-transition [data-sidebar='content']::view-transition-new(root
 
 [data-testid='plugin-homepage-sections']:not(:has(> section:not([id='plugin-homepage:sidebar-focus:menu-bridge']))) {
   display: none !important;
+}
+
+.sidebar-focus-progress {
+  cursor: default;
+}
+
+.sidebar-focus-new-task {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--bb-sidebar-row-height, 28px);
+  margin: 0 !important;
+  padding-left: 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+}
+
+.sidebar-focus-new-task:hover {
+  color: var(--sidebar-accent-foreground, var(--foreground));
+  background: var(--sidebar-accent);
+}
+
+.sidebar-focus-new-task:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.sidebar-focus-new-task .sidebar-focus-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.sidebar-focus-empty-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
+}
+
+/* Clock and next run on automation threads, in the working spinner's tone. */
+.sidebar-focus-schedule {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  height: 16px;
+  padding-right: 2px;
+  font-size: 11px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklab, var(--muted-foreground) 60%, transparent);
+}
+
+/* Alone it sits where bb's status glyph would. */
+.sidebar-focus-schedule-solo {
+  margin-right: -22px;
+}
+
+.sidebar-focus-clock {
+  display: inline-flex;
+}
+
+.sidebar-focus-clock svg {
+  width: 12px;
+  height: 12px;
+}
+
+.sidebar-focus-next-run:empty {
+  display: none;
 }

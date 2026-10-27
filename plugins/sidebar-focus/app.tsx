@@ -1,12 +1,13 @@
 import { definePluginApp } from '@get-bb/plugin-sdk/app';
 import './app.css';
 import {
-  clear, focusCss, placeButtons, placeOf, selectedThreadId, setExpanded, topBlocks, tuck,
+  clear, focusCss, placeButtons, placeOf, progress, selectedThreadId, setExpanded, startNewTask, topBlocks, tuck,
   type AutomationThread, type Handlers, type SidebarState,
 } from './sidebar';
 import { animateFocus } from './transition';
 import { clearArchived, menuSlots, renderArchived, type ArchivedHandlers, type ArchivedThread } from './archived';
 import { MenuBridge, publishMenuSlots } from './menus';
+import { clearSchedule, decorateSchedule } from './schedule';
 
 const REFRESH_MS = 60_000;
 const FOCUS_KEY = 'sidebar-focus:focus';
@@ -67,6 +68,9 @@ export default definePluginApp(app => {
             scan();
           });
         },
+        newTask(group) {
+          startNewTask(group);
+        },
         toggleAutomations(key) {
           const open = new Set(state.automationsOpen);
           if (!open.delete(key)) open.add(key);
@@ -90,6 +94,8 @@ export default definePluginApp(app => {
         if (style.textContent !== css) style.textContent = css;
         placeButtons(document, focus, handlers);
         tuck(document, state, handlers);
+        progress(document, handlers);
+        decorateSchedule(document, state.automations, Date.now());
         const ids = new Set([...document.querySelectorAll<HTMLElement>('[data-bb-plugin="thread-list"] a[data-sidebar-thread-id]')]
           .map(anchor => anchor.dataset.sidebarThreadId ?? ''));
         if ([...nativeIds].some(id => !ids.has(id))) refreshArchivedSoon();
@@ -192,6 +198,7 @@ export default definePluginApp(app => {
         style.remove();
         clear(document);
         clearArchived(document);
+        clearSchedule(document);
         publishMenuSlots([]);
       };
     },

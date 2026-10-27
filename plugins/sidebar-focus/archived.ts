@@ -1,4 +1,4 @@
-import { FLEX_CLASS, topBlocks } from './sidebar';
+import { FLEX_CLASS, primaryList, topBlocks } from './sidebar';
 
 /** One thread archived recently, as the server RPC returns it. */
 export interface ArchivedThread {
@@ -22,7 +22,6 @@ export const MENU_SLOT_CLASS = 'sidebar-focus-menu-slot';
 const ROW_BUTTON_CLASS = 'inline-flex items-center justify-center h-7 w-7 text-subtle-foreground hover:text-muted-foreground hover:bg-state-hover active:bg-state-active relative m-0 shrink-0 cursor-pointer rounded-md p-0 outline-none';
 const LIST = '[data-bb-plugin="thread-list"]';
 const ANCHOR = 'a[data-sidebar-thread-id]';
-const WRAPPER = '[data-sidebar-windowed-item]';
 const LABEL = '[data-sidebar-sticky-tier="label"]';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const CHEVRON = '<path d="M9.00005 6C9.00005 6 15 10.4189 15 12C15 13.5812 9 18 9 18"/>';
@@ -91,15 +90,15 @@ export function renderArchived(
   for (const { key, element } of topBlocks(root)) {
     const list = groups.get(key);
     if (!list?.length || isCollapsed(element)) continue;
-    // Inside the group's row list when it has one, so it orders after tucked automations; else after the header.
-    const container = element.querySelector(WRAPPER)?.parentElement ?? element;
+    // Inside the group's row list (or the plugin list after an empty group's header), ordered after Scheduled.
+    const container = primaryList(element);
     let block = container.querySelector<HTMLElement>(`:scope > .${ARCHIVED_CLASS}`);
     if (!block) {
       block = document.createElement('div');
       block.className = ARCHIVED_CLASS;
     }
     if (block.parentElement !== container) container.append(block);
-    if (container !== element && !container.classList.contains(FLEX_CLASS)) container.classList.add(FLEX_CLASS);
+    if (!container.classList.contains(FLEX_CLASS)) container.classList.add(FLEX_CLASS);
     seen.add(block);
     const isOpen = open.has(ARCHIVED_PREFIX + key) || list.some(thread => thread.threadId === selected);
     const signature = JSON.stringify([key, isOpen, selected, list.map(thread => [thread.threadId, thread.title])]);
@@ -119,7 +118,7 @@ function label(key: string, count: number, open: boolean, handlers: ArchivedHand
   element.tabIndex = 0;
   element.setAttribute('aria-expanded', String(open));
   const title = document.createElement('span');
-  title.textContent = 'Recently archived';
+  title.textContent = 'Done';
   const number = document.createElement('span');
   number.className = 'sidebar-focus-count';
   number.textContent = String(count);

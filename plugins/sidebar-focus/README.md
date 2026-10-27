@@ -4,11 +4,15 @@ Two changes to BB's own sidebar thread list, layered on top of it rather than re
 
 **Focus.** Hovering a group header (a project, Pinned, Threads, or a custom section) shows a small crosshair right after its collapse chevron, in the same muted tone. Clicking it shows only that group, expanding it if it was collapsed (it folds back when you leave the focus, unless you folded it yourself meanwhile); the pressed crosshair stays visible and clicking it again shows everything. Focusing and leaving the focus animate: other groups fade out, the focused one slides into place, and on the way back the others fade in once it has moved (off with the system's reduced-motion setting). The focus is remembered per window.
 
-**Automations.** Threads that an enabled automation runs in (its target thread, or the latest run thread of an automation that starts a new one each run) move to the end of their own project or section once there is nothing to look at, under a small collapsible **Automations N ›** line. They stay BB's own rows, with their status, clock and row actions; only their position changes. As soon as BB shows any status on such a thread (unread dot, spinner, question, failed send, draft) it is back in its usual place and order. A group without such threads has no Automations line. Each group remembers whether its line is open.
+**In progress, Scheduled, Done.** Each project or section is split into three lines, all 11px muted labels:
 
-The selected thread keeps the place it had when you opened it, so opening an unread automation thread doesn't move it, and a tucked thread you open stays visible even while its group's line is collapsed.
+- **In progress N** heads the threads left in the group, in BB's usual order. When none are left it shows a **New Task** row that opens the new-session screen in that project (BB's own New thread button).
+- **Scheduled N ›** collects threads that an enabled automation runs in (its target thread, or the latest run thread of one that starts a new thread per run) once there is nothing to look at. They stay BB's own rows, sorted by the soonest next run, each with a clock and that run's time: "Today, 12:00", "Tomorrow, 9:00", "11 Nov, 22:00". As soon as BB shows any status on one (unread dot, spinner, question, failed send, draft) it moves back to In progress. The clock and time show on automation threads wherever they are and hide on hover like BB's own status glyph. Collapsed by default, remembered per group.
+- **Done N ›** lists threads archived in the last 48 hours, even while the list shows active threads only. Clicking one opens it in place; on hover it has a quick Unarchive button and BB's own thread menu (⋯). Root threads only. When you show archived threads in BB's own list, it steps aside instead of repeating them.
 
-**Recently archived.** Threads archived in the last 48 hours show at the end of their project or section under a collapsed **Recently archived N ›** line, even while the list shows active threads only. Clicking one opens it in place; on hover it has a quick Unarchive button and BB's own thread menu (⋯). Root threads only, so archived subagents don't pile up. When you show archived threads in BB's own list, the line steps aside instead of repeating them.
+The selected thread keeps the place it had when you opened it, so opening an unread automation thread doesn't move it, and a scheduled thread you open stays visible even while Scheduled is collapsed.
+
+This plugin replaces Automation Clock; don't install both.
 
 Requires BB 0.47.1+ with the built-in Thread list and Automations plugins. Works through BB's sidebar markup, so a sidebar change can break it until updated. No settings, network services or credentials.
 

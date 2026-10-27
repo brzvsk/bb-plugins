@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  BUTTON_CLASS, FLEX_CLASS, setExpanded, LABEL_CLASS, TUCKED, clear, focusCss, placeButtons, placeOf, selectedThreadId, topBlocks,
+  BUTTON_CLASS, FLEX_CLASS, NEW_TASK_CLASS, PROGRESS_CLASS, progress, setExpanded, startNewTask, LABEL_CLASS, TUCKED, clear, focusCss, placeButtons, placeOf, selectedThreadId, topBlocks,
   tuck, type Handlers, type SidebarState,
 } from './sidebar';
 
@@ -38,8 +38,8 @@ function state(extra: Partial<SidebarState> = {}): SidebarState {
   return {
     focus: null,
     automations: new Map([
-      ['thr_auto_read', { threadId: 'thr_auto_read', unread: false }],
-      ['thr_auto_unread', { threadId: 'thr_auto_unread', unread: true }],
+      ['thr_auto_read', auto('thr_auto_read', false)],
+      ['thr_auto_unread', auto('thr_auto_unread', true)],
     ]),
     automationsOpen: new Set(),
     held: null,
@@ -47,7 +47,10 @@ function state(extra: Partial<SidebarState> = {}): SidebarState {
   };
 }
 
-const handlers = (): Handlers => ({ toggleFocus: vi.fn(), toggleAutomations: vi.fn() });
+const handlers = (): Handlers => ({ toggleFocus: vi.fn(), toggleAutomations: vi.fn(), newTask: vi.fn() });
+function auto(threadId: string, unread: boolean, nextRunAt: number | null = null) {
+  return { threadId, unread, names: ['A'], nextRunAt };
+}
 const wrapper = (id: string) => document.querySelector(`a[data-sidebar-thread-id="${id}"]`)!.closest('[data-sidebar-windowed-item]')!;
 
 beforeEach(() => sidebar());
@@ -79,10 +82,10 @@ describe('focus css', () => {
 
 describe('automation threads', () => {
   it('stay in place while bb shows a status, else get tucked', () => {
-    expect(placeOf(document, { threadId: 'thr_auto_read', unread: false })).toBe('block');
-    expect(placeOf(document, { threadId: 'thr_auto_unread', unread: true })).toBe('list');
-    expect(placeOf(document, { threadId: 'thr_gone', unread: true })).toBe('list');
-    expect(placeOf(document, { threadId: 'thr_gone', unread: false })).toBe('block');
+    expect(placeOf(document, auto('thr_auto_read', false))).toBe('block');
+    expect(placeOf(document, auto('thr_auto_unread', true))).toBe('list');
+    expect(placeOf(document, auto('thr_gone', true))).toBe('list');
+    expect(placeOf(document, auto('thr_gone', false))).toBe('block');
   });
 
   it('tuck read rows at the end of their own list under a collapsed label', () => {
@@ -93,7 +96,7 @@ describe('automation threads', () => {
     const list = document.getElementById('p1-rows')!;
     expect(list.classList.contains(FLEX_CLASS)).toBe(true);
     const label = list.querySelector(`:scope > .${LABEL_CLASS}`)!;
-    expect(label.textContent).toBe('Automations1');
+    expect(label.textContent).toBe('Scheduled1');
     expect(label.getAttribute('aria-expanded')).toBe('false');
     expect(document.querySelectorAll(`.${LABEL_CLASS}`)).toHaveLength(1);
   });
@@ -181,11 +184,55 @@ describe('expanding', () => {
   });
 });
 
+describe('in progress', () => {
+  it('heads each project list with the threads left in it, not Pinned', () => {
+    tuck(document, state(), handlers());
+    progress(document, handlers());
+    const label = document.querySelector('#p1-rows > .sidebar-focus-progress')!;
+    expect(label.textContent).toBe('In progress2');
+    expect(document.querySelector('#loose-rows > .sidebar-focus-progress')?.textContent).toBe('In progress1');
+    expect(document.querySelector('#pinned-rows .sidebar-focus-progress')).toBeNull();
+    expect(document.querySelector(`.${NEW_TASK_CLASS}`)).toBeNull();
+  });
+
+  it('offers New Task when nothing is left, through bb\'s New thread button', () => {
+    document.getElementById('loose-rows')!.replaceChildren();
+    const h = handlers();
+    progress(document, h);
+    const task = document.querySelector<HTMLElement>(`[data-sidebar-visibility-group="threads"] .${NEW_TASK_CLASS}`)!;
+    expect(task.parentElement?.id).toBe('');
+    expect(task.parentElement?.classList.contains('sidebar-focus-empty-list')).toBe(true);
+    task.click();
+    expect(h.newTask).toHaveBeenCalledWith(document.querySelector('[data-sidebar-visibility-group="threads"]'));
+
+    const newThread = vi.fn();
+    document.querySelector('[aria-label="New thread in Threads"]')!.addEventListener('click', newThread);
+    expect(startNewTask(document.querySelector('[data-sidebar-visibility-group="threads"]'))).toBe(true);
+    expect(newThread).toHaveBeenCalledTimes(1);
+  });
+
+  it('sorts Scheduled by the soonest next run', () => {
+    sidebar();
+    document.getElementById('p1-rows')!.insertAdjacentHTML('beforeend', `
+      <div data-sidebar-windowed-item=""><div class="group/thread-row"><a data-sidebar-thread-id="thr_soon"></a><span data-sidebar-thread-trailing=""></span></div></div>`);
+    const s = state({ automations: new Map([
+      ['thr_auto_read', auto('thr_auto_read', false, 5000)],
+      ['thr_soon', auto('thr_soon', false, 1000)],
+    ]) });
+    tuck(document, s, handlers());
+    expect((wrapper('thr_soon') as HTMLElement).style.order).toBe('1001');
+    expect((wrapper('thr_auto_read') as HTMLElement).style.order).toBe('1002');
+    tuck(document, state({ automations: new Map() }), handlers());
+    expect((wrapper('thr_soon') as HTMLElement).style.order).toBe('');
+  });
+});
+
 describe('cleanup', () => {
   it('removes buttons, labels and marks', () => {
     placeButtons(document, null, handlers());
     tuck(document, state(), handlers());
+    progress(document, handlers());
     clear(document);
-    expect(document.querySelectorAll(`.${BUTTON_CLASS}, .${LABEL_CLASS}, [${TUCKED}], .${FLEX_CLASS}`)).toHaveLength(0);
+    expect(document.querySelectorAll(`.${BUTTON_CLASS}, .${LABEL_CLASS}, .${PROGRESS_CLASS}, [${TUCKED}], .${FLEX_CLASS}`)).toHaveLength(0);
   });
 });
