@@ -315,10 +315,10 @@ export function progress(root: ParentNode, handlers: Handlers): void {
       task.className = NEW_TASK_CLASS;
       task.setAttribute('role', 'button');
       task.tabIndex = 0;
-      const plus = icon('<path d="M12 5v14M5 12h14"/>', 'sidebar-focus-icon');
+      // Reads like the Scheduled and Done lines, with a plus where their chevron is.
       const text = document.createElement('span');
       text.textContent = 'New Task';
-      task.append(plus, text);
+      task.append(text, icon('<path d="M12 5v14M5 12h14"/>', 'sidebar-focus-chevron'));
       const start = (event: Event) => {
         event.preventDefault();
         event.stopPropagation();

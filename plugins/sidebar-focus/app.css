@@ -75,7 +75,8 @@
 
 .sidebar-focus-automations,
 .sidebar-focus-disclosure,
-.sidebar-focus-progress {
+.sidebar-focus-progress,
+.sidebar-focus-new-task {
   display: flex;
   align-items: center;
   gap: 2px;
@@ -99,7 +100,8 @@
 }
 
 .sidebar-focus-automations:focus-visible,
-.sidebar-focus-disclosure:focus-visible {
+.sidebar-focus-disclosure:focus-visible,
+.sidebar-focus-new-task:focus-visible {
   box-shadow: inset 0 0 0 1px var(--ring);
 }
 
@@ -204,34 +206,8 @@ html.sidebar-focus-transition [data-sidebar='content']::view-transition-new(root
   display: none;
 }
 
-.sidebar-focus-new-task {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: var(--bb-sidebar-row-height, 28px);
-  margin: 0 !important;
-  padding-left: 8px;
-  border-radius: 6px;
-  font-size: 13px;
-  color: color-mix(in oklab, var(--muted-foreground) 70%, transparent);
-  cursor: pointer;
-  user-select: none;
-  outline: none;
-}
-
 .sidebar-focus-new-task:hover {
   color: var(--muted-foreground);
-  background: var(--sidebar-accent);
-}
-
-.sidebar-focus-new-task:focus-visible {
-  box-shadow: inset 0 0 0 1px var(--ring);
-}
-
-.sidebar-focus-new-task .sidebar-focus-icon {
-  width: 14px;
-  height: 14px;
 }
 
 .sidebar-focus-empty-list {
