@@ -1,4 +1,3 @@
-import { defineRpcContract } from '@get-bb/plugin-sdk';
 import { z } from 'zod';
 
 export const menuModelSchema = z.object({
@@ -30,14 +29,3 @@ export type MenuModel = z.infer<typeof menuModelSchema>;
 export type MenuProvider = z.infer<typeof menuProviderSchema>;
 export type HiddenMap = z.infer<typeof hiddenMapSchema>;
 export type Catalog = z.infer<typeof catalogSchema>;
-
-export const rpcContract = defineRpcContract({
-  catalog: {
-    input: z.null(),
-    output: catalogSchema,
-  },
-  save: {
-    input: z.object({ hidden: hiddenMapSchema }),
-    output: hiddenMapSchema,
-  },
-});

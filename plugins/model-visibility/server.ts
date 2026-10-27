@@ -1,10 +1,24 @@
-import type { BbPluginApi } from '@get-bb/plugin-sdk';
+import { defineRpcContract, type BbPluginApi } from '@get-bb/plugin-sdk';
+import { z } from 'zod';
 import {
-  rpcContract,
+  catalogSchema,
+  hiddenMapSchema,
   type Catalog,
   type HiddenMap,
   type MenuProvider,
 } from './contract';
+
+// Server-only: the frontend bundle must not import the server SDK entrypoint.
+export const rpcContract = defineRpcContract({
+  catalog: {
+    input: z.null(),
+    output: catalogSchema,
+  },
+  save: {
+    input: z.object({ hidden: hiddenMapSchema }),
+    output: hiddenMapSchema,
+  },
+});
 
 const KV_KEY = 'hiddenModels';
 const MAX_PROVIDER_IDS = 100;
