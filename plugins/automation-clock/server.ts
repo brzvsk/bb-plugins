@@ -14,6 +14,7 @@ const overview = z.object({
     automation: z.object({
       name: z.string(),
       enabled: z.boolean(),
+      lastRunThreadId: z.string().nullable().optional(),
       execution: z.object({ targetThreadId: z.string().optional() }).passthrough(),
     }).passthrough(),
   }).passthrough()),
@@ -27,7 +28,8 @@ export default function plugin(bb: BbPluginApi) {
       });
       const threads = new Map<string, BoundThread>();
       for (const { automation: a } of automations) {
-        const threadId = a.execution.targetThreadId;
+        // A bound automation runs in its target thread; one that starts a new thread per run marks its latest.
+        const threadId = a.execution.targetThreadId ?? a.lastRunThreadId;
         if (!a.enabled || !threadId) continue;
         const entry = threads.get(threadId) ?? { threadId, names: [] };
         if (entry.names.length < 20) entry.names.push(a.name);
