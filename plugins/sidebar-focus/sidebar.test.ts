@@ -24,7 +24,7 @@ const header = (name: string, controls = true) => `
 function sidebar(selected = '') {
   document.body.innerHTML = `
     <div data-bb-plugin="thread-list"><div id="groups">
-      <div data-sidebar-section-id="pinned">${header('Pinned', false)}<div id="pinned-rows">${row('thr_pin')}</div></div>
+      <div data-sidebar-sticky-group="" data-sidebar-sticky-header="false">${header('Pinned', false)}<div id="pinned-rows">${row('thr_pin')}</div></div>
       <div data-sidebar-visibility-group="project:p1">${header('One')}<div id="p1-rows">
         ${row('thr_auto_read', false, selected === 'thr_auto_read')}${row('thr_auto_unread', true)}${row('thr_plain')}
       </div></div>
@@ -71,13 +71,15 @@ describe('focus css', () => {
     expect(css).toContain('[data-sidebar-visibility-group]:not([data-sidebar-visibility-group="project:p1"])');
     expect(css).toContain('[data-sidebar-section-id]:not([data-sidebar-visibility-group] *)');
     expect(css).toContain('sidebar-thread-list-more-trigger');
-    expect(css).toContain('[data-sidebar-visibility-group]::before { display: none !important; }');
+    expect(css).toContain('> *::before { display: none !important; }');
+    expect(css).toContain('> [data-sidebar-sticky-group]:not([data-sidebar-visibility-group])');
   });
 
   it('keeps Pinned and hides every group', () => {
     const css = focusCss('pinned');
     expect(css).toContain('[data-sidebar-visibility-group]:not([data-sidebar-visibility-group] *)');
     expect(css).toContain('[data-sidebar-section-id]:not([data-sidebar-section-id="pinned"])');
+    expect(css).not.toContain('> [data-sidebar-sticky-group]:not([data-sidebar-visibility-group])');
   });
 });
 
@@ -166,7 +168,7 @@ describe('focus buttons', () => {
 
   it('end a header without actions, fading in on hover', () => {
     placeButtons(document, null, handlers());
-    const pinned = document.querySelector('[data-sidebar-section-id="pinned"] .sidebar-focus-button')!;
+    const pinned = document.querySelector('#groups > [data-sidebar-sticky-group] .sidebar-focus-button')!;
     expect(pinned.parentElement?.getAttribute('data-sidebar-sticky-tier')).toBe('label');
     expect(pinned.classList.contains('bb-sidebar-hover-actions')).toBe(true);
     placeButtons(document, 'pinned', handlers());

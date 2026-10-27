@@ -254,20 +254,21 @@ html.sidebar-focus-transition [data-sidebar='content']::view-transition-new(root
 /* Project and section names keep bb's size with a darker medium tone; the lines under them step back. */
 [data-bb-plugin='thread-list'] [data-sidebar-sticky-project-item] > [data-sidebar-sticky-group] > [data-sidebar-sticky-tier='label'],
 [data-bb-plugin='thread-list'] [data-sidebar-visibility-group] > [data-sidebar-sticky-group] > [data-sidebar-sticky-tier='label'],
-[data-bb-plugin='thread-list'] [data-sidebar-section-id] > [data-sidebar-sticky-tier='label'] {
+[data-bb-plugin='thread-list'] [data-sidebar-section-id] > [data-sidebar-sticky-tier='label'],
+[data-bb-plugin='thread-list'] :has(> [data-sidebar-visibility-group]) > [data-sidebar-sticky-group] > [data-sidebar-sticky-tier='label'] {
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.01em;
   color: color-mix(in oklab, var(--foreground) 75%, transparent);
 }
 
-/* A hairline between groups, inset like the thread rows. */
-[data-bb-plugin='thread-list'] [data-sidebar-visibility-group] ~ [data-sidebar-visibility-group] {
+/* A hairline between top-level groups, Pinned included in any order, inset like the thread rows. */
+[data-bb-plugin='thread-list'] :has(> [data-sidebar-visibility-group]) > * ~ :is([data-sidebar-visibility-group], [data-sidebar-sticky-group]) {
   position: relative;
   padding-top: 12px;
 }
 
-[data-bb-plugin='thread-list'] [data-sidebar-visibility-group] ~ [data-sidebar-visibility-group]::before {
+[data-bb-plugin='thread-list'] :has(> [data-sidebar-visibility-group]) > * ~ :is([data-sidebar-visibility-group], [data-sidebar-sticky-group])::before {
   content: '';
   position: absolute;
   top: 0;

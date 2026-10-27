@@ -32,6 +32,9 @@ const ROW = '[class*="group/thread-row"]';
 const ANCHOR = 'a[data-sidebar-thread-id]';
 const GLYPH = '[data-sidebar-thread-trailing-indicator]';
 const MORE = '[data-testid="sidebar-thread-list-more-trigger"]';
+/** The list of top-level groups, and a built-in section drawn bare in it (Pinned). */
+const GROUP_LIST = `${LIST} :has(> ${GROUP})`;
+const BARE_SECTION = `${GROUP_LIST} > [data-sidebar-sticky-group]:not(${GROUP})`;
 
 export const BUTTON_CLASS = 'sidebar-focus-button';
 export const LABEL_CLASS = 'sidebar-focus-automations';
@@ -82,6 +85,10 @@ export function topBlocks(root: ParentNode): { key: string; element: HTMLElement
     if (element.closest(GROUP) || element.parentElement?.closest(SECTION)) continue;
     blocks.push({ key: element.dataset.sidebarSectionId ?? '', element });
   }
+  // bb renders Pinned as a bare sticky group beside the visibility groups, with no id of its own.
+  for (const element of root.querySelectorAll<HTMLElement>(`${BARE_SECTION}`)) {
+    if (!blocks.some(block => block.element === element)) blocks.push({ key: 'pinned', element });
+  }
   return blocks.filter(block => block.key);
 }
 
@@ -92,16 +99,20 @@ function isGroupKey(key: string): boolean {
 /** CSS that shows only the focused block, without the divider above it; empty when nothing is focused. */
 export function focusCss(focus: string | null): string {
   if (!focus) return '';
-  const groupException = isGroupKey(focus) ? `:not([data-sidebar-visibility-group=${quote(focus)}])` : '';
-  const sectionException = isGroupKey(focus) ? '' : `:not([data-sidebar-section-id=${quote(focus)}])`;
-  return `${[
+  const group = isGroupKey(focus);
+  const groupException = group ? `:not([data-sidebar-visibility-group=${quote(focus)}])` : '';
+  const sectionException = group ? '' : `:not([data-sidebar-section-id=${quote(focus)}])`;
+  const hidden = [
     `${LIST} ${GROUP}${groupException}:not(${GROUP} *)`,
     `${LIST} ${SECTION}${sectionException}:not(${GROUP} *):not(${SECTION} *)`,
     `${LIST} ${MORE}`,
     `${LIST} :has(> ${MORE})`,
-  ].join(',\n')} { display: none !important; }
-${LIST} ${GROUP} { padding-top: 0 !important; }
-${LIST} ${GROUP}::before { display: none !important; }`;
+  ];
+  // Pinned has no id; it stays only while it is the focus.
+  if (focus !== 'pinned') hidden.push(BARE_SECTION);
+  return `${hidden.join(',\n')} { display: none !important; }
+${GROUP_LIST} > * { padding-top: 0 !important; }
+${GROUP_LIST} > *::before { display: none !important; }`;
 }
 
 function nativeRow(root: ParentNode, threadId: string): HTMLElement | null {
