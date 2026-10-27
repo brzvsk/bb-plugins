@@ -73,13 +73,13 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  /* One line of 11px text: the Automations and Recently archived lines sit tight together. */
-  height: 16px;
+  /* One line of 11px text with a little air: the Automations and Recently archived lines sit close together. */
+  height: 20px;
   margin: 0 !important;
   padding-left: 8px;
   border-radius: 4px;
   font-size: 11px;
-  line-height: 16px;
+  line-height: 20px;
   color: color-mix(in oklab, var(--muted-foreground) 80%, transparent);
   cursor: pointer;
   user-select: none;
