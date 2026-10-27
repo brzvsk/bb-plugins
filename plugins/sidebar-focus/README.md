@@ -6,7 +6,7 @@ Two changes to BB's own sidebar thread list, layered on top of it rather than re
 
 **In progress, Scheduled, Done.** Each project or section is split into three lines, all 11px muted labels:
 
-- **In progress N** heads the threads left in the group, in BB's usual order. When none are left it shows a **New Task** row that opens the new-session screen in that project (BB's own New thread button).
+- **In progress N** heads the threads left in the group, in BB's usual order. When none are left the line gives way to a muted, centered **New Task** row that opens the new-session screen in that project (BB's own New thread button).
 - **Scheduled N ›** collects threads that an enabled automation runs in (its target thread, or the latest run thread of one that starts a new thread per run) once there is nothing to look at. They stay BB's own rows, sorted by the soonest next run, each with a clock and that run's time: "Today, 12:00", "Tomorrow, 9:00", "11 Nov, 22:00". As soon as BB shows any status on one (unread dot, spinner, question, failed send, draft) it moves back to In progress. The clock and time show on automation threads wherever they are and hide on hover like BB's own status glyph. Collapsed by default, remembered per group.
 - **Done N ›** lists threads archived in the last 48 hours, even while the list shows active threads only. Clicking one opens it in place; on hover it has a quick Unarchive button and BB's own thread menu (⋯). Root threads only. When you show archived threads in BB's own list, it steps aside instead of repeating them.
 

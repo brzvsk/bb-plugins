@@ -200,23 +200,28 @@ html.sidebar-focus-transition [data-sidebar='content']::view-transition-new(root
   cursor: default;
 }
 
+.sidebar-focus-progress[hidden] {
+  display: none;
+}
+
 .sidebar-focus-new-task {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   height: var(--bb-sidebar-row-height, 28px);
   margin: 0 !important;
   padding-left: 8px;
   border-radius: 6px;
   font-size: 13px;
-  color: var(--muted-foreground);
+  color: color-mix(in oklab, var(--muted-foreground) 70%, transparent);
   cursor: pointer;
   user-select: none;
   outline: none;
 }
 
 .sidebar-focus-new-task:hover {
-  color: var(--sidebar-accent-foreground, var(--foreground));
+  color: var(--muted-foreground);
   background: var(--sidebar-accent);
 }
 

@@ -202,6 +202,7 @@ describe('in progress', () => {
     const task = document.querySelector<HTMLElement>(`[data-sidebar-visibility-group="threads"] .${NEW_TASK_CLASS}`)!;
     expect(task.parentElement?.id).toBe('');
     expect(task.parentElement?.classList.contains('sidebar-focus-empty-list')).toBe(true);
+    expect(document.querySelector<HTMLElement>('[data-sidebar-visibility-group="threads"] .sidebar-focus-progress')!.hidden).toBe(true);
     task.click();
     expect(h.newTask).toHaveBeenCalledWith(document.querySelector('[data-sidebar-visibility-group="threads"]'));
 

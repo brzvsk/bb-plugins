@@ -301,9 +301,9 @@ export function progress(root: ParentNode, handlers: Handlers): void {
     seen.add(label);
     const count = container.querySelectorAll(`:scope > ${WRAPPER}:not([${TUCKED}])`).length;
     const number = label.querySelector('.sidebar-focus-count')!;
-    // An empty list says so with its New Task row instead of a zero.
-    const shown = count > 0 ? String(count) : '';
-    if (number.textContent !== shown) number.textContent = shown;
+    if (number.textContent !== String(count)) number.textContent = String(count);
+    // An empty list shows only its New Task row.
+    if (label.hidden !== (count === 0)) label.hidden = count === 0;
 
     let task = container.querySelector<HTMLElement>(`:scope > .${NEW_TASK_CLASS}`);
     if (count > 0) {
