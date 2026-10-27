@@ -10,7 +10,7 @@
   },
   "bb": {
     "name": "Automation Clock",
-    "description": "Threads targeted by an enabled automation show a small clock in the sidebar; hover actions replace it as usual.",
+    "description": "A small clock marks sidebar threads that an enabled automation works in; hover actions replace it as usual.",
     "branding": {
       "icon": "Clock"
     },
@@ -26,6 +26,7 @@
     "server.ts",
     "rows.ts",
     "skills/",
+    "PLUGIN_OVERVIEW.md",
     "README.md",
     "LICENSE",
     "dist/app.js",
