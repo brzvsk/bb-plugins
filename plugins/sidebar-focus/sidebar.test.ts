@@ -1,15 +1,17 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  BLOCK_CLASS, BUTTON_CLASS, automationCss, blockThreads, clear, focusCss, placeButtons, placeOf, renderBlock,
-  selectedThreadId, topBlocks, type AutomationThread, type Handlers, type SidebarState,
+  BUTTON_CLASS, FLEX_CLASS, LABEL_CLASS, TUCKED, clear, focusCss, placeButtons, placeOf, selectedThreadId, topBlocks,
+  tuck, type Handlers, type SidebarState,
 } from './sidebar';
 
-const row = (id: string, glyph = '', selected = false) => `
-  <div class="group/thread-row${selected ? ' bb-sidebar-selected-row' : ''}">
-    <a data-sidebar-thread-id="${id}" href="/projects/p/threads/${id}"></a>
-    <span data-sidebar-thread-trailing="">${glyph ? `<span data-sidebar-thread-trailing-indicator=""><span aria-label="${glyph}"></span></span>` : ''}</span>
-  </div>`;
+const row = (id: string, glyph = false, selected = false) => `
+  <div data-sidebar-windowed-item=""><div data-sidebar-sticky-group="">
+    <div class="group/thread-row${selected ? ' bb-sidebar-selected-row' : ''}">
+      <a data-sidebar-thread-id="${id}" href="/projects/p/threads/${id}"></a>
+      <span data-sidebar-thread-trailing="">${glyph ? '<span data-sidebar-thread-trailing-indicator=""></span>' : ''}</span>
+    </div>
+  </div></div>`;
 
 const header = (name: string, controls = true) => `
   <div data-sidebar-sticky-tier="label">
@@ -21,36 +23,32 @@ const header = (name: string, controls = true) => `
 
 function sidebar(selected = '') {
   document.body.innerHTML = `
-    <div data-bb-plugin="thread-list"><div id="outer"><div id="groups">
-      <div data-sidebar-section-id="pinned">${header('Pinned', false)}${row('thr_pin', '', selected === 'thr_pin')}</div>
-      <div data-sidebar-visibility-group="project:p1">${header('One')}
-        ${row('thr_auto_read', '', selected === 'thr_auto_read')}${row('thr_auto_unread', 'unread-success')}${row('thr_plain')}
-      </div>
+    <div data-bb-plugin="thread-list"><div id="groups">
+      <div data-sidebar-section-id="pinned">${header('Pinned', false)}<div id="pinned-rows">${row('thr_pin')}</div></div>
+      <div data-sidebar-visibility-group="project:p1">${header('One')}<div id="p1-rows">
+        ${row('thr_auto_read', false, selected === 'thr_auto_read')}${row('thr_auto_unread', true)}${row('thr_plain')}
+      </div></div>
       <div data-sidebar-visibility-group="threads">
-        <div data-sidebar-section-id="threads">${header('Threads')}${row('thr_loose')}</div>
+        <div data-sidebar-section-id="threads">${header('Threads')}<div id="loose-rows">${row('thr_loose')}</div></div>
       </div>
-    </div><div id="more"></div></div></div>`;
+    </div></div>`;
 }
-
-const thread = (threadId: string, extra: Partial<AutomationThread> = {}): AutomationThread => ({
-  threadId, title: threadId, projectId: 'p1', projectName: 'One', sectionId: null, pinned: false, unread: false, updatedAt: 1, ...extra,
-});
 
 function state(extra: Partial<SidebarState> = {}): SidebarState {
   return {
     focus: null,
     automations: new Map([
-      ['thr_auto_read', thread('thr_auto_read', { updatedAt: 2 })],
-      ['thr_auto_unread', thread('thr_auto_unread', { unread: true })],
-      ['thr_offscreen', thread('thr_offscreen', { projectId: 'p2', projectName: 'Two', updatedAt: 3 })],
+      ['thr_auto_read', { threadId: 'thr_auto_read', unread: false }],
+      ['thr_auto_unread', { threadId: 'thr_auto_unread', unread: true }],
     ]),
-    automationsOpen: true,
+    automationsOpen: new Set(),
     held: null,
     ...extra,
   };
 }
 
-const handlers = (): Handlers => ({ toggleFocus: vi.fn(), toggleAutomations: vi.fn(), openThread: vi.fn() });
+const handlers = (): Handlers => ({ toggleFocus: vi.fn(), toggleAutomations: vi.fn() });
+const wrapper = (id: string) => document.querySelector(`a[data-sidebar-thread-id="${id}"]`)!.closest('[data-sidebar-windowed-item]')!;
 
 beforeEach(() => sidebar());
 
@@ -80,27 +78,59 @@ describe('focus css', () => {
 });
 
 describe('automation threads', () => {
-  it('belong in the list while bb shows a status, else in the block', () => {
-    const s = state();
-    expect(placeOf(document, s.automations.get('thr_auto_read')!)).toBe('block');
-    expect(placeOf(document, s.automations.get('thr_auto_unread')!)).toBe('list');
-    expect(placeOf(document, thread('thr_offscreen', { unread: true }))).toBe('list');
-    expect(placeOf(document, thread('thr_offscreen'))).toBe('block');
+  it('stay in place while bb shows a status, else get tucked', () => {
+    expect(placeOf(document, { threadId: 'thr_auto_read', unread: false })).toBe('block');
+    expect(placeOf(document, { threadId: 'thr_auto_unread', unread: true })).toBe('list');
+    expect(placeOf(document, { threadId: 'thr_gone', unread: true })).toBe('list');
+    expect(placeOf(document, { threadId: 'thr_gone', unread: false })).toBe('block');
   });
 
-  it('hide rows without a status glyph, except a selection held in the list', () => {
-    expect(automationCss(state())).toContain(':not(:has([data-sidebar-thread-trailing-indicator]))');
-    const held = automationCss(state({ held: { threadId: 'thr_auto_read', place: 'list' } }));
-    expect(held).not.toContain('"thr_auto_read"');
-    const tucked = automationCss(state({ held: { threadId: 'thr_auto_unread', place: 'block' } }));
-    expect(tucked).toContain(':has(a[data-sidebar-thread-id][data-sidebar-thread-id="thr_auto_unread"]) {');
+  it('tuck read rows at the end of their own list under a collapsed label', () => {
+    tuck(document, state(), handlers());
+    expect(wrapper('thr_auto_read').getAttribute(TUCKED)).toBe('closed');
+    expect(wrapper('thr_auto_unread').hasAttribute(TUCKED)).toBe(false);
+    expect(wrapper('thr_plain').hasAttribute(TUCKED)).toBe(false);
+    const list = document.getElementById('p1-rows')!;
+    expect(list.classList.contains(FLEX_CLASS)).toBe(true);
+    const label = list.querySelector(`:scope > .${LABEL_CLASS}`)!;
+    expect(label.textContent).toBe('Automations1');
+    expect(label.getAttribute('aria-expanded')).toBe('false');
+    expect(document.querySelectorAll(`.${LABEL_CLASS}`)).toHaveLength(1);
   });
 
-  it('fill the block newest first and follow focus', () => {
-    expect(blockThreads(document, state()).map(t => t.threadId)).toEqual(['thr_offscreen', 'thr_auto_read']);
-    expect(blockThreads(document, state({ focus: 'project:p1' })).map(t => t.threadId)).toEqual(['thr_auto_read']);
-    expect(blockThreads(document, state({ focus: 'pinned' }))).toEqual([]);
-    expect(blockThreads(document, state({ held: { threadId: 'thr_auto_read', place: 'list' } })).map(t => t.threadId)).toEqual(['thr_offscreen']);
+  it('open per group and toggle by group key', () => {
+    const h = handlers();
+    tuck(document, state({ automationsOpen: new Set(['project:p1']) }), h);
+    expect(wrapper('thr_auto_read').getAttribute(TUCKED)).toBe('open');
+    document.querySelector<HTMLElement>(`.${LABEL_CLASS}`)!.click();
+    expect(h.toggleAutomations).toHaveBeenCalledWith('project:p1');
+  });
+
+  it('come back when bb paints a status, and the label goes when empty', () => {
+    tuck(document, state(), handlers());
+    wrapper('thr_auto_read').querySelector('[data-sidebar-thread-trailing]')!.innerHTML = '<span data-sidebar-thread-trailing-indicator=""></span>';
+    tuck(document, state(), handlers());
+    expect(wrapper('thr_auto_read').hasAttribute(TUCKED)).toBe(false);
+    expect(document.querySelector(`.${LABEL_CLASS}`)).toBeNull();
+    expect(document.querySelector(`.${FLEX_CLASS}`)).toBeNull();
+  });
+
+  it('follow the held selection and keep it visible in a collapsed group', () => {
+    tuck(document, state({ held: { threadId: 'thr_auto_unread', place: 'block' } }), handlers());
+    expect(wrapper('thr_auto_unread').getAttribute(TUCKED)).toBe('closed');
+    sidebar('thr_auto_read');
+    tuck(document, state({ held: { threadId: 'thr_auto_read', place: 'block' } }), handlers());
+    expect(wrapper('thr_auto_read').getAttribute(TUCKED)).toBe('open');
+    tuck(document, state({ held: { threadId: 'thr_auto_read', place: 'list' } }), handlers());
+    expect(wrapper('thr_auto_read').hasAttribute(TUCKED)).toBe(false);
+  });
+
+  it('keep the mark of a virtualized-away wrapper', () => {
+    tuck(document, state(), handlers());
+    wrapper('thr_auto_read').replaceChildren();
+    const empty = document.querySelector(`[${TUCKED}]`)!;
+    tuck(document, state(), handlers());
+    expect(empty.getAttribute(TUCKED)).toBe('closed');
   });
 
   it('read the selection from bb, else from the URL', () => {
@@ -137,36 +167,11 @@ describe('focus buttons', () => {
   });
 });
 
-describe('automations block', () => {
-  it('renders after the groups, collapses, and disappears when empty', () => {
-    const s = state();
-    const h = handlers();
-    renderBlock(document, s, blockThreads(document, s), null, h);
-    const block = document.querySelector(`.${BLOCK_CLASS}`)!;
-    expect(block.previousElementSibling?.id).toBe('groups');
-    expect(block.querySelectorAll('a[data-sidebar-focus-thread-id]')).toHaveLength(2);
-    expect(block.textContent).toContain('Two');
-
-    const link = block.querySelector<HTMLAnchorElement>('a[data-sidebar-focus-thread-id="thr_auto_read"]')!;
-    link.click();
-    expect(h.openThread).toHaveBeenCalledWith('thr_auto_read', '/projects/p1/threads/thr_auto_read', expect.any(MouseEvent));
-
-    renderBlock(document, { ...s, automationsOpen: false }, blockThreads(document, s), null, h);
-    expect(block.querySelectorAll('a[data-sidebar-focus-thread-id]')).toHaveLength(0);
-    expect(block.querySelector('[aria-expanded]')?.getAttribute('aria-expanded')).toBe('false');
-
-    renderBlock(document, { ...s, automationsOpen: false }, blockThreads(document, s), 'thr_auto_read', h);
-    expect(block.querySelector('[aria-current="page"]')).not.toBeNull();
-
-    renderBlock(document, s, [], null, h);
-    expect(document.querySelector(`.${BLOCK_CLASS}`)).toBeNull();
-  });
-
-  it('is cleared with the buttons', () => {
-    const s = state();
+describe('cleanup', () => {
+  it('removes buttons, labels and marks', () => {
     placeButtons(document, null, handlers());
-    renderBlock(document, s, blockThreads(document, s), null, handlers());
+    tuck(document, state(), handlers());
     clear(document);
-    expect(document.querySelectorAll(`.${BUTTON_CLASS}, .${BLOCK_CLASS}`)).toHaveLength(0);
+    expect(document.querySelectorAll(`.${BUTTON_CLASS}, .${LABEL_CLASS}, [${TUCKED}], .${FLEX_CLASS}`)).toHaveLength(0);
   });
 });

@@ -1,6 +1,6 @@
 {
   "name": "bb-plugin-sidebar-focus",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Focus the sidebar on one project or section, and tuck read automation threads into an Automations block.",
   "license": "MIT",
@@ -11,7 +11,7 @@
   },
   "bb": {
     "name": "Sidebar Focus",
-    "description": "A focus button on sidebar group headers shows only that group; read automation threads move into a collapsible Automations block until they need attention.",
+    "description": "A focus button on sidebar group headers shows only that group; read automation threads move to the end of their group under a collapsible Automations line until they need attention.",
     "branding": {
       "icon": "Target"
     },

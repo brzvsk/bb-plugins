@@ -1,20 +1,15 @@
 /** One read-tracked automation thread, as the server RPC returns it. */
 export interface AutomationThread {
   threadId: string;
-  title: string;
-  projectId: string;
-  projectName: string;
-  sectionId: string | null;
-  pinned: boolean;
   unread: boolean;
-  updatedAt: number;
 }
 
 export interface SidebarState {
   /** Focused block key, or null to show everything. */
   focus: string | null;
   automations: ReadonlyMap<string, AutomationThread>;
-  automationsOpen: boolean;
+  /** Block keys whose Automations disclosure is open. */
+  automationsOpen: ReadonlySet<string>;
   /** The selected thread keeps the place it had when it was selected, like bb's own held read status. */
   held: { threadId: string; place: Place } | null;
 }
@@ -23,8 +18,7 @@ export type Place = 'list' | 'block';
 
 export interface Handlers {
   toggleFocus(key: string): void;
-  toggleAutomations(): void;
-  openThread(threadId: string, href: string, event: MouseEvent): void;
+  toggleAutomations(key: string): void;
 }
 
 const LIST = '[data-bb-plugin="thread-list"]';
@@ -37,15 +31,12 @@ const GLYPH = '[data-sidebar-thread-trailing-indicator]';
 const MORE = '[data-testid="sidebar-thread-list-more-trigger"]';
 
 export const BUTTON_CLASS = 'sidebar-focus-button';
-export const BLOCK_CLASS = 'sidebar-focus-automations';
+export const LABEL_CLASS = 'sidebar-focus-automations';
+export const FLEX_CLASS = 'sidebar-focus-list';
+export const TUCKED = 'data-sidebar-focus-tucked';
+const WRAPPER = '[data-sidebar-windowed-item]';
 
 const HOVER_ACTIONS = 'bb-sidebar-hover-actions';
-// bb's own row look; these utility classes already exist in the app stylesheet.
-const ROW_CLASS = 'sidebar-focus-row flex w-full items-center gap-2 rounded-md pr-0 text-sm transition-none relative h-[var(--bb-sidebar-row-height)] cursor-pointer text-sidebar-foreground select-none';
-const ROW_IDLE_CLASS = 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground bb-sidebar-accent-row';
-const ROW_SELECTED_CLASS = 'bg-state-active bb-sidebar-selected-row';
-const LABEL_CLASS = 'sidebar-focus-label flex shrink-0 items-center px-1 text-xs font-normal leading-5 text-muted-foreground pl-2 rounded-md pr-0 select-none cursor-pointer h-7';
-
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const CROSSHAIR = '<circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/>';
 const CHEVRON = '<path d="M9.00005 6C9.00005 6 15 10.4189 15 12C15 13.5812 9 18 9 18"/>';
@@ -109,47 +100,13 @@ function nativeRow(root: ParentNode, threadId: string): HTMLElement | null {
 
 /**
  * Where an automation thread belongs right now: in the list while bb shows any
- * status for it (unread dot, spinner, question, draft…), else in the block.
+ * status for it (unread dot, spinner, question, draft…), else tucked away.
  * Without a mounted row (virtualized away) the server's read state decides.
  */
 export function placeOf(root: ParentNode, thread: AutomationThread): Place {
   const row = nativeRow(root, thread.threadId);
   if (row) return row.querySelector(GLYPH) ? 'list' : 'block';
   return thread.unread ? 'list' : 'block';
-}
-
-/**
- * Hides native rows of automation threads that have nothing to show. The
- * status check lives in the selector, so a row reappears in the same frame bb
- * paints its unread dot. A held selection overrides it either way.
- */
-export function automationCss(state: SidebarState): string {
-  const ids = [...state.automations.keys()].filter(id => id !== state.held?.threadId);
-  const anchors = (list: string[]) => list.map(id => `${ANCHOR}[data-sidebar-thread-id=${quote(id)}]`).join(', ');
-  const rules: string[] = [];
-  if (ids.length) rules.push(`${LIST} ${ROW}:has(${anchors(ids)}):not(:has(${GLYPH}))`);
-  if (state.held?.place === 'block') rules.push(`${LIST} ${ROW}:has(${anchors([state.held.threadId])})`);
-  return rules.length ? `${rules.join(',\n')} { display: none !important; }` : '';
-}
-
-/** Automation threads for the block, newest first, limited to the focused block. */
-export function blockThreads(root: ParentNode, state: SidebarState): AutomationThread[] {
-  const focused = state.focus ? topBlocks(root).find(block => block.key === state.focus)?.element ?? null : null;
-  return [...state.automations.values()]
-    .filter(thread => {
-      if (state.held?.threadId === thread.threadId) return state.held.place === 'block';
-      return placeOf(root, thread) === 'block';
-    })
-    .filter(thread => {
-      const focus = state.focus;
-      if (!focus || !focused) return true;
-      if (focus.startsWith('project:')) return focus === `project:${thread.projectId}`;
-      if (focus.startsWith('section:')) return focus === `section:${thread.sectionId}`;
-      if (focus === 'pinned') return thread.pinned;
-      const row = nativeRow(root, thread.threadId);
-      return row !== null && focused.contains(row);
-    })
-    .sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 /** The thread bb marks as selected in its list, else the one in the URL. */
@@ -219,84 +176,93 @@ export function placeButtons(root: ParentNode, focus: string | null, handlers: H
   }
 }
 
-/** Renders the Automations block below bb's groups, or removes it when it has nothing to hold. */
-export function renderBlock(root: ParentNode, state: SidebarState, threads: AutomationThread[], selected: string | null, handlers: Handlers): void {
-  let block = root.querySelector<HTMLElement>(`.${BLOCK_CLASS}`);
-  const anchor = topBlocks(root)[0]?.element.parentElement ?? null;
-  if (!threads.length || !anchor) {
-    block?.remove();
-    return;
-  }
-  // Selecting a tucked-away thread opens the block so the selection stays visible.
-  const open = state.automationsOpen || threads.some(thread => thread.threadId === selected);
-  const projectFocus = state.focus?.startsWith('project:') ?? false;
-  const signature = JSON.stringify([open, selected, projectFocus, threads.map(t => [t.threadId, t.title, t.projectName])]);
-  if (!block) {
-    block = document.createElement('div');
-    block.className = BLOCK_CLASS;
-  }
-  if (anchor.nextElementSibling !== block) anchor.after(block);
-  if (block.dataset.signature === signature) return;
-  block.dataset.signature = signature;
-
-  const header = document.createElement('div');
-  header.className = LABEL_CLASS;
-  header.setAttribute('role', 'button');
-  header.tabIndex = 0;
-  header.setAttribute('aria-expanded', String(open));
-  const title = document.createElement('span');
-  title.className = 'min-w-0 truncate';
-  title.textContent = 'Automations';
-  const count = document.createElement('span');
-  count.className = 'sidebar-focus-count';
-  count.textContent = String(threads.length);
-  header.append(title, icon(CHEVRON, `sidebar-focus-chevron${open ? ' sidebar-focus-chevron-open' : ''}`), count);
-  header.addEventListener('click', () => handlers.toggleAutomations());
-  header.addEventListener('keydown', event => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    event.preventDefault();
-    handlers.toggleAutomations();
-  });
-
-  const rows = document.createElement('div');
-  rows.className = 'sidebar-focus-rows';
-  if (open) {
-    for (const thread of threads) {
-      const isSelected = thread.threadId === selected;
-      const row = document.createElement('div');
-      row.className = `${ROW_CLASS} ${isSelected ? ROW_SELECTED_CLASS : ROW_IDLE_CLASS}`;
-      row.style.paddingLeft = '8px';
-      const href = `/projects/${encodeURIComponent(thread.projectId)}/threads/${encodeURIComponent(thread.threadId)}`;
-      const link = document.createElement('a');
-      link.href = href;
-      link.className = 'absolute inset-0 rounded-md outline-none';
-      link.dataset.sidebarFocusThreadId = thread.threadId;
-      link.setAttribute('aria-label', `Open ${thread.title}`);
-      if (isSelected) link.setAttribute('aria-current', 'page');
-      link.addEventListener('click', event => handlers.openThread(thread.threadId, href, event));
-      const name = document.createElement('span');
-      name.className = 'pointer-events-none relative flex min-w-0 flex-1 items-center';
-      const titleText = document.createElement('span');
-      titleText.className = 'bb-thread-title';
-      titleText.title = thread.title;
-      const truncate = document.createElement('span');
-      truncate.className = 'truncate whitespace-pre';
-      truncate.textContent = thread.title;
-      titleText.append(truncate);
-      name.append(titleText);
-      row.append(link, name);
-      if (!projectFocus && thread.projectName) {
-        const project = document.createElement('span');
-        project.className = 'sidebar-focus-project pointer-events-none';
-        project.textContent = thread.projectName;
-        row.append(project);
-      }
-      rows.append(row);
+/**
+ * Moves automation threads with nothing to show to the end of their own list,
+ * under a small Automations disclosure. The rows stay bb's own: only their
+ * wrapper gets an order (and, while collapsed, zero height), so the list keeps
+ * its sort, statuses and row actions. A wrapper virtualized away keeps its last
+ * mark until it mounts again.
+ */
+export function tuck(root: ParentNode, state: SidebarState, handlers: Handlers): void {
+  const containers = new Set<HTMLElement>();
+  for (const wrapper of root.querySelectorAll<HTMLElement>(`${LIST} ${WRAPPER}`)) {
+    // The wrapper's first row is its root thread; child rows move with it.
+    const anchor = wrapper.querySelector<HTMLElement>(ANCHOR);
+    let tucked: boolean;
+    if (!anchor) {
+      tucked = wrapper.hasAttribute(TUCKED);
+    } else {
+      const threadId = anchor.dataset.sidebarThreadId ?? '';
+      const row = anchor.closest<HTMLElement>(ROW);
+      tucked = state.automations.has(threadId) && (state.held?.threadId === threadId
+        ? state.held.place === 'block'
+        : !row?.querySelector(GLYPH));
     }
+    const container = wrapper.parentElement;
+    if (!tucked || !container) {
+      if (wrapper.hasAttribute(TUCKED)) wrapper.removeAttribute(TUCKED);
+      continue;
+    }
+    containers.add(container);
+    const key = blockKeyOf(container);
+    // The selected thread stays visible even in a collapsed group.
+    const selected = wrapper.querySelector(`${ROW}.bb-sidebar-selected-row`) !== null;
+    const value = selected || state.automationsOpen.has(key) ? 'open' : 'closed';
+    if (wrapper.getAttribute(TUCKED) !== value) wrapper.setAttribute(TUCKED, value);
   }
-  block.replaceChildren(header, rows);
+
+  for (const container of containers) {
+    const key = blockKeyOf(container);
+    const open = state.automationsOpen.has(key);
+    const count = container.querySelectorAll(`:scope > [${TUCKED}]`).length;
+    if (!container.classList.contains(FLEX_CLASS)) container.classList.add(FLEX_CLASS);
+    let label = container.querySelector<HTMLElement>(`:scope > .${LABEL_CLASS}`);
+    if (!label) {
+      label = document.createElement('div');
+      label.className = LABEL_CLASS;
+      label.setAttribute('role', 'button');
+      label.tabIndex = 0;
+      const title = document.createElement('span');
+      title.className = 'sidebar-focus-label-title';
+      title.textContent = 'Automations';
+      const number = document.createElement('span');
+      number.className = 'sidebar-focus-count';
+      label.append(title, icon(CHEVRON, 'sidebar-focus-chevron'), number);
+      label.addEventListener('pointerdown', event => event.stopPropagation());
+      label.addEventListener('click', event => {
+        event.stopPropagation();
+        handlers.toggleAutomations(label!.dataset.key ?? '');
+      });
+      label.addEventListener('keydown', event => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        event.stopPropagation();
+        handlers.toggleAutomations(label!.dataset.key ?? '');
+      });
+    }
+    if (label.parentElement !== container || container.lastElementChild !== label) container.append(label);
+    if (label.dataset.key !== key) label.dataset.key = key;
+    if (label.getAttribute('aria-expanded') !== String(open)) label.setAttribute('aria-expanded', String(open));
+    const number = label.querySelector('.sidebar-focus-count')!;
+    if (number.textContent !== String(count)) number.textContent = String(count);
+  }
+
+  for (const label of root.querySelectorAll<HTMLElement>(`.${LABEL_CLASS}`)) {
+    if (!containers.has(label.parentElement as HTMLElement)) label.remove();
+  }
+  for (const container of root.querySelectorAll<HTMLElement>(`.${FLEX_CLASS}`)) {
+    if (!containers.has(container)) container.classList.remove(FLEX_CLASS);
+  }
+}
+
+function blockKeyOf(element: HTMLElement): string {
+  const group = element.closest<HTMLElement>(GROUP);
+  if (group) return group.dataset.sidebarVisibilityGroup ?? '';
+  return element.closest<HTMLElement>(SECTION)?.dataset.sidebarSectionId ?? '';
 }
 
 export function clear(root: ParentNode): void {
-  for (const node of root.querySelectorAll(`.${BUTTON_CLASS}, .${BLOCK_CLASS}`)) node.remove();
+  for (const node of root.querySelectorAll(`.${BUTTON_CLASS}, .${LABEL_CLASS}`)) node.remove();
+  for (const node of root.querySelectorAll(`[${TUCKED}]`)) node.removeAttribute(TUCKED);
+  for (const node of root.querySelectorAll(`.${FLEX_CLASS}`)) node.classList.remove(FLEX_CLASS);
 }

@@ -1,16 +1,24 @@
 import { definePluginApp } from '@get-bb/plugin-sdk/app';
 import './app.css';
 import {
-  automationCss, blockThreads, clear, focusCss, placeButtons, placeOf, renderBlock, selectedThreadId, topBlocks,
+  clear, focusCss, placeButtons, placeOf, selectedThreadId, topBlocks, tuck,
   type AutomationThread, type Handlers, type SidebarState,
 } from './sidebar';
 
 const REFRESH_MS = 60_000;
 const FOCUS_KEY = 'sidebar-focus:focus';
-const OPEN_KEY = 'sidebar-focus:automations-open';
+const OPEN_KEY = 'sidebar-focus:automations-open-groups';
 
 function read(key: string): string | null {
   try { return localStorage.getItem(key); } catch { return null; }
+}
+function readSet(key: string): Set<string> {
+  try {
+    const value: unknown = JSON.parse(read(key) ?? '[]');
+    return new Set(Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []);
+  } catch {
+    return new Set();
+  }
 }
 function write(key: string, value: string | null): void {
   try { value === null ? localStorage.removeItem(key) : localStorage.setItem(key, value); } catch { /* per-window state only */ }
@@ -23,7 +31,7 @@ export default definePluginApp(app => {
       const state: SidebarState = {
         focus: read(FOCUS_KEY),
         automations: new Map(),
-        automationsOpen: read(OPEN_KEY) === 'true',
+        automationsOpen: readSet(OPEN_KEY),
         held: null,
       };
       const style = document.createElement('style');
@@ -39,25 +47,12 @@ export default definePluginApp(app => {
           write(FOCUS_KEY, state.focus);
           scan();
         },
-        toggleAutomations() {
-          state.automationsOpen = !state.automationsOpen;
-          write(OPEN_KEY, String(state.automationsOpen));
+        toggleAutomations(key) {
+          const open = new Set(state.automationsOpen);
+          if (!open.delete(key)) open.add(key);
+          state.automationsOpen = open;
+          write(OPEN_KEY, JSON.stringify([...open]));
           scan();
-        },
-        openThread(threadId, href, event) {
-          if (event.button !== 0) return;
-          event.preventDefault();
-          // The hidden native row still routes like a visible one, including modifier clicks.
-          const native = document.querySelector<HTMLElement>(`a[data-sidebar-thread-id="${threadId}"]`);
-          if (native) {
-            native.dispatchEvent(new MouseEvent('click', {
-              bubbles: true, cancelable: true, button: 0,
-              metaKey: event.metaKey, ctrlKey: event.ctrlKey, shiftKey: event.shiftKey, altKey: event.altKey,
-            }));
-            return;
-          }
-          history.pushState(history.state, '', href);
-          window.dispatchEvent(new PopStateEvent('popstate', { state: history.state }));
         },
       };
 
@@ -71,10 +66,10 @@ export default definePluginApp(app => {
         }
         // A focus whose group is gone (renamed mode, deleted project) shows everything instead of nothing.
         const focus = state.focus && topBlocks(document).some(block => block.key === state.focus) ? state.focus : null;
-        const css = [focusCss(focus), automationCss(state)].filter(Boolean).join('\n');
+        const css = focusCss(focus);
         if (style.textContent !== css) style.textContent = css;
         placeButtons(document, focus, handlers);
-        renderBlock(document, { ...state, focus }, blockThreads(document, { ...state, focus }), selected, handlers);
+        tuck(document, state, handlers);
       };
       const schedule = () => {
         if (!frame && !disposed) frame = requestAnimationFrame(scan);
