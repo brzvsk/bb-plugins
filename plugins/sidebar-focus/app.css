@@ -5,14 +5,14 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   margin: 0;
   padding: 0;
   border-radius: 6px;
   cursor: pointer;
   outline: none;
-  /* The chevron's tones: text-subtle-foreground, hover:text-muted-foreground. */
+  /* bb's header action tones: text-subtle-foreground, hover:text-muted-foreground. */
   color: var(--subtle-foreground, var(--muted-foreground));
   background: transparent;
 }
@@ -31,8 +31,8 @@
 }
 
 .sidebar-focus-icon {
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   pointer-events: none;
 }
 

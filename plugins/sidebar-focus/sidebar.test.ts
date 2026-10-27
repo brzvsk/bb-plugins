@@ -146,27 +146,28 @@ describe('automation threads', () => {
 });
 
 describe('focus buttons', () => {
-  it('sit right of the collapse chevron on hover, move to the right edge when pressed, and toggle by key', () => {
+  it('sit right of New thread among the hover actions, move to the right edge when pressed, and toggle by key', () => {
     const h = handlers();
     placeButtons(document, null, h);
     const button = document.querySelector<HTMLButtonElement>('[data-sidebar-visibility-group="project:p1"] .sidebar-focus-button')!;
-    expect(button.previousElementSibling?.getAttribute('aria-label')).toBe('Collapse One section');
-    expect(button.classList.contains('bb-sidebar-hover-actions')).toBe(true);
+    expect(button.previousElementSibling?.getAttribute('aria-label')).toBe('New thread in One');
+    expect(button.parentElement?.hasAttribute('data-sidebar-row-controls')).toBe(true);
+    expect(button.classList.contains('bb-sidebar-hover-actions')).toBe(false);
     expect(button.getAttribute('aria-label')).toBe('Focus on One');
 
     placeButtons(document, 'project:p1', h);
     expect(button.parentElement?.hasAttribute('data-sidebar-trailing-controls')).toBe(true);
     expect(button.parentElement?.lastElementChild).toBe(button);
-    expect(button.classList.contains('bb-sidebar-hover-actions')).toBe(false);
     expect(button.getAttribute('aria-pressed')).toBe('true');
     button.click();
     expect(h.toggleFocus).toHaveBeenCalledWith('project:p1');
   });
 
-  it('end the title of a header without a chevron', () => {
+  it('end a header without actions, fading in on hover', () => {
     placeButtons(document, null, handlers());
     const pinned = document.querySelector('[data-sidebar-section-id="pinned"] .sidebar-focus-button')!;
-    expect(pinned.previousElementSibling?.getAttribute('title')).toBe('Pinned');
+    expect(pinned.parentElement?.getAttribute('data-sidebar-sticky-tier')).toBe('label');
+    expect(pinned.classList.contains('bb-sidebar-hover-actions')).toBe(true);
     placeButtons(document, 'pinned', handlers());
     expect(pinned.parentElement?.getAttribute('data-sidebar-sticky-tier')).toBe('label');
     expect(pinned.parentElement?.lastElementChild).toBe(pinned);
