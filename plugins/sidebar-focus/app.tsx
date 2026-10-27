@@ -5,6 +5,7 @@ import {
   type AutomationThread, type Handlers, type SidebarState,
 } from './sidebar';
 import { animateFocus } from './transition';
+import { clearArchived, renderArchived, type ArchivedHandlers, type ArchivedThread } from './archived';
 
 const REFRESH_MS = 60_000;
 const FOCUS_KEY = 'sidebar-focus:focus';
@@ -39,6 +40,9 @@ export default definePluginApp(app => {
       const style = document.createElement('style');
       style.dataset.sidebarFocus = '';
       document.head.append(style);
+      let archived: ArchivedThread[] = [];
+      let nativeIds = new Set<string>();
+      let archivedTimer = 0;
       let frame = 0;
       let inflight: AbortController | null = null;
       let disposed = false;
@@ -80,6 +84,11 @@ export default definePluginApp(app => {
         if (style.textContent !== css) style.textContent = css;
         placeButtons(document, focus, handlers);
         tuck(document, state, handlers);
+        const ids = new Set([...document.querySelectorAll<HTMLElement>('[data-bb-plugin="thread-list"] a[data-sidebar-thread-id]')]
+          .map(anchor => anchor.dataset.sidebarThreadId ?? ''));
+        if ([...nativeIds].some(id => !ids.has(id))) refreshArchivedSoon();
+        nativeIds = ids;
+        renderArchived(document, archived, state.automationsOpen, selected, archivedHandlers);
       };
       const schedule = () => {
         if (!frame && !disposed) frame = requestAnimationFrame(scan);
@@ -104,27 +113,78 @@ export default definePluginApp(app => {
         }
         schedule();
       };
-      const onFocus = () => void load();
+      const rpc = async <T,>(method: string, input: unknown, signal?: AbortSignal): Promise<T | null> => {
+        const response = await fetch(`/api/v1/plugins/${encodeURIComponent(pluginId)}/rpc/${method}`, {
+          method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(input), signal,
+        });
+        const data = await response.json() as { ok?: boolean; result?: T };
+        return response.ok && data.ok ? data.result ?? null : null;
+      };
+      let archivedInflight = false;
+      const loadArchived = async () => {
+        if (archivedInflight || disposed) return;
+        archivedInflight = true;
+        try {
+          const result = await rpc<ArchivedThread[]>('recentlyArchived', null);
+          if (Array.isArray(result)) archived = result;
+        } catch {
+          // Keep the last list; the minute refresh retries.
+        } finally {
+          archivedInflight = false;
+        }
+        schedule();
+      };
+      // A row leaving bb's list is usually an archive; pick it up without waiting a minute.
+      const refreshArchivedSoon = () => {
+        window.clearTimeout(archivedTimer);
+        archivedTimer = window.setTimeout(() => void loadArchived(), 400);
+      };
+      const archivedHandlers: ArchivedHandlers = {
+        toggle(key) {
+          handlers.toggleAutomations(key);
+        },
+        open(href, event) {
+          if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+          event.preventDefault();
+          history.pushState(history.state, '', href);
+          window.dispatchEvent(new PopStateEvent('popstate', { state: history.state }));
+        },
+        unarchive(threadId) {
+          archived = archived.filter(thread => thread.threadId !== threadId);
+          schedule();
+          void rpc('unarchive', { threadId }).catch(() => undefined).finally(() => void loadArchived());
+        },
+      };
+      const onFocus = () => {
+        void load();
+        void loadArchived();
+      };
       const onHistory = () => schedule();
 
       const observer = new MutationObserver(schedule);
       observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
-      const timer = window.setInterval(() => void load(), REFRESH_MS);
+      const timer = window.setInterval(() => {
+        void load();
+        void loadArchived();
+      }, REFRESH_MS);
       window.addEventListener('focus', onFocus);
       window.addEventListener('popstate', onHistory);
       void load();
+      void loadArchived();
       schedule();
 
       return () => {
         disposed = true;
         observer.disconnect();
         window.clearInterval(timer);
+        window.clearTimeout(archivedTimer);
         window.removeEventListener('focus', onFocus);
         window.removeEventListener('popstate', onHistory);
         cancelAnimationFrame(frame);
         inflight?.abort();
         style.remove();
         clear(document);
+        clearArchived(document);
       };
     },
   });

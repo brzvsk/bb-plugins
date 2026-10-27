@@ -241,7 +241,8 @@ export function tuck(root: ParentNode, state: SidebarState, handlers: Handlers):
         handlers.toggleAutomations(label!.dataset.key ?? '');
       });
     }
-    if (label.parentElement !== container || container.lastElementChild !== label) container.append(label);
+    // The flex order places it; checking for last place would fight Recently archived over the same slot.
+    if (label.parentElement !== container) container.append(label);
     if (label.dataset.key !== key) label.dataset.key = key;
     if (label.getAttribute('aria-expanded') !== String(open)) label.setAttribute('aria-expanded', String(open));
     const number = label.querySelector('.sidebar-focus-count')!;
@@ -252,7 +253,8 @@ export function tuck(root: ParentNode, state: SidebarState, handlers: Handlers):
     if (!containers.has(label.parentElement as HTMLElement)) label.remove();
   }
   for (const container of root.querySelectorAll<HTMLElement>(`.${FLEX_CLASS}`)) {
-    if (!containers.has(container)) container.classList.remove(FLEX_CLASS);
+    // Recently archived shares the ordering; it owns the class while it is there.
+    if (!containers.has(container) && !container.querySelector(':scope > .sidebar-focus-archived')) container.classList.remove(FLEX_CLASS);
   }
 }
 

@@ -73,4 +73,4 @@ bb plugin install . --plugin model-visibility
 
 ## Sidebar Focus
 
-`plugins/sidebar-focus` adds a focus button to sidebar group headers that shows only that project or section, and tucks read automation threads to the end of their own project or section under a small Automations line until they need attention. Local only; not published to the marketplace.
+`plugins/sidebar-focus` adds a focus button to sidebar group headers that shows only that project or section, and tucks read automation threads to the end of their own project or section under a small Automations line until they need attention, and keeps threads archived in the last two days under a collapsed Recently archived line. Local only; not published to the marketplace.

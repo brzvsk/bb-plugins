@@ -8,6 +8,8 @@ Two changes to BB's own sidebar thread list, layered on top of it rather than re
 
 The selected thread keeps the place it had when you opened it, so opening an unread automation thread doesn't move it, and a tucked thread you open stays visible even while its group's line is collapsed.
 
+**Recently archived.** Threads archived in the last 48 hours show at the end of their project or section under a collapsed **Recently archived N ›** line, even while the list shows active threads only. Clicking one opens it in place; the hover button unarchives it. Root threads only, so archived subagents don't pile up. When you show archived threads in BB's own list, the line steps aside instead of repeating them.
+
 Requires BB 0.47.1+ with the built-in Thread list and Automations plugins. Works through BB's sidebar markup, so a sidebar change can break it until updated. No settings, network services or credentials.
 
 Build: `npm ci --include=dev --ignore-scripts`, `npm run typecheck`, `npm test`, `npm run build`. Install: `bb plugin install . --yes`.
