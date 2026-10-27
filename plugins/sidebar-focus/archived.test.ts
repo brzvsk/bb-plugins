@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ARCHIVED_CLASS, clearArchived, groupArchived, renderArchived, type ArchivedHandlers, type ArchivedThread } from './archived';
+import { ARCHIVED_CLASS, clearArchived, groupArchived, menuSlots, renderArchived, type ArchivedHandlers, type ArchivedThread } from './archived';
 
 const header = (name: string, expanded = true) => `
   <div data-sidebar-sticky-tier="label"><span><span title="${name}">${name}</span>
@@ -64,6 +64,14 @@ describe('recently archived', () => {
     expect(document.querySelector('#p1-rows .sidebar-focus-archived')).toBeNull();
     renderArchived(document, [...archived, thread('thr_active', 'p1')], new Set(), null, handlers());
     expect(document.querySelectorAll(`.${ARCHIVED_CLASS}`)).toHaveLength(0);
+  });
+
+  it('offers a slot for bb\'s thread menu on every drawn row', () => {
+    renderArchived(document, archived, new Set(['archived:project:p1']), null, handlers());
+    const slots = menuSlots(document, archived);
+    expect(slots.map(slot => slot.thread.id)).toEqual(['thr_a1', 'thr_a2']);
+    expect(slots[0].thread).toMatchObject({ projectId: 'p1', archivedAt: 1, status: 'idle', pinnedAt: null });
+    expect(slots[0].element.previousElementSibling?.getAttribute('aria-label')).toBe('Unarchive');
   });
 
   it('cleans up', () => {

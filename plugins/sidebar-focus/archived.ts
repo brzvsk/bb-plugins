@@ -17,6 +17,9 @@ export interface ArchivedHandlers {
 
 export const ARCHIVED_CLASS = 'sidebar-focus-archived';
 export const ARCHIVED_PREFIX = 'archived:';
+export const MENU_SLOT_CLASS = 'sidebar-focus-menu-slot';
+// bb's own sidebar row button look (ghost icon button), from its stylesheet.
+const ROW_BUTTON_CLASS = 'inline-flex items-center justify-center h-7 w-7 text-subtle-foreground hover:text-muted-foreground hover:bg-state-hover active:bg-state-active relative m-0 shrink-0 cursor-pointer rounded-md p-0 outline-none';
 const LIST = '[data-bb-plugin="thread-list"]';
 const ANCHOR = 'a[data-sidebar-thread-id]';
 const WRAPPER = '[data-sidebar-windowed-item]';
@@ -156,9 +159,12 @@ function row(thread: ArchivedThread, selected: boolean, handlers: ArchivedHandle
   text.textContent = thread.title;
   title.append(text);
   name.append(title);
+  // Quick unarchive, then bb's own thread menu (portaled in by the menu bridge), like a native row's actions.
+  const actions = document.createElement('span');
+  actions.className = 'sidebar-focus-row-actions bb-sidebar-hover-actions';
   const restore = document.createElement('button');
   restore.type = 'button';
-  restore.className = 'sidebar-focus-restore bb-sidebar-hover-actions';
+  restore.className = `sidebar-focus-restore ${ROW_BUTTON_CLASS}`;
   restore.setAttribute('aria-label', 'Unarchive');
   restore.title = 'Unarchive';
   restore.append(icon(RESTORE, 'sidebar-focus-icon'));
@@ -167,10 +173,37 @@ function row(thread: ArchivedThread, selected: boolean, handlers: ArchivedHandle
     event.stopPropagation();
     handlers.unarchive(thread.threadId);
   });
-  element.append(link, name, restore);
+  const menu = document.createElement('span');
+  menu.className = MENU_SLOT_CLASS;
+  menu.dataset.threadId = thread.threadId;
+  actions.append(restore, menu);
+  element.append(link, name, actions);
   return element;
 }
 
 export function clearArchived(root: ParentNode): void {
   for (const block of root.querySelectorAll(`.${ARCHIVED_CLASS}`)) block.remove();
+}
+
+/** Where bb's thread menu goes on each drawn row, with the thread it acts on. */
+export function menuSlots(root: ParentNode, threads: readonly ArchivedThread[]) {
+  const byId = new Map(threads.map(thread => [thread.threadId, thread]));
+  return [...root.querySelectorAll<HTMLElement>(`.${MENU_SLOT_CLASS}`)].flatMap(element => {
+    const thread = byId.get(element.dataset.threadId ?? '');
+    if (!thread) return [];
+    return [{
+      element,
+      thread: {
+        id: thread.threadId,
+        projectId: thread.projectId,
+        parentThreadId: null,
+        archivedAt: thread.archivedAt,
+        pinnedAt: null,
+        sectionId: thread.sectionId,
+        isUnread: false,
+        status: 'idle' as const,
+        environment: null,
+      },
+    }];
+  });
 }

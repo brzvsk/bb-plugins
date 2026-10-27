@@ -60,6 +60,7 @@
 
 [data-sidebar-focus-tucked='closed'] {
   height: 0 !important;
+  margin: 0 !important;
   overflow: hidden;
 }
 
@@ -72,16 +73,19 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  height: 22px;
+  /* One line of 11px text: the Automations and Recently archived lines sit tight together. */
+  height: 16px;
+  margin: 0 !important;
   padding-left: 8px;
-  border-radius: 6px;
+  border-radius: 4px;
   font-size: 11px;
-  line-height: 1;
+  line-height: 16px;
   color: color-mix(in oklab, var(--muted-foreground) 80%, transparent);
   cursor: pointer;
   user-select: none;
   outline: none;
 }
+
 
 .sidebar-focus-automations:hover,
 .sidebar-focus-disclosure:hover {
@@ -156,24 +160,32 @@ html.sidebar-focus-transition [data-sidebar='content']::view-transition-new(root
   display: flex;
   flex-direction: column;
   gap: 2px;
+  margin: 0 !important;
 }
 
-.sidebar-focus-restore {
+.sidebar-focus-row-actions {
   position: relative;
   z-index: 20;
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  cursor: pointer;
-  color: var(--subtle-foreground, var(--muted-foreground));
-  background: transparent;
+  gap: 2px;
 }
 
-.sidebar-focus-restore:hover {
-  color: var(--muted-foreground);
-  background: var(--state-hover, var(--sidebar-accent));
+.sidebar-focus-menu-slot {
+  display: contents;
+}
+
+/* Keep the actions up while bb's menu is open. */
+.sidebar-focus-archived-row:has([data-state='open']) .sidebar-focus-row-actions {
+  opacity: 1;
+}
+
+/* The home-screen menu bridge renders nothing visible. */
+[id='plugin-homepage:sidebar-focus:menu-bridge'] {
+  display: none !important;
+}
+
+[data-testid='plugin-homepage-sections']:not(:has(> section:not([id='plugin-homepage:sidebar-focus:menu-bridge']))) {
+  display: none !important;
 }

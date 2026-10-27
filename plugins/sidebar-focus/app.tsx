@@ -5,7 +5,8 @@ import {
   type AutomationThread, type Handlers, type SidebarState,
 } from './sidebar';
 import { animateFocus } from './transition';
-import { clearArchived, renderArchived, type ArchivedHandlers, type ArchivedThread } from './archived';
+import { clearArchived, menuSlots, renderArchived, type ArchivedHandlers, type ArchivedThread } from './archived';
+import { MenuBridge, publishMenuSlots } from './menus';
 
 const REFRESH_MS = 60_000;
 const FOCUS_KEY = 'sidebar-focus:focus';
@@ -28,6 +29,11 @@ function write(key: string, value: string | null): void {
 }
 
 export default definePluginApp(app => {
+  // Invisible React mounts for bb's thread menu on drawn rows: one in each thread
+  // header, one on the home screen (its section is hidden by app.css).
+  app.slots.experimental_threadHeaderAction({ id: 'menu-bridge', title: 'Sidebar Focus menus', component: MenuBridge });
+  app.slots.homepageSection({ id: 'menu-bridge', title: 'Sidebar Focus menus', component: MenuBridge });
+
   app.contentScripts.register({
     id: 'sidebar-focus',
     mount({ pluginId }) {
@@ -89,6 +95,7 @@ export default definePluginApp(app => {
         if ([...nativeIds].some(id => !ids.has(id))) refreshArchivedSoon();
         nativeIds = ids;
         renderArchived(document, archived, state.automationsOpen, selected, archivedHandlers);
+        publishMenuSlots(menuSlots(document, archived));
       };
       const schedule = () => {
         if (!frame && !disposed) frame = requestAnimationFrame(scan);
@@ -185,6 +192,7 @@ export default definePluginApp(app => {
         style.remove();
         clear(document);
         clearArchived(document);
+        publishMenuSlots([]);
       };
     },
   });
