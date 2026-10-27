@@ -1,0 +1,84 @@
+.sidebar-focus-button {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  outline: none;
+  color: var(--subtle-foreground, var(--muted-foreground));
+  background: transparent;
+}
+
+.sidebar-focus-button:hover {
+  color: var(--muted-foreground);
+  background: var(--state-hover, var(--sidebar-accent));
+}
+
+.sidebar-focus-button:focus-visible {
+  box-shadow: 0 0 0 1px var(--ring);
+}
+
+.sidebar-focus-button[aria-pressed='true'] {
+  color: var(--foreground);
+}
+
+.sidebar-focus-icon {
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+}
+
+.sidebar-focus-automations {
+  margin-top: 16px;
+}
+
+.sidebar-focus-label:hover {
+  color: var(--foreground);
+}
+
+.sidebar-focus-label:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.sidebar-focus-chevron {
+  width: 12px;
+  height: 12px;
+  margin-left: 4px;
+  flex-shrink: 0;
+  transition: transform 150ms;
+}
+
+.sidebar-focus-chevron-open {
+  transform: rotate(90deg);
+}
+
+.sidebar-focus-count {
+  margin-left: auto;
+  padding-right: 10px;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklab, var(--muted-foreground) 70%, transparent);
+}
+
+.sidebar-focus-rows {
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-focus-project {
+  flex-shrink: 1;
+  max-width: 40%;
+  overflow: hidden;
+  padding-right: 8px;
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--muted-foreground);
+}

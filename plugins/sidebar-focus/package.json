@@ -1,0 +1,54 @@
+{
+  "name": "bb-plugin-sidebar-focus",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Focus the sidebar on one project or section, and tuck read automation threads into an Automations block.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bb": ">=0.47.1",
+    "bbPluginSdk": ">=0.6.49 <0.7.0"
+  },
+  "bb": {
+    "name": "Sidebar Focus",
+    "description": "A focus button on sidebar group headers shows only that group; read automation threads move into a collapsible Automations block until they need attention.",
+    "branding": {
+      "icon": "Target"
+    },
+    "server": "./server.ts",
+    "app": "./app.tsx",
+    "skills": [
+      "skills"
+    ]
+  },
+  "files": [
+    "app.tsx",
+    "app.css",
+    "server.ts",
+    "sidebar.ts",
+    "skills/",
+    "README.md",
+    "LICENSE",
+    "dist/app.js",
+    "dist/app.css",
+    "dist/app.meta.json",
+    "dist/server.js",
+    "dist/server.meta.json"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "bb plugin build ."
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@get-bb/plugin-sdk": "0.6.49",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "jsdom": "^26.1.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

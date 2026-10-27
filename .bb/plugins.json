@@ -42,6 +42,10 @@
     {
       "name": "model-visibility",
       "source": "./plugins/model-visibility"
+    },
+    {
+      "name": "sidebar-focus",
+      "source": "./plugins/sidebar-focus"
     }
   ]
 }
