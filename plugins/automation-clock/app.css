@@ -1,0 +1,14 @@
+.automation-clock {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--subtle-foreground);
+}
+
+.automation-clock svg {
+  width: 13px;
+  height: 13px;
+}
