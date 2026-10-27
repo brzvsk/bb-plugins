@@ -136,9 +136,9 @@ export function setExpanded(root: ParentNode, key: string, expanded: boolean): b
 }
 
 /**
- * Puts one focus button on every top-level header, right of its collapse
- * chevron. Unpressed it shows on hover like the chevron; pressed it stays
- * visible so the focus can be left from the same place.
+ * Puts one focus button on every top-level header. Unpressed it sits right of
+ * the collapse chevron and shows on hover like it; pressed it moves to the
+ * header's right edge and stays visible, so the focus is left from there.
  */
 export function placeButtons(root: ParentNode, focus: string | null, handlers: Handlers): void {
   const seen = new Set<Element>();
@@ -170,12 +170,19 @@ export function placeButtons(root: ParentNode, focus: string | null, handlers: H
       button.setAttribute('aria-label', text);
       button.title = text;
     }
-    // Right after bb's collapse chevron, in the title span; without one, at the end of the title.
-    const chevron = label.querySelector<HTMLElement>('button[aria-expanded]:not([aria-haspopup])');
-    const title = chevron?.parentElement ?? label.querySelector<HTMLElement>(':scope > span') ?? label;
-    if (chevron ? chevron.nextElementSibling !== button : title.lastElementChild !== button) {
-      if (chevron) chevron.after(button);
-      else title.append(button);
+    if (pressed) {
+      // On: the header's very right edge, after bb's own actions (they keep their room even while hidden),
+      // always visible as the mode's indicator.
+      const trailing = label.querySelector<HTMLElement>('[data-sidebar-trailing-controls]') ?? label;
+      if (trailing.lastElementChild !== button) trailing.append(button);
+    } else {
+      // Off: right after bb's collapse chevron, in the title span; without one, at the end of the title.
+      const chevron = label.querySelector<HTMLElement>('button[aria-expanded]:not([aria-haspopup])');
+      const title = chevron?.parentElement ?? label.querySelector<HTMLElement>(':scope > span') ?? label;
+      if (chevron ? chevron.nextElementSibling !== button : title.lastElementChild !== button) {
+        if (chevron) chevron.after(button);
+        else title.append(button);
+      }
     }
     // Like the chevron: a hover action until pressed, then always visible.
     button.classList.toggle(HOVER_ACTIONS, !pressed);

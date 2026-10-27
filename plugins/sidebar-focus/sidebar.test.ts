@@ -146,7 +146,7 @@ describe('automation threads', () => {
 });
 
 describe('focus buttons', () => {
-  it('sit right of the collapse chevron, hover-only until pressed, and toggle by key', () => {
+  it('sit right of the collapse chevron on hover, move to the right edge when pressed, and toggle by key', () => {
     const h = handlers();
     placeButtons(document, null, h);
     const button = document.querySelector<HTMLButtonElement>('[data-sidebar-visibility-group="project:p1"] .sidebar-focus-button')!;
@@ -155,7 +155,8 @@ describe('focus buttons', () => {
     expect(button.getAttribute('aria-label')).toBe('Focus on One');
 
     placeButtons(document, 'project:p1', h);
-    expect(button.previousElementSibling?.getAttribute('aria-label')).toBe('Collapse One section');
+    expect(button.parentElement?.hasAttribute('data-sidebar-trailing-controls')).toBe(true);
+    expect(button.parentElement?.lastElementChild).toBe(button);
     expect(button.classList.contains('bb-sidebar-hover-actions')).toBe(false);
     expect(button.getAttribute('aria-pressed')).toBe('true');
     button.click();
@@ -166,6 +167,10 @@ describe('focus buttons', () => {
     placeButtons(document, null, handlers());
     const pinned = document.querySelector('[data-sidebar-section-id="pinned"] .sidebar-focus-button')!;
     expect(pinned.previousElementSibling?.getAttribute('title')).toBe('Pinned');
+    placeButtons(document, 'pinned', handlers());
+    expect(pinned.parentElement?.getAttribute('data-sidebar-sticky-tier')).toBe('label');
+    expect(pinned.parentElement?.lastElementChild).toBe(pinned);
+    placeButtons(document, null, handlers());
     expect(document.querySelectorAll(`.${BUTTON_CLASS}`)).toHaveLength(3);
   });
 });

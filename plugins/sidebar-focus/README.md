@@ -2,7 +2,7 @@
 
 Two changes to BB's own sidebar thread list, layered on top of it rather than replacing it.
 
-**Focus.** Hovering a group header (a project, Pinned, Threads, or a custom section) shows a small crosshair right after its collapse chevron, in the same muted tone. Clicking it shows only that group, expanding it if it was collapsed (it folds back when you leave the focus, unless you folded it yourself meanwhile); the pressed crosshair stays visible and clicking it again shows everything. Focusing and leaving the focus animate: other groups fade out, the focused one slides into place, and on the way back the others fade in once it has moved (off with the system's reduced-motion setting). The focus is remembered per window.
+**Focus.** Hovering a group header (a project, Pinned, Threads, or a custom section) shows a small crosshair right after its collapse chevron, in the same muted tone; while focused it sits at the header's right edge. Clicking it shows only that group, expanding it if it was collapsed (it folds back when you leave the focus, unless you folded it yourself meanwhile); the pressed crosshair stays visible and clicking it again shows everything. Focusing and leaving the focus animate: other groups fade out, the focused one slides into place, and on the way back the others fade in once it has moved (off with the system's reduced-motion setting). The focus is remembered per window.
 
 **In progress, Scheduled, Done.** Each project or section is split into three lines, all 11px muted labels:
 
