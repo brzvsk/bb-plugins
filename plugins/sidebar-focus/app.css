@@ -26,8 +26,11 @@
   box-shadow: 0 0 0 2px var(--sidebar-ring, var(--ring));
 }
 
-.sidebar-focus-button[aria-pressed='true'] {
-  color: var(--muted-foreground);
+/* On: pressed in, like bb's own toggled buttons (aria-pressed:bg-state-active aria-pressed:text-foreground). */
+.sidebar-focus-button[aria-pressed='true'],
+.sidebar-focus-button[aria-pressed='true']:hover {
+  color: var(--foreground);
+  background: var(--state-active);
 }
 
 .sidebar-focus-icon {
