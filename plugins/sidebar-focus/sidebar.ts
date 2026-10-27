@@ -116,6 +116,18 @@ export function selectedThreadId(root: ParentNode, path: string): string | null 
 }
 
 /**
+ * Expands or collapses a top-level block through bb's own collapse chevron, so
+ * bb keeps owning the state. Returns whether it had to change anything.
+ */
+export function setExpanded(root: ParentNode, key: string, expanded: boolean): boolean {
+  const element = topBlocks(root).find(block => block.key === key)?.element;
+  const chevron = element?.querySelector<HTMLElement>(`${LABEL} button[aria-expanded]:not([aria-haspopup])`);
+  if (!chevron || chevron.getAttribute('aria-expanded') === String(expanded)) return false;
+  chevron.click();
+  return true;
+}
+
+/**
  * Puts one focus button on every top-level header, right of its collapse
  * chevron. Unpressed it shows on hover like the chevron; pressed it stays
  * visible so the focus can be left from the same place.

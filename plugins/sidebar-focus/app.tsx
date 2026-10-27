@@ -1,12 +1,13 @@
 import { definePluginApp } from '@get-bb/plugin-sdk/app';
 import './app.css';
 import {
-  clear, focusCss, placeButtons, placeOf, selectedThreadId, topBlocks, tuck,
+  clear, focusCss, placeButtons, placeOf, selectedThreadId, setExpanded, topBlocks, tuck,
   type AutomationThread, type Handlers, type SidebarState,
 } from './sidebar';
 
 const REFRESH_MS = 60_000;
 const FOCUS_KEY = 'sidebar-focus:focus';
+const EXPANDED_KEY = 'sidebar-focus:expanded-by-focus';
 const OPEN_KEY = 'sidebar-focus:automations-open-groups';
 
 function read(key: string): string | null {
@@ -43,8 +44,14 @@ export default definePluginApp(app => {
 
       const handlers: Handlers = {
         toggleFocus(key) {
-          state.focus = state.focus === key ? null : key;
+          const previous = state.focus;
+          // A group the focus expanded folds back when the focus leaves it, unless you already folded it.
+          const expandedByFocus = read(EXPANDED_KEY);
+          if (previous && expandedByFocus === previous) setExpanded(document, previous, false);
+          write(EXPANDED_KEY, null);
+          state.focus = previous === key ? null : key;
           write(FOCUS_KEY, state.focus);
+          if (state.focus && setExpanded(document, state.focus, true)) write(EXPANDED_KEY, state.focus);
           scan();
         },
         toggleAutomations(key) {

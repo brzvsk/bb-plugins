@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  BUTTON_CLASS, FLEX_CLASS, LABEL_CLASS, TUCKED, clear, focusCss, placeButtons, placeOf, selectedThreadId, topBlocks,
+  BUTTON_CLASS, FLEX_CLASS, setExpanded, LABEL_CLASS, TUCKED, clear, focusCss, placeButtons, placeOf, selectedThreadId, topBlocks,
   tuck, type Handlers, type SidebarState,
 } from './sidebar';
 
@@ -164,6 +164,20 @@ describe('focus buttons', () => {
     const pinned = document.querySelector('[data-sidebar-section-id="pinned"] .sidebar-focus-button')!;
     expect(pinned.previousElementSibling?.getAttribute('title')).toBe('Pinned');
     expect(document.querySelectorAll(`.${BUTTON_CLASS}`)).toHaveLength(3);
+  });
+});
+
+describe('expanding', () => {
+  it('clicks bb\'s chevron only when the state differs', () => {
+    const chevron = document.querySelector<HTMLElement>('[data-sidebar-visibility-group="project:p1"] button[aria-expanded]')!;
+    const clicks = vi.fn(() => chevron.setAttribute('aria-expanded', String(chevron.getAttribute('aria-expanded') !== 'true')));
+    chevron.addEventListener('click', clicks);
+    expect(setExpanded(document, 'project:p1', true)).toBe(false);
+    expect(setExpanded(document, 'project:p1', false)).toBe(true);
+    expect(chevron.getAttribute('aria-expanded')).toBe('false');
+    expect(setExpanded(document, 'project:p1', true)).toBe(true);
+    expect(setExpanded(document, 'pinned', true)).toBe(false);
+    expect(clicks).toHaveBeenCalledTimes(2);
   });
 });
 
