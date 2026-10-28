@@ -1,0 +1,52 @@
+{
+  "name": "bb-plugin-child-thread-model",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Show each active child thread's model and reasoning level in BB's native child-threads banner.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bb": ">=0.47.1",
+    "bbPluginSdk": ">=0.6.79 <0.7.0"
+  },
+  "bb": {
+    "name": "Child Thread Model",
+    "description": "Active child threads show the model and reasoning level of their last turn beside the title.",
+    "branding": {
+      "icon": "Brain"
+    },
+    "server": "./server.ts",
+    "app": "./app.tsx"
+  },
+  "files": [
+    "app.tsx",
+    "app.css",
+    "server.ts",
+    "label.ts",
+    "rows.ts",
+    "README.md",
+    "LICENSE",
+    "dist/app.js",
+    "dist/app.css",
+    "dist/app.meta.json",
+    "dist/server.js",
+    "dist/server.meta.json"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "bb plugin build ."
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@get-bb/plugin-sdk": "0.6.79",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "jsdom": "^26.1.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}
