@@ -1,5 +1,6 @@
 import { definePluginApp } from '@get-bb/plugin-sdk/app';
 import './app.css';
+import { SidebarChildActivity } from './sidebar-ui';
 import type { ChildThreadLabel } from './label';
 import { childRowThreadIds, decorate, undecorate } from './rows';
 
@@ -12,6 +13,7 @@ interface ChildThreadModelsResponse {
 }
 
 export default definePluginApp(app => {
+  app.slots.experimental_appOverlay({ id: 'sidebar-child-activity', component: SidebarChildActivity });
   app.contentScripts.register({
     id: 'child-thread-model',
     mount({ pluginId }) {

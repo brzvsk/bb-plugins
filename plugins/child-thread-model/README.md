@@ -7,3 +7,5 @@ The label comes from the execution tuple BB recorded for that child's latest dis
 Works through BB's child-banner markup and the public `threads.events` SDK area. A banner or row DOM change can break the decoration until this plugin is updated. No settings, network services or credentials.
 
 Build: `npm ci --include=dev --ignore-scripts`, `npm run typecheck`, `npm test`, `npm run build`. Install: `bb plugin install . --yes`.
+
+The sidebar shows BB’s ChildThread icon immediately left of a parent’s existing loader when only a visible descendant is working. If the parent has its own running turn or background work, only its native indicator remains. Live state comes from the SDK sidebar hook; no polling or new threads. The icon follows row changes and is removed on plugin unload.

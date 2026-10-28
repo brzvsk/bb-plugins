@@ -1,6 +1,6 @@
 {
   "name": "bb-plugin-child-thread-model",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Show each active child thread's model and reasoning level in BB's native child-threads banner.",
   "license": "MIT",
@@ -30,7 +30,9 @@
     "dist/app.css",
     "dist/app.meta.json",
     "dist/server.js",
-    "dist/server.meta.json"
+    "dist/server.meta.json",
+    "sidebar.ts",
+    "sidebar-ui.tsx"
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",

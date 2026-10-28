@@ -36,3 +36,6 @@
     font-size: 10px;
   }
 }
+
+.child-thread-activity { display: inline-flex; flex: none; align-items: center; color: var(--muted-foreground); }
+.child-thread-activity-icon { width: 14px; height: 14px; }
