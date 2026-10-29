@@ -1,0 +1,37 @@
+{
+  "name": "bb-plugin-handoff-child",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "private": true,
+  "description": "Hand a thread off to a new child thread from the send menu.",
+  "engines": {
+    "bb": ">=0.48.0",
+    "bbPluginSdk": ">=0.6.94 <0.7.0"
+  },
+  "bb": {
+    "name": "Handoff Child",
+    "description": "In handoff mode, the send menu creates the new thread as a child of the source thread, with or without parent notifications.",
+    "branding": {
+      "icon": "GitBranch"
+    },
+    "server": "./server.ts",
+    "app": "./app.tsx",
+    "skills": [
+      "skills"
+    ]
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "bb plugin build ."
+  },
+  "devDependencies": {
+    "@get-bb/plugin-sdk": "0.6.94",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "react": "^19.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

@@ -38,6 +38,10 @@ Use independent immutable tags such as `tab-close-right/v0.1.0`. A separate BB C
 
 `plugins/play-continue` ports the DSH Play Continue plugin: double Escape stops the running thread, and a Play button in the Send position continues a stopped or failed turn. Local only; not published to the marketplace.
 
+## Handoff Child
+
+`plugins/handoff-child` adds New child thread and New child thread (no notifications) to the send menu in handoff mode, so the handoff thread becomes a child of its source. Local only; not published to the marketplace.
+
 ## Pinned Project Line
 
 `plugins/pinned-project-line` adds a smaller, muted second line with the project name (including its emoji) under each pinned thread in the sidebar. Local only; not published to the marketplace.
