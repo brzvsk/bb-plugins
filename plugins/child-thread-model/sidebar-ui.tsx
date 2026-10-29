@@ -26,7 +26,7 @@ export function SidebarChildActivity() {
     };
   }, [key]);
   return <>{targets.map(({ id, element }, index) => createPortal(
-    <Icon name="ChildThread" className="child-thread-activity-icon" aria-label="Child thread working; parent is idle" />,
+    <Icon name="ChildThread" className="child-thread-activity-icon animate-shine-icon" aria-label="Child thread working; parent is idle" />,
     element, `${id}:${index}`,
   ))}</>;
 }

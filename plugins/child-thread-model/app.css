@@ -38,4 +38,5 @@
 }
 
 .child-thread-activity { display: inline-flex; flex: none; align-items: center; color: var(--muted-foreground); }
-.child-thread-activity-icon { width: 14px; height: 14px; }
+.child-thread-activity-icon { width: 16px; height: 16px; }
+[data-sidebar-thread-trailing-indicator]:has(> [data-child-thread-activity]) > [data-icon="Loading"] { display: none; }

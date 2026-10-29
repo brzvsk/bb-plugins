@@ -1,6 +1,6 @@
 {
   "name": "bb-plugin-child-thread-model",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "Show each active child thread's model and reasoning level in BB's native child-threads banner.",
   "license": "MIT",

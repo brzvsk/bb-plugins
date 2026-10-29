@@ -27,15 +27,17 @@ describe('delegated activity', () => {
 });
 
 describe('sidebar decoration', () => {
-  it('inserts before existing loader without modifying it, deduplicates and cleans transitions', () => {
+  it('replaces the loader in its own slot, deduplicates and restores the native DOM', () => {
     document.body.innerHTML = `<div data-sidebar-rename-row><a data-sidebar-thread-id="p"></a><span data-sidebar-thread-trailing><span class="native"><span data-sidebar-thread-trailing-indicator><svg data-icon="Loading"></svg></span></span></span></div>`;
     const native = document.querySelector('.native')!;
     const html = native.outerHTML;
+    const loader = native.querySelector('svg')!;
+    const loaderHtml = loader.outerHTML;
     const [target] = syncActivityTargets(document, new Set(['p']));
-    expect(target?.element.nextElementSibling).toBe(native);
+    expect(target?.element.parentElement).toBe(loader.parentElement);
     expect(syncActivityTargets(document, new Set(['p']))[0]?.element).toBe(target?.element);
     expect(document.querySelectorAll(`[${MARKER}]`)).toHaveLength(1);
-    expect(native.outerHTML).toBe(html);
+    expect(loader.outerHTML).toBe(loaderHtml);
     syncActivityTargets(document, new Set());
     expect(document.querySelector(`[${MARKER}]`)).toBeNull();
     expect(native.outerHTML).toBe(html);

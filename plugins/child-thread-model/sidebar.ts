@@ -41,15 +41,14 @@ export function syncActivityTargets(root: ParentNode, eligible: ReadonlySet<stri
     const trailing = row?.querySelector<HTMLElement>('[data-sidebar-thread-trailing]');
     const loader = trailing?.querySelector('[data-sidebar-thread-trailing-indicator] [data-icon="Loading"]');
     if (!trailing || !loader) continue;
-    let anchor = loader.parentElement!;
-    while (anchor.parentElement && anchor.parentElement !== trailing) anchor = anchor.parentElement;
-    let marker = trailing.querySelector<HTMLElement>(`:scope > [${MARKER}]`);
+    const indicator = loader.parentElement!;
+    let marker = indicator.querySelector<HTMLElement>(`:scope > [${MARKER}]`);
     if (!marker) {
       marker = trailing.ownerDocument.createElement('span');
       marker.setAttribute(MARKER, id);
-      marker.className = 'child-thread-activity bb-sidebar-hover-actions-fade';
+      marker.className = 'child-thread-activity';
       marker.title = 'Child thread working; parent is idle';
-      trailing.insertBefore(marker, anchor);
+      indicator.append(marker);
     }
     keep.add(marker);
     targets.push({ id, element: marker });
