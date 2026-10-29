@@ -2,7 +2,8 @@ import { createFakePluginHost, makeThreadResponse } from "@get-bb/plugin-sdk/tes
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BurnAlert } from "../../extensions/bb/alerts.js";
 import type { EventRow } from "../../extensions/bb/ledger.js";
-import plugin, { SETTINGS } from "../../extensions/bb/server.js";
+import { SETTINGS_COPY_KEY } from "../../extensions/bb/keys.js";
+import plugin, { SETTINGS, settingsToRestore } from "../../extensions/bb/server.js";
 import * as spendServer from "../../extensions/bb/spend/server.js";
 import type { EntryLike, UsageReport } from "../../src/report.js";
 import { buildReport, dayKey } from "../../src/report.js";
@@ -32,6 +33,8 @@ type Options = {
   providers?: Record<string, string>;
   /** The usage events bb recorded, for threads of other providers. */
   events?: EventRow[];
+  /** Burn's own copy of its settings in its storage, as removing the plugin leaves it: the copy kept, bb's store empty. */
+  settingsCopy?: Record<string, unknown>;
 };
 
 const LOG_MTIME = 1_700_000_000_000;
@@ -50,8 +53,31 @@ async function setup(opts: Options = {}) {
     settings: opts.settings,
     sdk: {
       threads: {
-        list: async ({ limit, offset = 0 }: { limit?: number; offset?: number } = {}) =>
-          (opts.listed ?? []).slice(offset, limit === undefined ? undefined : offset + limit),
+        // The real `threads.list` carries every field `threads.get` and `environments.get` used to be asked for one thread at a time.
+        list: async ({ limit, offset = 0 }: { limit?: number; offset?: number } = {}) => {
+          const row = (t: { id: string; providerId: string; updatedAt: number; deletedAt: number | null; archivedAt?: number | null; status?: string }) => ({
+            title: null,
+            titleFallback: null,
+            projectId: "proj_1",
+            environmentId: "env_1",
+            environmentHostId: HOST,
+            status: "idle",
+            archivedAt: null,
+            visibility: "visible" as const,
+            ...t,
+          });
+          const all = (
+            opts.listed ??
+            [THREAD, CHILD, GRANDCHILD, ...Object.keys(logs), ...Object.keys(opts.providers ?? {}), ...Object.keys(opts.statuses ?? {})].map((id) => ({
+              id,
+              providerId: opts.providers?.[id] ?? "pi",
+              updatedAt: Date.now(),
+              deletedAt: null,
+              status: statuses[id] ?? "idle",
+            }))
+          ).map(row);
+          return all.slice(offset, limit === undefined ? undefined : offset + limit);
+        },
         events: {
           list: async (args: Parameters<ReturnType<typeof listEvents>>[0]) =>
             args.types?.includes("thread/identity")
@@ -88,6 +114,8 @@ async function setup(opts: Options = {}) {
       };
     },
   });
+  // Seeded before the plugin loads, so it reads them the way a fresh install after a removal does.
+  if (opts.settingsCopy !== undefined) await bb.storage.kv.set(SETTINGS_COPY_KEY, opts.settingsCopy);
   await plugin(bb);
   disposers.push(() => harness.lifecycle.dispose());
   const post = (body: unknown) =>
@@ -183,6 +211,43 @@ describe("settings", () => {
     const s = await setup();
     await expect(s.harness.behavior.setSettings({ discount: 101 })).rejects.toThrow(/-100 to 100/);
     await expect(s.harness.behavior.setSettings({ cacheWriteDiscount: -101 })).rejects.toThrow(/-100 to 100/);
+  });
+
+  it("keeps its own copy of the settings that are set", async () => {
+    const s = await setup({ settings: { discount: 15, threadBudget: 10, dailyBudget: 500, chip: true } });
+    // The copy holds every setting, so a value that goes back to its default reads as a default, not as a loss.
+    expect(await s.bb.storage.kv.get(SETTINGS_COPY_KEY)).toMatchObject({ discount: 15, threadBudget: 10, dailyBudget: 500, chip: true });
+    await s.harness.behavior.setSettings({ discount: 20 });
+    expect(await s.bb.storage.kv.get(SETTINGS_COPY_KEY)).toMatchObject({ discount: 20, threadBudget: 10 });
+  });
+
+  it("puts back the settings bb forgot when the plugin was removed", async () => {
+    // bb deletes a plugin's settings on removal but keeps its storage, so this is what a reinstall finds.
+    const s = await setup({ settingsCopy: { discount: 15, threadBudget: 10, stopAtBudget: true, chip: false } });
+    expect(await (await s.post(envelope(1))).json()).toMatchObject({ policy: { budget: 10, stopAtBudget: true } });
+    const kept = (await s.bb.storage.kv.get(SETTINGS_COPY_KEY)) as Record<string, unknown>;
+    expect(kept).toMatchObject({ discount: 15, threadBudget: 10, stopAtBudget: true, chip: false });
+  });
+
+  it("leaves a setting bb holds of its own, whatever the copy says", async () => {
+    // Set while the plugin was off, so bb holds it and the copy is behind: the user's newer value wins.
+    const s = await setup({ settings: { discount: 20 }, settingsCopy: { discount: 15, threadBudget: 10 } });
+    expect(await s.bb.storage.kv.get(SETTINGS_COPY_KEY)).toMatchObject({ discount: 20, threadBudget: 10 });
+  });
+});
+
+describe("settingsToRestore", () => {
+  it("puts back a default bb reports where the copy holds a value, and nothing else", () => {
+    const copy = { discount: 15, dailyBudget: 500, threadBudget: 10, chip: true, chipShows: "delta", gone: 3 };
+    const effective = { discount: 0, dailyBudget: null, threadBudget: null, chip: false, chipShows: "cost" };
+    // chip and chipShows sit at their defaults in the copy, gone is no longer a setting, and chip holds a value of bb's own.
+    expect(settingsToRestore(copy, effective)).toEqual({ discount: 15, dailyBudget: 500, threadBudget: 10 });
+  });
+
+  it("has nothing to put back once bb holds the values", async () => {
+    const copy = { discount: 15, dailyBudget: 500 };
+    expect(settingsToRestore(copy, { discount: 15, dailyBudget: 500 })).toEqual({});
+    expect(settingsToRestore(copy, { discount: 20, dailyBudget: 500 })).toEqual({});
   });
 });
 
