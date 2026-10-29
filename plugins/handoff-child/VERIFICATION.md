@@ -9,3 +9,7 @@
   (no notifications), Send later…. Choosing the quiet row created
   `thr_ntcnnib662` with `parentThreadId` = the scratch thread and
   `parentNotifications: off`. The `auto` row shares the same path.
+
+0.1.1: live headless, scratch thread (archived after): with a plain follow-up
+draft both rows are in the menu with `display: none`; in handoff mode both are
+shown (`flex`) between Save draft… and Send later….

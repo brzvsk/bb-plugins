@@ -12,7 +12,7 @@ to the source with `parentThreadId` and `parentNotifications` `auto` or `off`.
 
 Troubleshooting:
 
-- Rows disabled: the draft no longer mentions the source thread
+- Rows missing: not in handoff mode, or the draft no longer mentions the source thread
   (`Continue from @thread:…` was removed).
 - Thread created but not a child: check `bb plugin logs handoff-child` for
   `could not link`; link manually with
