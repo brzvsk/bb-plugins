@@ -9,3 +9,5 @@ Works through BB's child-banner markup and the public `threads.events` SDK area.
 Build: `npm ci --include=dev --ignore-scripts`, `npm run typecheck`, `npm test`, `npm run build`. Install: `bb plugin install . --yes`.
 
 The sidebar replaces a parent’s loader with BB’s shimmering ChildThread icon when only a visible descendant is working. If the parent has its own running turn or background work, only its native indicator remains. Live state comes from the SDK sidebar hook; no polling or new threads. The icon follows row changes and is removed on plugin unload.
+
+Unread parents keep the native unread dot beside the shimmering child icon. Reading the parent clears only the dot; child activity remains visible.
