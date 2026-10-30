@@ -1,0 +1,54 @@
+{
+  "name": "bb-plugin-context-card-extras",
+  "version": "0.1.0",
+  "description": "Branch and automations in BB's thread context card.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bb": ">=0.48.1",
+    "bbPluginSdk": ">=0.6.104 <0.7.0"
+  },
+  "bb": {
+    "name": "Context Card Extras",
+    "description": "Adds the thread's branch and the automations that run in it to the thread context card.",
+    "branding": {
+      "icon": "PanelRight"
+    },
+    "server": "./server.ts",
+    "app": "./app.tsx",
+    "skills": []
+  },
+  "files": [
+    "app.tsx",
+    "contracts.ts",
+    "format.ts",
+    "server.ts",
+    "README.md",
+    "LICENSE",
+    "dist/app.js",
+    "dist/app.css",
+    "dist/app.meta.json",
+    "dist/server.js",
+    "dist/server.meta.json"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "bb plugin build ."
+  },
+  "dependencies": {
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@get-bb/plugin-sdk": "0.6.104",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.0",
+    "jsdom": "^29.0.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "typescript": "5.9.3",
+    "vitest": "^4.1.1"
+  }
+}
