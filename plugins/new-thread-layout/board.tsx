@@ -264,7 +264,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
       <Group label="Pinned" count={board.pinned.length}>
         {board.pinned.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} />)}
       </Group>
-      <Group label="In progress" count={board.inProgress.length}>
+      <Group label="Idle" count={board.inProgress.length}>
         {board.inProgress.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} />)}
       </Group>
       <Group label="Recently done" count={board.done.length} open={doneOpen} onToggle={toggleDone}>
