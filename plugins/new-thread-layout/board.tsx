@@ -73,9 +73,17 @@ function AutomationLine({ row, now, onOpen }: { row: ScheduledRow; now: number; 
   const next = formatNextRun(row.automation.nextRunAt, now);
   const t = row.thread as PluginSidebarThread | null;
   const where = t ? t.displayTitle : "new thread";
+  // Quiet unless its thread has something unread; then bb's own unread dot replaces the clock.
+  const unread = !!t?.isUnread;
   const body = (
     <>
-      <span className="ph-glyph"><Icon name="Clock" className="ph-clock" aria-hidden /></span>
+      <span className="ph-glyph">
+        {unread ? (
+          <StatusGlyph indicator={t!.indicator === "unread-error" ? "unread-error" : "unread-success"} />
+        ) : (
+          <Icon name="Clock" className="ph-clock" aria-hidden />
+        )}
+      </span>
       <span className="ph-auto-text">
         <span className="ph-auto-name">{row.automation.name}</span>
         {where !== row.automation.name ? <span className="ph-auto-where">{where}</span> : null}
@@ -88,6 +96,7 @@ function AutomationLine({ row, now, onOpen }: { row: ScheduledRow; now: number; 
   return (
     <a
       className="ph-row ph-auto-row"
+      data-ph-unread={unread || undefined}
       href={t.href}
       title={title}
       onClick={e => {
