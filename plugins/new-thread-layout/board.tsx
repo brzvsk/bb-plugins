@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   ThreadTitle,
   experimental_Icon as Icon,
@@ -20,7 +20,7 @@ import { usePreviews, type Preview } from "./previews";
 import { useComposeTopBar } from "./crumb";
 import { ThreadRowActions, useRowActionKeys } from "./actions";
 
-const DONE_OPEN_KEY = "new-thread-layout:done-open";
+const TOP_TAB_KEY = "new-thread-layout:top-tab";
 
 function previewLine(p: Preview | null | undefined): string {
   if (!p) return "";
@@ -110,14 +110,36 @@ function AutomationLine({ row, now, onOpen }: { row: ScheduledRow; now: number; 
   );
 }
 
-function AutomationStrip({ rows, now, onOpen }: { rows: ScheduledRow[]; now: number; onOpen: Open }) {
-  if (!rows.length) return null;
+type TopTab = "scheduled" | "done";
+
+/**
+ * The fixed zone under the top bar: a switch between the project's schedule and
+ * its recently done threads. Only tabs with something in them are offered.
+ */
+function TopPanel({ tab, onTab, scheduled, done }: { tab: TopTab; onTab: (tab: TopTab) => void; scheduled: ReactNode[]; done: ReactNode[] }) {
+  const tabs = ([
+    ["scheduled", "Scheduled", scheduled],
+    ["done", "Recently done", done],
+  ] as const).filter(([, , rows]) => rows.length > 0);
+  if (!tabs.length) return null;
+  const active = tabs.find(([id]) => id === tab) ?? tabs[0];
   return (
-    <section className="ph-autos ph-group" aria-label="Scheduled">
-      <h3 className="ph-group-title">Scheduled <span className="ph-count">{rows.length}</span></h3>
-      <div className="ph-rows">
-        {rows.map(r => <AutomationLine key={r.automation.id} row={r} now={now} onOpen={onOpen} />)}
+    <section className="ph-autos ph-group" data-ph-tab={active[0]}>
+      <div className="ph-tabs" role="tablist">
+        {tabs.map(([id, label, rows]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={id === active[0]}
+            className="ph-group-title ph-tab"
+            onClick={() => onTab(id)}
+          >
+            {label} <span className="ph-count">{rows.length}</span>
+          </button>
+        ))}
       </div>
+      <div className="ph-rows" role="tabpanel">{active[2]}</div>
     </section>
   );
 }
@@ -139,23 +161,14 @@ function useStripHolder(topBar: HTMLElement | null): HTMLElement | null {
   return holder;
 }
 
-function Group({ label, count, open, onToggle, children }: { label: string; count: number; open?: boolean; onToggle?: () => void; children: React.ReactNode }) {
+function Group({ label, count, children }: { label: string; count: number; children: ReactNode }) {
   if (!count) return null;
-  const collapsible = !!onToggle;
-  const title = (
-    <>
-      {label} <span className="ph-count">{count}</span>
-      {collapsible ? <Icon name="ChevronRight" className="ph-chevron" aria-hidden /> : null}
-    </>
-  );
   return (
-    <section className="ph-group" data-ph-open={!collapsible || open ? "" : undefined}>
-      {collapsible ? (
-        <button type="button" className="ph-group-title ph-group-toggle" aria-expanded={!!open} onClick={onToggle}>{title}</button>
-      ) : (
-        <h3 className="ph-group-title">{title}</h3>
-      )}
-      {!collapsible || open ? <div className="ph-rows">{children}</div> : null}
+    <section className="ph-group">
+      <h3 className="ph-group-title">
+        {label} <span className="ph-count">{count}</span>
+      </h3>
+      <div className="ph-rows">{children}</div>
     </section>
   );
 }
@@ -169,25 +182,24 @@ function useNow(): number {
   return now;
 }
 
-function useStoredFlag(key: string, initial: boolean): [boolean, () => void] {
-  const [value, setValue] = useState(() => {
+function useStoredTab(key: string, initial: TopTab): [TopTab, (tab: TopTab) => void] {
+  const [value, setValue] = useState<TopTab>(() => {
     try {
       const v = localStorage.getItem(key);
-      return v === null ? initial : v === "1";
+      return v === "done" || v === "scheduled" ? v : initial;
     } catch {
       return initial;
     }
   });
-  const toggle = () =>
-    setValue(v => {
-      try {
-        localStorage.setItem(key, v ? "0" : "1");
-      } catch {
-        // storage unavailable; keep in memory
-      }
-      return !v;
-    });
-  return [value, toggle];
+  const set = (tab: TopTab) => {
+    setValue(tab);
+    try {
+      localStorage.setItem(key, tab);
+    } catch {
+      // storage unavailable; keep in memory
+    }
+  };
+  return [value, set];
 }
 
 export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectionProps) {
@@ -209,7 +221,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
   const topBar = useComposeTopBar();
   const stripHolder = useStripHolder(topBar);
   const actionKeys = useRowActionKeys();
-  const [doneOpen, toggleDone] = useStoredFlag(DONE_OPEN_KEY, false);
+  const [topTab, setTopTab] = useStoredTab(TOP_TAB_KEY, "scheduled");
 
   // Page archived threads back until the Recently done window is covered.
   const archived = sidebar.experimental_archived;
@@ -229,8 +241,8 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
     [sidebar.threads, automations.data, projectId, now],
   );
   const previewTargets = useMemo(
-    () => (board ? [...board.pinned, ...board.inProgress, ...(doneOpen ? board.done : [])].map(r => ({ id: r.thread.id, updatedAt: r.thread.updatedAt })) : []),
-    [board, doneOpen],
+    () => (board ? [...board.pinned, ...board.inProgress, ...(topTab === "done" || !board.scheduled.length ? board.done : [])].map(r => ({ id: r.thread.id, updatedAt: r.thread.updatedAt })) : []),
+    [board, topTab],
   );
   const previews = usePreviews(sdk.threads, previewTargets);
   const open: Open = t => navigate.toThread(t.id);
@@ -258,7 +270,17 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
   return (
     <div className="ph-board" data-ph-board="">
       {crumb}
-      {stripHolder ? createPortal(<AutomationStrip rows={board.scheduled} now={now} onOpen={open} />, stripHolder) : null}
+      {stripHolder
+        ? createPortal(
+            <TopPanel
+              tab={topTab}
+              onTab={setTopTab}
+              scheduled={board.scheduled.map(r => <AutomationLine key={r.automation.id} row={r} now={now} onOpen={open} />)}
+              done={board.done.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} />)}
+            />,
+            stripHolder,
+          )
+        : null}
       {sidebar.status === "loading" ? <p className="ph-empty">Loading…</p> : null}
       {sidebar.status === "ready" && empty ? <p className="ph-empty">Nothing in progress here yet.</p> : null}
       <Group label="Pinned" count={board.pinned.length}>
@@ -266,9 +288,6 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
       </Group>
       <Group label="Idle" count={board.inProgress.length}>
         {board.inProgress.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} />)}
-      </Group>
-      <Group label="Recently done" count={board.done.length} open={doneOpen} onToggle={toggleDone}>
-        {board.done.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} />)}
       </Group>
     </div>
   );
