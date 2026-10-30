@@ -216,7 +216,13 @@ a.ph-row:hover { background: var(--state-hover, color-mix(in oklab, var(--foregr
 /* On a wide screen the tabs share the top bar's row (the crumb sits at the far left, the column is centered). */
 @media (min-width: 1100px) {
   .ph-autos-holder { margin-top: calc(-1 * var(--bb-app-chrome-row-height, 2.5rem)); }
-  .ph-autos-holder .ph-tabs { min-height: var(--bb-app-chrome-row-height, 2.5rem); align-items: center; margin-bottom: 0; }
+  /* Tabs centered on the crumb's line, the list right under them rather than under the whole chrome row. */
+  .ph-autos-holder .ph-tabs {
+    height: 18px;
+    margin-top: calc((var(--bb-app-chrome-row-height, 2.5rem) - 18px) / 2);
+    margin-bottom: 0.125rem;
+    align-items: center;
+  }
   .ph-autos-holder .ph-autos { padding-top: 0; }
 }
 .ph-autos-holder:empty { display: none; }
