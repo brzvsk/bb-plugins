@@ -7,7 +7,7 @@ export interface Preview {
 }
 
 interface OutlineClient {
-  conversationOutline(args: { threadId: string }): Promise<{ items: readonly { role: "user" | "assistant"; preview: string }[] }>;
+  conversationOutline(args: { threadId: string; role?: "user" | "assistant" }): Promise<{ items: readonly { role: "user" | "assistant"; preview: string }[] }>;
 }
 
 /** The last message of a conversation outline as a one-line preview; null when the thread has none yet. */
@@ -22,7 +22,7 @@ export function lastPreview(items: readonly { role: "user" | "assistant"; previe
 const CONCURRENCY = 4;
 
 /**
- * Last-message previews for the given threads, fetched a few at a time and
+ * The author's last message in each of the given threads as a one-line preview, fetched a few at a time and
  * refreshed when a thread's `updatedAt` moves. Keyed by thread id. A fetch in
  * flight always lands; a thread that changed meanwhile is fetched again after it.
  */
@@ -49,7 +49,7 @@ export function usePreviews(client: OutlineClient, threads: readonly { id: strin
       if (!t || !mounted.current) return;
       inFlight.current.set(t.id, t.updatedAt);
       try {
-        const { items } = await client.conversationOutline({ threadId: t.id });
+        const { items } = await client.conversationOutline({ threadId: t.id, role: "user" });
         if (!mounted.current) return;
         loaded.current.set(t.id, t.updatedAt);
         const preview = lastPreview(items);

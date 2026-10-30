@@ -24,7 +24,7 @@ const TOP_TAB_KEY = "new-thread-layout:top-tab";
 
 function previewLine(p: Preview | null | undefined): string {
   if (!p) return "";
-  return p.role === "user" ? `You: ${p.text}` : p.text;
+  return p.text;
 }
 
 type Open = (thread: PluginSidebarThread) => void;

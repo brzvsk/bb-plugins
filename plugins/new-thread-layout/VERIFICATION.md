@@ -15,6 +15,7 @@
 - Quiet schedule, same day: schedule lines at 50% opacity (muted text alone barely differs from foreground in this theme). Live: with the Security watch thread `thr_2geria3c6z` marked unread for the check (marked read again after), its line was full strength with bb's unread dot, the other four dimmed with clocks.
 - Quiet rows, same day: live on Cockpit: the running pinned thread at full strength with the `ph-shimmer` title animation, three idle rows at 0.5; with `thr_wnzfera4zw` marked unread for the check (read again after) its row went to 1.
 - Top switch, same day: live on Cockpit: tabs "Scheduled 5" (selected) and "Recently done 8" in the fixed zone; the board below holds only Pinned and Idle; switching showed the eight done rows with "Done 1 h ago · …" lines and stored `done` in localStorage.
+- Author's message as the second line, same day: `conversationOutline` with role `user`; live on Cockpit each row showed the author's last message (e.g. "второй строчкой надо мое сообщение вывести"), without a "You:" prefix.
 - Earlier 0.3.0 checks still apply to the heading: popover anchoring, native chip unchanged, selection sync; disable cleanup (heading, topbar row and crumb holders are removed by their disposers).
 
 Not checked live: compact (mobile) layout; split panes with threads from two projects (the crumb uses the route's project for every visible header row).
