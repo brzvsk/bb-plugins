@@ -133,3 +133,11 @@ a.ph-row:hover { background: var(--state-hover, color-mix(in oklab, var(--foregr
 .ph-crumb-name { overflow: hidden; text-overflow: ellipsis; }
 .ph-crumb-sep { margin-left: 0.15rem; opacity: 0.5; }
 .ph-topbar .ph-crumb { color: var(--foreground); }
+
+/* The top of the desktop window is a drag region; the crumbs must stay clickable there. */
+.ph-topbar,
+.ph-crumb-holder,
+.ph-crumb-link {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
