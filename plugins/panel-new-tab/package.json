@@ -1,0 +1,50 @@
+{
+  "name": "bb-plugin-panel-new-tab",
+  "version": "0.1.0",
+  "description": "Open a new tab when the right panel opens with nothing but Info in it.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "bb": ">=0.48.1",
+    "bbPluginSdk": ">=0.6.104 <0.7.0"
+  },
+  "bb": {
+    "name": "Panel New Tab",
+    "description": "When you open the right panel and it has no content tabs, it opens on a new tab instead of Info.",
+    "branding": {
+      "icon": "PanelRight"
+    },
+    "server": "./server.ts",
+    "app": "./app.tsx",
+    "skills": []
+  },
+  "files": [
+    "app.tsx",
+    "decide.ts",
+    "server.ts",
+    "README.md",
+    "LICENSE",
+    "dist/app.js",
+    "dist/app.css",
+    "dist/app.meta.json",
+    "dist/server.js",
+    "dist/server.meta.json"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "bb plugin build ."
+  },
+  "devDependencies": {
+    "@get-bb/plugin-sdk": "0.6.104",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.0",
+    "jsdom": "^29.0.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "typescript": "5.9.3",
+    "vitest": "^4.1.1"
+  }
+}
