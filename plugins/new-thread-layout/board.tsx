@@ -18,6 +18,7 @@ import { formatAgo, formatNextRun } from "./format";
 import { buildBoard, DONE_WINDOW_MS, type BoardRow, type ScheduledRow } from "./model";
 import { usePreviews, type Preview } from "./previews";
 import { useComposeTopBar } from "./crumb";
+import { ThreadRowActions, useRowActionKeys } from "./actions";
 
 const DONE_OPEN_KEY = "new-thread-layout:done-open";
 
@@ -32,7 +33,7 @@ function plainClick(e: React.MouseEvent): boolean {
   return !(e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0);
 }
 
-function Row({ row, preview, now, onOpen }: { row: BoardRow; preview: Preview | null | undefined; now: number; onOpen: Open }) {
+function Row({ row, preview, now, onOpen, actionKeys }: { row: BoardRow; preview: Preview | null | undefined; now: number; onOpen: Open; actionKeys: readonly string[] }) {
   const t = row.thread as PluginSidebarThread;
   const rowStatus = useSidebarThreadRowStatus(t.id);
   const second = t.isArchived
@@ -40,6 +41,7 @@ function Row({ row, preview, now, onOpen }: { row: BoardRow; preview: Preview | 
     : previewLine(preview);
   const meta = row.children ? `${row.children} child` : "";
   return (
+    <ThreadRowActions thread={t} keys={actionKeys}>
     <a
       className="ph-row"
       href={t.href}
@@ -61,8 +63,8 @@ function Row({ row, preview, now, onOpen }: { row: BoardRow; preview: Preview | 
         </span>
         {second ? <span className="ph-second">{second}</span> : null}
       </span>
-      {row.status && !t.isArchived ? <span className="ph-status">{row.status}</span> : null}
     </a>
+    </ThreadRowActions>
   );
 }
 
@@ -197,6 +199,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
   const project = sidebar.projects.find(p => p.id === projectId) ?? null;
   const topBar = useComposeTopBar();
   const stripHolder = useStripHolder(topBar);
+  const actionKeys = useRowActionKeys();
   const [doneOpen, toggleDone] = useStoredFlag(DONE_OPEN_KEY, false);
 
   // Page archived threads back until the Recently done window is covered.
@@ -250,13 +253,13 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
       {sidebar.status === "loading" ? <p className="ph-empty">Loading…</p> : null}
       {sidebar.status === "ready" && empty ? <p className="ph-empty">Nothing in progress here yet.</p> : null}
       <Group label="Pinned" count={board.pinned.length}>
-        {board.pinned.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} />)}
+        {board.pinned.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} />)}
       </Group>
       <Group label="In progress" count={board.inProgress.length}>
-        {board.inProgress.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} />)}
+        {board.inProgress.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} />)}
       </Group>
       <Group label="Recently done" count={board.done.length} open={doneOpen} onToggle={toggleDone}>
-        {board.done.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} />)}
+        {board.done.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} />)}
       </Group>
     </div>
   );

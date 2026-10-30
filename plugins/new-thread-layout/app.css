@@ -144,8 +144,41 @@ a.ph-row:hover { background: var(--state-hover, color-mix(in oklab, var(--foregr
   white-space: nowrap;
 }
 .ph-status-time { font-variant-numeric: tabular-nums; }
-.ph-row[data-ph-working] .ph-status { color: var(--foreground); opacity: 0.8; }
-.ph-row[data-ph-attention] .ph-status { color: var(--primary); }
+/* Hover actions, as on thread-list rows: quick actions and the thread menu at the row's right edge. */
+.ph-row-wrap { position: relative; }
+.ph-row-wrap:hover > a.ph-row,
+.ph-row-wrap[data-ph-menu-open] > a.ph-row { background: var(--state-hover, color-mix(in oklab, var(--foreground) 6%, transparent)); }
+.ph-actions {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.375rem;
+  display: none;
+  align-items: center;
+  gap: 0.125rem;
+  padding-left: 0.5rem;
+  border-radius: 0.375rem;
+  background: color-mix(in oklab, var(--foreground) 6%, var(--background));
+}
+.ph-row-wrap:hover > .ph-actions,
+.ph-row-wrap:focus-within > .ph-actions,
+.ph-row-wrap[data-ph-menu-open] > .ph-actions { display: inline-flex; }
+.ph-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 0.375rem;
+  background: none;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.ph-action:hover,
+.ph-action[data-state="open"] { color: var(--foreground); background: var(--state-active, color-mix(in oklab, var(--foreground) 10%, transparent)); }
+.ph-action:disabled { opacity: 0.4; cursor: default; }
+.ph-action-icon { width: 15px; height: 15px; }
 
 /* Project name in the top bar */
 .ph-topbar {

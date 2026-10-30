@@ -22,3 +22,13 @@ export const automationsContract = {
     output: z.array(automation),
   },
 } as const;
+
+// The bundled thread list's preferences; only the quick actions its rows show.
+export const threadListContract = {
+  listPreferences: {
+    input: z.null(),
+    output: z.looseObject({
+      preferences: z.looseObject({ rowActions: z.array(z.string()).optional() }),
+    }),
+  },
+} as const;

@@ -23,38 +23,56 @@ const CONCURRENCY = 4;
 
 /**
  * Last-message previews for the given threads, fetched a few at a time and
- * refreshed when a thread's `updatedAt` moves. Keyed by thread id.
+ * refreshed when a thread's `updatedAt` moves. Keyed by thread id. A fetch in
+ * flight always lands; a thread that changed meanwhile is fetched again after it.
  */
 export function usePreviews(client: OutlineClient, threads: readonly { id: string; updatedAt: number }[]): ReadonlyMap<string, Preview | null> {
   const [previews, setPreviews] = useState<ReadonlyMap<string, Preview | null>>(new Map());
   const loaded = useRef(new Map<string, number>());
-  const inFlight = useRef(new Set<string>());
+  const inFlight = useRef(new Map<string, number>());
+  const wanted = useRef(new Map<string, number>());
+  const mounted = useRef(true);
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const key = threads.map(t => `${t.id}:${t.updatedAt}`).join(",");
   useEffect(() => {
-    let cancelled = false;
+    wanted.current = new Map(threads.map(t => [t.id, t.updatedAt] as const));
     const queue = threads.filter(t => loaded.current.get(t.id) !== t.updatedAt && !inFlight.current.has(t.id));
-    const next = async () => {
+    const slots = Math.max(0, CONCURRENCY - inFlight.current.size);
+    const next = async (): Promise<void> => {
       const t = queue.shift();
-      if (!t || cancelled) return;
-      inFlight.current.add(t.id);
+      if (!t || !mounted.current) return;
+      inFlight.current.set(t.id, t.updatedAt);
       try {
         const { items } = await client.conversationOutline({ threadId: t.id });
-        if (cancelled) return;
+        if (!mounted.current) return;
         loaded.current.set(t.id, t.updatedAt);
         const preview = lastPreview(items);
         setPreviews(prev => new Map(prev).set(t.id, preview));
       } catch {
         // Leave the row without a preview; the next updatedAt change retries.
+        loaded.current.set(t.id, t.updatedAt);
       } finally {
         inFlight.current.delete(t.id);
       }
       await next();
     };
-    void Promise.all(Array.from({ length: CONCURRENCY }, next));
-    return () => {
-      cancelled = true;
-    };
+    void Promise.all(Array.from({ length: Math.max(1, slots) }, next)).then(() => {
+      // Threads that changed or were skipped while fetches were running get another pass.
+      if (!mounted.current) return;
+      for (const [id, at] of wanted.current) {
+        if (loaded.current.get(id) !== at && !inFlight.current.has(id)) {
+          setTick(n => n + 1);
+          return;
+        }
+      }
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, client]);
+  }, [key, client, tick]);
   return previews;
 }
