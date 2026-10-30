@@ -130,7 +130,6 @@ a.ph-row:hover { background: var(--state-hover, color-mix(in oklab, var(--foregr
 }
 .ph-crumb-link { border-radius: 0.25rem; padding: 0.125rem 0.25rem; margin-left: -0.25rem; }
 .ph-crumb-link:hover { color: var(--foreground); background: var(--state-hover, color-mix(in oklab, var(--foreground) 6%, transparent)); }
-.ph-crumb-icon { width: 14px; height: 14px; flex: none; }
 .ph-crumb-name { overflow: hidden; text-overflow: ellipsis; }
 .ph-crumb-sep { margin-left: 0.15rem; opacity: 0.5; }
 .ph-topbar .ph-crumb { color: var(--foreground); }

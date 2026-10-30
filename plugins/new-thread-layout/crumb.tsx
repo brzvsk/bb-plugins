@@ -1,6 +1,6 @@
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
-import { experimental_Icon as Icon, experimental_useSidebarThreads, useBbContext, useBbNavigate } from "@get-bb/plugin-sdk/app";
+import { experimental_useSidebarThreads, useBbContext, useBbNavigate } from "@get-bb/plugin-sdk/app";
 
 const COMPOSE_PANEL = '[data-panel-id="root-compose-main-panel"]';
 const COMPOSE_FRAME = `${COMPOSE_PANEL} [data-split-pane-id] > .relative.flex.h-full`;
@@ -76,7 +76,7 @@ const placeThreadCrumb = (host: Element) => {
   return holder;
 };
 
-/** The project name before the thread title in every thread header; a click opens the project's home. */
+/** The project name before the thread title in every thread header; a click opens the project. */
 export function ThreadProjectCrumb() {
   const { projectId } = useBbContext();
   const { projects } = experimental_useSidebarThreads();
@@ -98,7 +98,6 @@ export function ThreadProjectCrumb() {
               navigate.toProject(project.id);
             }}
           >
-            <Icon name="Home" className="ph-crumb-icon" aria-hidden />
             <span className="ph-crumb-name">{project.name}</span>
             <span className="ph-crumb-sep" aria-hidden>/</span>
           </a>,

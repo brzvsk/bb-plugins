@@ -155,10 +155,18 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
 
   const crumb = topBar && project
     ? createPortal(
-        <span className="ph-crumb" aria-current="page">
-          <Icon name="Home" className="ph-crumb-icon" aria-hidden />
+        <a
+          className="ph-crumb ph-crumb-link"
+          href={project.href}
+          title={`Open ${project.name}`}
+          onClick={e => {
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+            e.preventDefault();
+            navigate.toProject(project.id);
+          }}
+        >
           <span className="ph-crumb-name">{project.name}</span>
-        </span>,
+        </a>,
         topBar,
       )
     : null;
