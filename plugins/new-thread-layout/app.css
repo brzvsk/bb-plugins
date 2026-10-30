@@ -198,7 +198,19 @@ a.ph-row:hover { background: var(--state-hover, color-mix(in oklab, var(--foregr
 }
 
 /* Automations: a list fixed under the top bar, outside the scrolling list, aligned with the thread column. */
-.ph-autos-holder { flex: none; }
+.ph-autos-holder {
+  flex: none;
+  position: relative;
+  z-index: 1;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+/* On a wide screen the tabs share the top bar's row (the crumb sits at the far left, the column is centered). */
+@media (min-width: 1100px) {
+  .ph-autos-holder { margin-top: calc(-1 * var(--bb-app-chrome-row-height, 2.5rem)); }
+  .ph-autos-holder .ph-tabs { min-height: var(--bb-app-chrome-row-height, 2.5rem); align-items: center; margin-bottom: 0; }
+  .ph-autos-holder .ph-autos { padding-top: 0; }
+}
 .ph-autos-holder:empty { display: none; }
 .ph-autos {
   max-width: 760px;

@@ -16,6 +16,7 @@
 - Quiet rows, same day: live on Cockpit: the running pinned thread at full strength with the `ph-shimmer` title animation, three idle rows at 0.5; with `thr_wnzfera4zw` marked unread for the check (read again after) its row went to 1.
 - Top switch, same day: live on Cockpit: tabs "Scheduled 5" (selected) and "Recently done 8" in the fixed zone; the board below holds only Pinned and Idle; switching showed the eight done rows with "Done 1 h ago · …" lines and stored `done` in localStorage.
 - Author's message as the second line, same day: `conversationOutline` with role `user`; live on Cockpit each row showed the author's last message (e.g. "второй строчкой надо мое сообщение вывести"), without a "You:" prefix.
+- Tabs in the top bar row, same day: on viewports ≥1100px the fixed zone pulls up one chrome row so the Scheduled / Recently done tabs share the crumb's row (live headless 1400×800: crumb and tab centers both at y=24, tabs start 86px right of the crumb), the list right under it; the zone is `app-region: no-drag` for the desktop drag strip. Tab clicks worked headless; desktop clicking not checked by the agent.
 - Earlier 0.3.0 checks still apply to the heading: popover anchoring, native chip unchanged, selection sync; disable cleanup (heading, topbar row and crumb holders are removed by their disposers).
 
 Not checked live: compact (mobile) layout; split panes with threads from two projects (the crumb uses the route's project for every visible header row).
