@@ -5,11 +5,21 @@ import {
   experimental_ThreadContextCardRow as CardRow,
   experimental_useRpcKeyedQuery,
   experimental_useRpcQuery,
-  useBbNavigate,
   type ExperimentalThreadContextCardProps,
 } from "@get-bb/plugin-sdk/app";
 import { automationsContract, gitContract } from "./contracts";
 import { automationStatus, branchView } from "./format";
+
+/**
+ * Open an automation in the bundled Automations plugin. BbNavigate only reaches
+ * this plugin's own panels, so this pushes the app route BB's router listens to
+ * (the same URL the Automations page uses for its breadcrumbs).
+ */
+export function openAutomation(projectId: string, automationId: string): void {
+  const path = `/plugins/automations/automations/${encodeURIComponent(projectId)}/${encodeURIComponent(automationId)}`;
+  window.history.pushState(window.history.state, "", path);
+  window.dispatchEvent(new PopStateEvent("popstate", { state: window.history.state }));
+}
 
 export function BranchRow({ environment }: ExperimentalThreadContextCardProps) {
   const id = environment?.id ?? null;
@@ -33,7 +43,6 @@ export function BranchRow({ environment }: ExperimentalThreadContextCardProps) {
 }
 
 export function AutomationsSection({ threadId }: ExperimentalThreadContextCardProps) {
-  const navigate = useBbNavigate();
   const list = experimental_useRpcQuery({
     pluginId: "automations",
     contract: automationsContract,
@@ -51,7 +60,7 @@ export function AutomationsSection({ threadId }: ExperimentalThreadContextCardPr
           label={a.name}
           title={a.name}
           trailing={automationStatus(a)}
-          onClick={() => navigate.toPluginPanel("automations", { subPath: `${a.projectId}/${a.id}` })}
+          onClick={() => openAutomation(a.projectId, a.id)}
         />
       ))}
     </>
