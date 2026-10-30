@@ -53,9 +53,9 @@ describe("buildBoard", () => {
       thread({ id: "manager", isPinned: true }),
     ];
     const automations = [
-      { id: "a1", projectId: "p1", name: "Daily", enabled: true, nextRunAt: NOW + 2 * H, targetThreadId: "daily" },
-      { id: "a2", projectId: "p1", name: "Loud", enabled: true, nextRunAt: NOW + 3 * H, targetThreadId: "loud" },
-      { id: "a3", projectId: "p1", name: "Manager", enabled: true, nextRunAt: NOW + H, targetThreadId: "manager" },
+      { id: "a1", projectId: "p1", name: "Daily", enabled: true, nextRunAt: NOW + 2 * H, execution: { targetThreadId: "daily" } },
+      { id: "a2", projectId: "p1", name: "Loud", enabled: true, nextRunAt: NOW + 3 * H, execution: { targetThreadId: "loud" } },
+      { id: "a3", projectId: "p1", name: "Manager", enabled: true, nextRunAt: NOW + H, execution: { targetThreadId: "manager" } },
       { id: "a4", projectId: "p1", name: "Fresh", enabled: true, nextRunAt: NOW + 4 * H },
       { id: "a5", projectId: "p1", name: "Paused", enabled: false, nextRunAt: NOW + 4 * H },
     ];

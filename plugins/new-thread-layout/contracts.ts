@@ -8,7 +8,8 @@ const automation = z.looseObject({
   name: z.string(),
   enabled: z.boolean().optional(),
   nextRunAt: z.number().nullable().optional(),
-  targetThreadId: z.string().nullable().optional(),
+  /** The thread an agent automation re-prompts; per-run automations have none. */
+  execution: z.looseObject({ targetThreadId: z.string().nullable().optional() }).optional(),
   lastRunThreadId: z.string().nullable().optional(),
   lastRunStatus: z.string().nullable().optional(),
   problem: z.string().optional(),

@@ -67,7 +67,7 @@ export function statusOf(t: BoardThread): Pick<BoardRow, "status" | "attention" 
 
 /** Automation thread binding: the target thread, else the latest run thread of a per-run automation. */
 export function boundThreadId(a: Automation): string | null {
-  return a.targetThreadId ?? a.lastRunThreadId ?? null;
+  return a.execution?.targetThreadId ?? a.lastRunThreadId ?? null;
 }
 
 export function buildBoard(threads: readonly BoardThread[], automations: readonly Automation[], projectId: string, now: number): Board {
