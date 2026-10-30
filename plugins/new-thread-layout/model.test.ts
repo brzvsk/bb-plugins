@@ -1,0 +1,117 @@
+import { describe, expect, it } from "vitest";
+import { buildBoard, statusOf, type BoardThread } from "./model";
+import { formatAgo, formatNextRun, firstLine } from "./format";
+import { lastPreview } from "./previews";
+
+const NOW = Date.parse("2026-10-30T12:00:00+03:00");
+const H = 60 * 60 * 1000;
+
+function thread(over: Partial<BoardThread> & { id: string }): BoardThread {
+  return {
+    projectId: "p1",
+    href: `/projects/p1/threads/${over.id}`,
+    displayTitle: over.id,
+    parentThreadId: null,
+    status: "idle",
+    runtimeStatus: "idle",
+    indicator: "none",
+    hasPendingInteraction: false,
+    isUnread: false,
+    isPinned: false,
+    isArchived: false,
+    archivedAt: null,
+    isHidden: false,
+    updatedAt: NOW - H,
+    ...over,
+  };
+}
+
+describe("buildBoard", () => {
+  it("splits a project's root threads into pinned, in progress and recently done", () => {
+    const threads = [
+      thread({ id: "pin", isPinned: true }),
+      thread({ id: "work", runtimeStatus: "active", status: "active", updatedAt: NOW - 5 * H }),
+      thread({ id: "idle", updatedAt: NOW - H }),
+      thread({ id: "child", parentThreadId: "idle" }),
+      thread({ id: "done", isArchived: true, archivedAt: NOW - 3 * H }),
+      thread({ id: "old", isArchived: true, archivedAt: NOW - 60 * H }),
+      thread({ id: "other", projectId: "p2" }),
+      thread({ id: "hidden", isHidden: true }),
+    ];
+    const b = buildBoard(threads, [], "p1", NOW);
+    expect(b.pinned.map(r => r.thread.id)).toEqual(["pin"]);
+    expect(b.inProgress.map(r => r.thread.id)).toEqual(["work", "idle"]);
+    expect(b.inProgress[1].children).toBe(1);
+    expect(b.done.map(r => r.thread.id)).toEqual(["done"]);
+    expect(b.scheduled).toEqual([]);
+  });
+
+  it("puts read idle automation threads under Scheduled and keeps unread or pinned ones where they are", () => {
+    const threads = [
+      thread({ id: "daily", updatedAt: NOW - H }),
+      thread({ id: "loud", isUnread: true }),
+      thread({ id: "manager", isPinned: true }),
+    ];
+    const automations = [
+      { id: "a1", projectId: "p1", name: "Daily", enabled: true, nextRunAt: NOW + 2 * H, targetThreadId: "daily" },
+      { id: "a2", projectId: "p1", name: "Loud", enabled: true, nextRunAt: NOW + 3 * H, targetThreadId: "loud" },
+      { id: "a3", projectId: "p1", name: "Manager", enabled: true, nextRunAt: NOW + H, targetThreadId: "manager" },
+      { id: "a4", projectId: "p1", name: "Fresh", enabled: true, nextRunAt: NOW + 4 * H },
+      { id: "a5", projectId: "p1", name: "Paused", enabled: false, nextRunAt: NOW + 4 * H },
+    ];
+    const b = buildBoard(threads, automations, "p1", NOW);
+    expect(b.inProgress.map(r => r.thread.id)).toEqual(["loud"]);
+    expect(b.pinned[0].nextRunAt).toBe(NOW + H);
+    expect(b.pinned[0].automationNames).toEqual(["Manager"]);
+    expect(b.scheduled.map(r => [r.automation.name, r.thread?.id ?? null])).toEqual([
+      ["Daily", "daily"],
+      ["Loud", "loud"],
+      ["Fresh", null],
+    ]);
+  });
+
+  it("orders in progress by work, then attention, then recency", () => {
+    const threads = [
+      thread({ id: "recent", updatedAt: NOW }),
+      thread({ id: "ask", hasPendingInteraction: true, updatedAt: NOW - 9 * H }),
+      thread({ id: "busy", runtimeStatus: "active", updatedAt: NOW - 9 * H }),
+    ];
+    expect(buildBoard(threads, [], "p1", NOW).inProgress.map(r => r.thread.id)).toEqual(["busy", "ask", "recent"]);
+  });
+});
+
+describe("statusOf", () => {
+  it("names the states bb's thread list distinguishes", () => {
+    expect(statusOf(thread({ id: "a", runtimeStatus: "active" })).status).toBe("Working");
+    expect(statusOf(thread({ id: "a", runtimeStatus: "provisioning" })).status).toBe("Starting");
+    expect(statusOf(thread({ id: "a", hasPendingInteraction: true }))).toMatchObject({ status: "Needs you", attention: true });
+    expect(statusOf(thread({ id: "a", status: "error" }))).toMatchObject({ status: "Failed", attention: true });
+    expect(statusOf(thread({ id: "a", isUnread: true })).status).toBe("Unread");
+    expect(statusOf(thread({ id: "a", indicator: "queued-waiting" })).status).toBe("Queued");
+    expect(statusOf(thread({ id: "a" })).status).toBe("");
+  });
+});
+
+describe("format", () => {
+  it("formats next runs relative to today", () => {
+    expect(formatNextRun(NOW + 2 * H, NOW)).toMatch(/^Today, 14:00$/);
+    expect(formatNextRun(NOW + 24 * H, NOW)).toMatch(/^Tomorrow, 12:00$/);
+    expect(formatNextRun(NOW + 5 * 24 * H, NOW)).toMatch(/^4 Nov, 12:00$/);
+    expect(formatNextRun(NOW - 1, NOW)).toBeNull();
+    expect(formatNextRun(null, NOW)).toBeNull();
+  });
+  it("formats how long ago", () => {
+    expect(formatAgo(NOW - 20_000, NOW)).toBe("just now");
+    expect(formatAgo(NOW - 5 * 60_000, NOW)).toBe("5 min ago");
+    expect(formatAgo(NOW - 3 * H, NOW)).toBe("3 h ago");
+    expect(formatAgo(NOW - 26 * H, NOW)).toBe("yesterday");
+    expect(formatAgo(NOW - 4 * 24 * H, NOW)).toBe("4 days ago");
+  });
+  it("takes the first non-empty line of a preview", () => {
+    expect(firstLine("\n\n  Hello   world\nmore")).toBe("Hello world");
+    expect(firstLine("**Пилот закончен.** Ни `uv`")).toBe("Пилот закончен. Ни uv");
+    expect(firstLine("## Title")).toBe("Title");
+    expect(lastPreview([{ role: "user", preview: "hi" }, { role: "assistant", preview: "\n" }])).toEqual({ role: "user", text: "hi" });
+    expect(lastPreview([])).toBeNull();
+  });
+});

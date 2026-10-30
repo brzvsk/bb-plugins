@@ -7,13 +7,14 @@
     "jsx": "react-jsx",
     "lib": [
       "ES2022",
-      "DOM"
+      "DOM",
+      "DOM.Iterable"
     ],
     "noEmit": true,
     "skipLibCheck": true
   },
   "include": [
-    "app.tsx",
-    "server.ts"
+    "*.ts",
+    "*.tsx"
   ]
 }

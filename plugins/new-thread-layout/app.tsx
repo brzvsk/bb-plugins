@@ -1,41 +1,12 @@
 import { definePluginApp } from "@get-bb/plugin-sdk/app";
+import "./app.css";
+import { ProjectBoard } from "./board";
+import { ThreadProjectCrumb } from "./crumb";
 
 // Wide New thread layout only; the compact (mobile) home has its own structure.
 const panel = '[data-panel-id="root-compose-main-panel"]';
 const content = `${panel} .relative > [class~="@container/page"].overflow-y-auto > div`;
 const trigger = "[data-promptbox-project-control]";
-
-const css = `
-.ntl-heading {
-  margin: max(2rem, calc(58vh - 140px - 3.5rem)) 0 1.25rem;
-  padding: 0 0.25rem;
-  font-size: 1.5rem;
-  line-height: 1.25;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  color: var(--foreground);
-}
-.ntl-line { margin: 0; font: inherit; overflow-wrap: anywhere; }
-.ntl-sub { color: var(--muted-foreground); }
-.ntl-project {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.3em;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  color: var(--foreground);
-  cursor: pointer;
-  text-decoration: underline dotted;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 0.18em;
-  text-decoration-color: var(--muted-foreground);
-}
-.ntl-project:hover { text-decoration-color: var(--foreground); }
-.ntl-project:disabled { cursor: default; }
-.ntl-project svg { width: 0.8em; height: 0.8em; align-self: center; flex: none; }
-`;
 
 const folderIcon =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
@@ -44,14 +15,12 @@ const folderIcon =
   'A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>';
 
 export default definePluginApp(app => {
+  app.slots.homepageSection({ id: "board", title: "Project home", component: ProjectBoard });
+  app.slots.experimental_appOverlay({ id: "thread-crumb", component: ThreadProjectCrumb });
+
   app.contentScripts.register({
     id: "new-thread-layout",
     mount() {
-      const style = document.createElement("style");
-      style.dataset.bbPlugin = "new-thread-layout";
-      style.textContent = css;
-      document.head.append(style);
-
       const heading = document.createElement("header");
       heading.className = "ntl-heading";
       const sub = document.createElement("h1");
@@ -129,7 +98,6 @@ export default definePluginApp(app => {
         restore?.();
         project.removeEventListener("click", open);
         heading.remove();
-        style.remove();
       };
     },
   });

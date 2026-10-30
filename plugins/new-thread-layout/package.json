@@ -1,19 +1,19 @@
 {
   "name": "bb-plugin-new-thread-layout",
-  "version": "0.3.0",
-  "description": "Place the New thread composer in the lower middle of the screen.",
+  "version": "0.4.0",
+  "description": "Project home on the New thread screen: pinned, in progress, scheduled and recently done threads under the composer, plus the project name in the top bar.",
   "license": "MIT",
   "private": true,
   "type": "module",
   "engines": {
-    "bb": ">=0.46.1",
-    "bbPluginSdk": ">=0.6.49 <0.7.0"
+    "bb": ">=0.48.1",
+    "bbPluginSdk": ">=0.6.104 <0.7.0"
   },
   "bb": {
-    "name": "New Thread Layout",
-    "description": "Moves the New thread composer to the lower middle of the screen under a Working on project picker.",
+    "name": "Project Home",
+    "description": "Turns the New thread screen into the project's home: the composer under a Working on heading, then the project's pinned, in progress, scheduled and recently done threads with their status and last message. The project name sits in the top bar of threads and of the New thread screen.",
     "branding": {
-      "icon": "PanelBottom"
+      "icon": "Home"
     },
     "server": "./server.ts",
     "app": "./app.tsx",
@@ -21,6 +21,13 @@
   },
   "files": [
     "app.tsx",
+    "app.css",
+    "board.tsx",
+    "crumb.tsx",
+    "contracts.ts",
+    "format.ts",
+    "model.ts",
+    "previews.ts",
     "server.ts",
     "README.md",
     "LICENSE",
@@ -32,11 +39,22 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "build": "bb plugin build ."
   },
+  "dependencies": {
+    "zod": "^4.1.12"
+  },
   "devDependencies": {
-    "@get-bb/plugin-sdk": "0.6.49",
+    "@get-bb/plugin-sdk": "0.6.104",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.0",
+    "jsdom": "^29.0.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "typescript": "5.9.3",
-    "@types/react": "19.2.2"
+    "vitest": "^4.1.1"
   }
 }
