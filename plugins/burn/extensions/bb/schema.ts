@@ -12,6 +12,7 @@ import {
   TURN_TOOLS_MAX,
   TURNS_MAX,
   type UsageReport,
+  foldAgentRows,
 } from "../../src/report.js";
 
 export const THREAD_ID = /^thr_[0-9a-z]{6,40}$/;
@@ -20,6 +21,12 @@ const amount = z.number().finite().nonnegative();
 const count = z.number().int().nonnegative();
 const key = z.string().max(200);
 const cost = z.object({ input: amount, output: amount, cacheRead: amount, cacheWrite: amount, total: amount });
+export const agentUsageSchema = z.object({
+  count: count.optional(),
+  coverage: z.enum(["available", "partial"]),
+  // An older extension can send every agent row; fold rather than reject, so its figures still land inside bb's KV cap.
+  rows: z.array(z.object({ id: key, calls: count, cost, estimated: z.boolean() })).transform(foldAgentRows),
+});
 const tokenParts = z.object({ input: amount, output: amount, cacheRead: amount, cacheWrite: amount });
 const tokenCounts = tokenParts.extend({ reasoning: amount });
 const kindCosts = cost.omit({ total: true });
@@ -118,6 +125,9 @@ const v2Schema = z.object({
   stoppedAt: amount.nullable(),
   // Burn 0.2 extensions send none.
   estimated: z.boolean().default(false),
+  agents: agentUsageSchema.optional(),
+  coverageNote: z.string().max(500).optional(),
+  coverage: z.enum(["available", "partial"]).optional(),
 });
 
 /**

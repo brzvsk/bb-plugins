@@ -203,6 +203,15 @@ export function createOpencodeDb(opts: { path: string; modelsPath?: string }): O
   const modelsPath = opts.modelsPath ?? opencodeModelsPath();
   let catalog: unknown = null;
   let catalogStamp: number | null = null;
+  // A missing database is normal (opencode is not installed); a locked, unreadable or changed one is not, and should not look like "no data".
+  const warned = new Set<string>();
+  function warnOnce(what: string, err: unknown): void {
+    if (warned.has(what)) return;
+    if (warned.size > 20) warned.clear();
+    warned.add(what);
+    const detail = err instanceof Error ? err.message : String(err);
+    console.warn(`[burn] ${what}: ${detail}`);
+  }
 
   /** models.dev's catalog, read again whenever opencode refreshes the file, so a model added later gets its prices. */
   function prices(): unknown {
@@ -218,7 +227,8 @@ export function createOpencodeDb(opts: { path: string; modelsPath?: string }): O
       catalogStamp = stamp;
       try {
         catalog = JSON.parse(readFileSync(modelsPath, "utf8")) as unknown;
-      } catch {
+      } catch (err) {
+        warnOnce("opencode's model catalog is not valid JSON, so recorded costs are split by tokens instead of prices", err);
         catalog = null;
       }
     }
@@ -231,7 +241,8 @@ export function createOpencodeDb(opts: { path: string; modelsPath?: string }): O
     let children: ReturnType<DatabaseSync["prepare"]>;
     try {
       children = db.prepare("select id from session where parent_id = ?");
-    } catch {
+    } catch (err) {
+      warnOnce("opencode's session table has no parent_id column, so subagent sessions are not counted", err);
       return [...all].map(([id, child]) => ({ id, child }));
     }
     let level = [...ids];
@@ -256,7 +267,8 @@ export function createOpencodeDb(opts: { path: string; modelsPath?: string }): O
       let db: DatabaseSync;
       try {
         db = new DatabaseSync(opts.path, { readOnly: true });
-      } catch {
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== "ENOENT") warnOnce("could not open opencode's database, so its threads show no figures", err);
         return null;
       }
       try {
@@ -304,6 +316,7 @@ export function createOpencodeDb(opts: { path: string; modelsPath?: string }): O
             const entry = {
               type: "message",
               timestamp,
+              ...(child ? {agentId: sessionId} : {}),
               message: {
                 role: "assistant",
                 provider,
@@ -318,8 +331,11 @@ export function createOpencodeDb(opts: { path: string; modelsPath?: string }): O
         }
         if (entries.length === 0) return null;
         entries.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
-        return { report: buildReport(entries, null, { timeZone }), at: at || Date.now() };
-      } catch {
+        const report = buildReport(entries, null, { timeZone });
+        report.agents = {coverage: "partial", rows: report.agents?.rows ?? []};
+        return { report, at: at || Date.now() };
+      } catch (err) {
+        warnOnce("could not read opencode's database, so its threads show no figures", err);
         return null;
       } finally {
         db.close();

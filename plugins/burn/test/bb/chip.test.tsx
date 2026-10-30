@@ -324,6 +324,30 @@ describe("the chip's popover", () => {
     await vi.waitFor(() => expect(slot.queryByRole("dialog")).toBeNull());
   });
 
+  it("shows a cost reported as one total as an Unsplit slice, not an empty grey bar", async () => {
+    const report = sampleReport({ cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 1.5 } });
+    const card = await openCard(await renderChip(backend(() => answer({ report }))));
+    const where = card.getByTestId("where-it-went");
+    expect(where.textContent).toContain("Unsplit—$1.50");
+    expect(where.textContent).toContain("Part of this cost was reported as one total");
+    expect(where.querySelector('[data-part="unsplit"]')).not.toBeNull();
+  });
+
+  it("hides Where it went until there is a priced call", async () => {
+    const report = sampleReport({
+      calls: 0,
+      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+      tokens: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, reasoning: 0 },
+      lastTurnCost: 0,
+      byModel: [],
+      series: [],
+      turns: [],
+      turnCount: 0,
+    });
+    const card = await openCard(await renderChip(backend(() => answer({ report }))));
+    expect(card.queryByTestId("where-it-went")).toBeNull();
+  });
+
   it("shows each model's output speed over its timed calls", async () => {
     const report = sampleReport({ byModel: [modelRow("p/claude-opus", 4.31, 1_500_000, 18, { timed: 18, ms: 36_000, timedOutput: 2232 }), modelRow("p/claude-haiku", 0.51, 236_000, 5)] });
     const card = await openCard(await renderChip(backend(() => answer({ report }))));
@@ -446,4 +470,26 @@ describe("the chip's popover", () => {
     card = await openCard(slot);
     expect(card.getByText("Open details")).toBeTruthy();
   });
+});
+
+it("shows native-agent spend as part of the thread total, and hides it when the source has none", async () => {
+  const report = sampleReport({ agents: { coverage: "available", rows: [{ id: "native", calls: 1, cost: costOf(1), estimated: false }] } });
+  const card = await openCard(await renderChip(backend(() => answer({ report }))));
+  expect(card.getByTestId("agents-line").textContent).toBe("Subagents · $1.00 · part of this total");
+  const plain = await openCard(await renderChip(backend(() => answer())));
+  expect(plain.queryByTestId("agents-line")).toBeNull();
+});
+
+it("refreshes the card when only a known child thread reports", async () => {
+  const current = answer();
+  current.family.children = [{ threadId: "thr_child000", title: "Worker", cost: 1, calls: 1, running: false, model: null, estimated: false }];
+  current.family.total = 5.82;
+  const server = backend(() => current);
+  const slot = await renderChip(server);
+  const card = await openCard(slot);
+  expect(card.getByTestId("with-children").textContent).toBe("$5.82 with 1 child thread");
+  current.family = { ...current.family, total: 6.82 };
+  await slot.behavior.emitRealtime("usage", { threadId: "thr_child000" });
+  await vi.waitFor(() => expect(card.getByTestId("with-children").textContent).toBe("$6.82 with 1 child thread"));
+  expect(server.callsTo("usage")).toHaveLength(2);
 });

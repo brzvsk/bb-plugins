@@ -78,7 +78,19 @@ export interface DayRow {
   aborted: number;
 }
 
+export interface AgentUsage {
+  /** Number of native agents when rows contains only a family aggregate. */
+  count?: number;
+  coverage: "available" | "partial";
+  rows: { id: string; calls: number; cost: CostParts; estimated: boolean }[];
+}
+
 export interface UsageReport {
+  /** Native agent spend is a subset of this report, never an additional charge. */
+  agents?: AgentUsage;
+  /** Limits of the available source, shown alongside its figures. */
+  coverageNote?: string;
+  coverage?: "available" | "partial";
   version: 2;
   startedAt: number;
   updatedAt: number;
@@ -111,11 +123,13 @@ export interface UsageReport {
 }
 
 /** Structural on purpose: pi's SessionEntry interfaces are assignable, and tests use plain objects. */
-export type EntryLike = { type: string; timestamp: string };
+export type EntryLike = { type: string; timestamp: string; agentId?: string };
 
 export const REPORT_VERSION = 2;
 export const SERIES_MAX = 60;
 export const MODELS_MAX = 8;
+/** Rows in `agents`; the rest fold into one Other row, as models and days do, so a thread with many subagents stays inside bb's KV cap. */
+export const AGENTS_MAX = 50;
 export const TURNS_MAX = 50;
 export const DAYS_MAX = 60;
 export const PROMPT_MAX = 120;
@@ -260,21 +274,24 @@ export function forkedAt(header: unknown): number | null {
   return Number.isFinite(at) ? at : null;
 }
 
+/** A token or cost field as a number. A harness that changes a field's shape must not turn the sums into NaN or text. */
+const finiteNumber = (value: unknown): number => (typeof value === "number" && Number.isFinite(value) ? value : 0);
+
 function slimUsage(usage: unknown): Usage | undefined {
   if (!isRecord(usage) || !isRecord(usage.cost)) return undefined;
   const { cost } = usage;
   return {
-    input: usage.input as number,
-    output: usage.output as number,
-    cacheRead: usage.cacheRead as number,
-    cacheWrite: usage.cacheWrite as number,
-    reasoning: usage.reasoning as number | undefined,
+    input: finiteNumber(usage.input),
+    output: finiteNumber(usage.output),
+    cacheRead: finiteNumber(usage.cacheRead),
+    cacheWrite: finiteNumber(usage.cacheWrite),
+    reasoning: typeof usage.reasoning === "number" && Number.isFinite(usage.reasoning) ? usage.reasoning : undefined,
     cost: {
-      input: cost.input as number,
-      output: cost.output as number,
-      cacheRead: cost.cacheRead as number,
-      cacheWrite: cost.cacheWrite as number,
-      total: cost.total as number,
+      input: finiteNumber(cost.input),
+      output: finiteNumber(cost.output),
+      cacheRead: finiteNumber(cost.cacheRead),
+      cacheWrite: finiteNumber(cost.cacheWrite),
+      total: finiteNumber(cost.total),
     },
   };
 }
@@ -286,7 +303,7 @@ function slimUsage(usage: unknown): Usage | undefined {
  */
 export function slimEntry(entry: unknown): EntryLike | null {
   if (!isRecord(entry) || typeof entry.type !== "string" || typeof entry.timestamp !== "string" || entry.type === "session") return null;
-  const slim: Loose & EntryLike = { type: entry.type, timestamp: entry.timestamp };
+  const slim: Loose & EntryLike = { type: entry.type, timestamp: entry.timestamp, ...(typeof entry.agentId === "string" ? { agentId: entry.agentId } : {}) };
   const usage = slimUsage(entry.usage);
   if (usage) slim.usage = usage;
   if (entry.type === "usage") {
@@ -468,6 +485,46 @@ export interface ReportOptions {
   timeZone?: string;
 }
 
+/** Costliest rows first; past AGENTS_MAX the rest fold into one Other row, so a report stays under bb's KV cap. */
+export function foldAgentRows(rows: AgentUsage["rows"]): AgentUsage["rows"] {
+  const sorted = [...rows].sort((a, b) => b.cost.total - a.cost.total || a.id.localeCompare(b.id));
+  if (sorted.length <= AGENTS_MAX) return sorted;
+  const head = sorted.slice(0, AGENTS_MAX - 1);
+  const folded = sorted.slice(AGENTS_MAX - 1);
+  const cost: CostParts = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 };
+  let calls = 0;
+  let estimated = false;
+  for (const row of folded) {
+    calls += row.calls;
+    estimated ||= row.estimated;
+    for (const key of ["input", "output", "cacheRead", "cacheWrite", "total"] as const) cost[key] += row.cost[key];
+  }
+  return [...head, { id: OTHER_KEY, calls, cost, estimated }];
+}
+
+/**
+ * One row per native agent. The rows are the agent-attributed subset of the report,
+ * so coverage stays "partial": an entry the harness never tagged with an agent is not claimed as covered.
+ */
+function agentsOf(entries: readonly EntryLike[], opts: ReportOptions): AgentUsage {
+  const groups = new Map<string, EntryLike[]>();
+  for (const entry of entries) {
+    if (!entry.agentId) continue;
+    const own = groups.get(entry.agentId);
+    if (own) own.push(entry);
+    else groups.set(entry.agentId, [entry]);
+  }
+  const rows = [...groups.entries()].map(([id, own]) => {
+    const r = buildReport(
+      own.map(({ agentId: _agentId, ...entry }) => entry),
+      null,
+      opts,
+    );
+    return { id, calls: r.calls, cost: r.cost, estimated: r.estimated };
+  });
+  return { coverage: "partial", rows: foldAgentRows(rows) };
+}
+
 export function buildReport(
   entries: readonly EntryLike[],
   context: UsageReport["context"] | undefined,
@@ -574,6 +631,7 @@ export function buildReport(
 
   const prompt = tokens.input + tokens.cacheRead + tokens.cacheWrite;
   return {
+    ...(entries.some(e => e.agentId) ? { agents: agentsOf(entries, opts) } : {}),
     version: REPORT_VERSION,
     startedAt,
     updatedAt,

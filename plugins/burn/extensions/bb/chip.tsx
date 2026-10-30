@@ -179,7 +179,7 @@ function BurnChip({ threadId, answer, placement }: { threadId: string; answer: U
 export function BurnHeaderAction({ threadId, isCompactViewport }: PluginThreadHeaderActionProps): ReactNode {
   const prefs = readPrefs(useSettings().values);
   const navigate = useBbNavigate();
-  const { answer } = useUsage(threadId);
+  const { answer } = useUsage(threadId, { withChildren: true });
   const [anchor, setAnchor] = useState<HTMLSpanElement | null>(null);
   const mount = useFooterMount(prefs.chip ? anchor : null);
   useEffect(() => registerPanelOpener(threadId, (params) => openPanelIn(navigate, params)), [threadId, navigate]);

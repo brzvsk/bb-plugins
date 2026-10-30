@@ -86,9 +86,9 @@ The shared report, formatting and budget code is in `src/`. The pi extension is 
 
 The screenshots come from a sandboxed bb and pi with made-up projects and threads.
 
-## Credits
-
 Support for OpenCode threads, which Burn reads from opencode's own database, is by [Nikolai Berezovskii](https://github.com/brzvsk) ([#1](https://github.com/kalindudc/burn/pull/1)).
+
+Subagent accounting, which reads Claude Code transcripts and separates Codex child counters, is by [Artur Karapetyan](https://github.com/architawr) ([#2](https://github.com/kalindudc/burn/pull/2)).
 
 ## License
 
