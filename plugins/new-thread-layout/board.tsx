@@ -45,8 +45,8 @@ function Row({ row, preview, now, onOpen, actionKeys }: { row: BoardRow; preview
     <a
       className="ph-row"
       href={t.href}
-      data-ph-working={row.working || undefined}
-      data-ph-attention={row.attention || undefined}
+      data-ph-working={(row.working && !t.isArchived) || undefined}
+      data-ph-loud={(!t.isArchived && (t.isUnread || t.isPinned || row.attention)) || undefined}
       onClick={e => {
         if (!plainClick(e)) return;
         e.preventDefault();
