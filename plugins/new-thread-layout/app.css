@@ -243,7 +243,8 @@ a.ph-row:hover { background: var(--state-hover, color-mix(in oklab, var(--foregr
 /* Quiet by default (this theme's muted and foreground text are close, so opacity carries it); full strength when its thread is unread. */
 .ph-auto-row { align-items: center; padding-top: 0.25rem; padding-bottom: 0.25rem; opacity: 0.5; transition: opacity 120ms; }
 .ph-auto-row[data-ph-unread],
-a.ph-auto-row:hover { opacity: 1; }
+.ph-row-wrap:hover > .ph-auto-row { opacity: 1; }
+.ph-row-wrap:hover > div.ph-auto-row { background: var(--state-hover, color-mix(in oklab, var(--foreground) 6%, transparent)); }
 .ph-auto-row .ph-glyph { margin-top: 0; }
 .ph-auto-row .ph-status { padding-top: 0; }
 .ph-auto-text { display: flex; align-items: baseline; gap: 0.5rem; min-width: 0; }

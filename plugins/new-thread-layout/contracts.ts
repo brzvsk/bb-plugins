@@ -32,3 +32,11 @@ export const threadListContract = {
     }),
   },
 } as const;
+
+const automationRef = z.object({ projectId: z.string(), automationId: z.string() });
+
+/** The bundled Automations plugin's write methods this plugin calls from schedule rows. */
+export const automationActionsContract = {
+  automations_pause: { input: automationRef, output: z.looseObject({}) },
+  automations_resume: { input: automationRef, output: z.looseObject({}) },
+} as const;

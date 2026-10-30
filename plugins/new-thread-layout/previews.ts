@@ -10,11 +10,14 @@ interface OutlineClient {
   conversationOutline(args: { threadId: string; role?: "user" | "assistant" }): Promise<{ items: readonly { role: "user" | "assistant"; preview: string }[] }>;
 }
 
-/** The last message of a conversation outline as a one-line preview; null when the thread has none yet. */
+/** bb's own notices (child completions and the like) arrive as user messages: "[bb system] …". */
+const SYSTEM_NOTICE = /^\[bb[ \]]/i;
+
+/** The last real message of a conversation outline as a one-line preview; null when the thread has none yet. */
 export function lastPreview(items: readonly { role: "user" | "assistant"; preview: string }[]): Preview | null {
   for (let i = items.length - 1; i >= 0; i--) {
     const text = firstLine(items[i].preview);
-    if (text) return { role: items[i].role, text };
+    if (text && !SYSTEM_NOTICE.test(text)) return { role: items[i].role, text };
   }
   return null;
 }

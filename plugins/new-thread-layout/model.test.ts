@@ -68,6 +68,7 @@ describe("buildBoard", () => {
       ["Daily", "daily"],
       ["Loud", "loud"],
       ["Fresh", null],
+      ["Paused", null],
     ]);
   });
 
@@ -114,5 +115,6 @@ describe("format", () => {
     expect(firstLine("## Title")).toBe("Title");
     expect(lastPreview([{ role: "user", preview: "hi" }, { role: "assistant", preview: "\n" }])).toEqual({ role: "user", text: "hi" });
     expect(lastPreview([])).toBeNull();
+    expect(lastPreview([{ role: "user", preview: "сделай" }, { role: "user", preview: "[bb system] @thread:thr_x completed: READY" }])).toEqual({ role: "user", text: "сделай" });
   });
 });

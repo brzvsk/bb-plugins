@@ -102,10 +102,12 @@ export function buildBoard(threads: readonly BoardThread[], automations: readonl
     .filter(r => !(bound.has(r.thread.id) && !r.working && !r.attention && !r.thread.isUnread))
     .sort((a, b) => Number(b.working) - Number(a.working) || Number(b.attention) - Number(a.attention) || b.thread.updatedAt - a.thread.updatedAt);
 
-  const scheduled: ScheduledRow[] = automations
+  // Upcoming runs by time, then paused automations so they can be resumed from here.
+  const upcoming = automations
     .filter(a => a.enabled !== false && a.nextRunAt != null && a.nextRunAt >= now)
-    .sort((a, b) => (a.nextRunAt ?? 0) - (b.nextRunAt ?? 0))
-    .map(a => ({ automation: a, thread: byId.get(boundThreadId(a) ?? "") ?? null }));
+    .sort((a, b) => (a.nextRunAt ?? 0) - (b.nextRunAt ?? 0));
+  const paused = automations.filter(a => a.enabled === false).sort((a, b) => a.name.localeCompare(b.name));
+  const scheduled: ScheduledRow[] = [...upcoming, ...paused].map(a => ({ automation: a, thread: byId.get(boundThreadId(a) ?? "") ?? null }));
 
   const done = roots
     .filter(t => t.isArchived && t.archivedAt !== null && t.archivedAt >= now - DONE_WINDOW_MS)
