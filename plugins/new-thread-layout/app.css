@@ -180,37 +180,20 @@ a.ph-row:hover { background: var(--state-hover, color-mix(in oklab, var(--foregr
   app-region: no-drag;
 }
 
-/* Automations: a row of small cards under the top bar, outside the scrolling list, aligned with the column. */
+/* Automations: a list fixed under the top bar, outside the scrolling list, aligned with the thread column. */
 .ph-autos-holder { flex: none; }
 .ph-autos-holder:empty { display: none; }
 .ph-autos {
-  display: flex;
-  gap: 0.5rem;
   max-width: 760px;
   margin: 0 auto;
-  padding: 0.25rem 1rem 0.75rem;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.ph-autos::-webkit-scrollbar { display: none; }
-.ph-auto {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  flex: 0 0 auto;
-  width: 172px;
-  padding: 0.5rem 0.75rem 0.55rem;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  background: var(--card, var(--background));
-  color: var(--foreground);
-  text-decoration: none;
-  font-size: 12px;
+  padding: 0.25rem 1.25rem 0.75rem;
+  font-size: 13px;
   line-height: 1.35;
 }
-a.ph-auto-link:hover { background: var(--state-hover, color-mix(in oklab, var(--foreground) 6%, transparent)); }
-.ph-auto-head { display: flex; align-items: center; gap: 0.35rem; color: var(--muted-foreground); }
-.ph-auto-icon { width: 13px; height: 13px; flex: none; }
-.ph-auto-when { font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.ph-auto-name { font-size: 13px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.ph-auto-where { color: var(--muted-foreground); opacity: 0.8; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ph-autos .ph-rows { max-height: 11rem; overflow-y: auto; scrollbar-width: thin; }
+.ph-auto-row { align-items: center; padding-top: 0.25rem; padding-bottom: 0.25rem; }
+.ph-auto-row .ph-glyph { margin-top: 0; }
+.ph-auto-row .ph-status { padding-top: 0; }
+.ph-auto-text { display: flex; align-items: baseline; gap: 0.5rem; min-width: 0; }
+.ph-auto-name { flex: none; max-width: 70%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ph-auto-where { min-width: 0; font-size: 12px; color: var(--muted-foreground); opacity: 0.8; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }

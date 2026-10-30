@@ -66,25 +66,26 @@ function Row({ row, preview, now, onOpen }: { row: BoardRow; preview: Preview | 
   );
 }
 
-/** One automation as a small card: next run, name, and the thread it runs in. */
-function AutomationCard({ row, now, onOpen }: { row: ScheduledRow; now: number; onOpen: Open }) {
+/** One automation as a single line: name, the thread it runs in, and the next run. */
+function AutomationLine({ row, now, onOpen }: { row: ScheduledRow; now: number; onOpen: Open }) {
   const next = formatNextRun(row.automation.nextRunAt, now);
   const t = row.thread as PluginSidebarThread | null;
-  const title = `${row.automation.name} · runs in ${t ? t.displayTitle : "a new thread"}`;
+  const where = t ? t.displayTitle : "new thread";
   const body = (
     <>
-      <span className="ph-auto-head">
-        <Icon name="Clock" className="ph-auto-icon" aria-hidden />
-        <span className="ph-auto-when">{next ?? "Not scheduled"}</span>
+      <span className="ph-glyph"><Icon name="Clock" className="ph-clock" aria-hidden /></span>
+      <span className="ph-auto-text">
+        <span className="ph-auto-name">{row.automation.name}</span>
+        {where !== row.automation.name ? <span className="ph-auto-where">{where}</span> : null}
       </span>
-      <span className="ph-auto-name">{row.automation.name}</span>
-      <span className="ph-auto-where">{t ? t.displayTitle : "New thread"}</span>
+      {next ? <span className="ph-status ph-status-time">{next}</span> : null}
     </>
   );
-  if (!t) return <div className="ph-auto" title={title}>{body}</div>;
+  const title = `${row.automation.name} · runs in ${t ? t.displayTitle : "a new thread"}`;
+  if (!t) return <div className="ph-row ph-auto-row" title={title}>{body}</div>;
   return (
     <a
-      className="ph-auto ph-auto-link"
+      className="ph-row ph-auto-row"
       href={t.href}
       title={title}
       onClick={e => {
@@ -101,9 +102,12 @@ function AutomationCard({ row, now, onOpen }: { row: ScheduledRow; now: number; 
 function AutomationStrip({ rows, now, onOpen }: { rows: ScheduledRow[]; now: number; onOpen: Open }) {
   if (!rows.length) return null;
   return (
-    <div className="ph-autos" aria-label="Scheduled">
-      {rows.map(r => <AutomationCard key={r.automation.id} row={r} now={now} onOpen={onOpen} />)}
-    </div>
+    <section className="ph-autos ph-group" aria-label="Scheduled">
+      <h3 className="ph-group-title">Scheduled <span className="ph-count">{rows.length}</span></h3>
+      <div className="ph-rows">
+        {rows.map(r => <AutomationLine key={r.automation.id} row={r} now={now} onOpen={onOpen} />)}
+      </div>
+    </section>
   );
 }
 
