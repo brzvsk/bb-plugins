@@ -6,8 +6,8 @@
 
 ## How it works
 
-When the last closable tab disappears, the plugin presses BB’s own Hide right panel control. Tab closing is unchanged. It makes no network calls and stores nothing.
+The plugin watches BB's experimental panel-tabs API. When the last closable tab of the current panel disappears, it asks the panel controller to close the panel. Tab closing is unchanged. It makes no network calls and stores nothing.
 
 ## Limits
 
-It targets the standard single right panel. If several tab strips or more than one hide control are visible, such as in split layouts, it leaves the layout alone. It relies on attributes of BB’s interface, so a future BB layout change may need a plugin update.
+It follows BB's reported panel tabs and can only hide the panel through the controller. The API is experimental, so a future BB release may need a plugin update.

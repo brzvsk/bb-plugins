@@ -1,45 +1,46 @@
-import { definePluginApp } from "@get-bb/plugin-sdk/app";
+import {
+  definePluginApp,
+  experimental_useAppPanel,
+  experimental_usePanelTabs,
+  useBbContext,
+} from "@get-bb/plugin-sdk/app";
+import { useEffect, useRef } from "react";
+
+type PanelSnapshot = {
+  threadId: string | null;
+  open: boolean;
+  closable: number;
+};
+
+type AutoHidePanelProps = {
+  /** Test seam; the composer banner leaves it undefined and uses BbContext. */
+  threadId?: string | null;
+};
+
+export function AutoHidePanel({ threadId }: AutoHidePanelProps) {
+  const context = useBbContext();
+  const panel = experimental_useAppPanel();
+  const { open, tabs } = experimental_usePanelTabs();
+  const currentThreadId = threadId === undefined ? context.threadId : threadId;
+  const closable = tabs.filter(tab => tab.closable).length;
+  const previous = useRef<PanelSnapshot | null>(null);
+
+  useEffect(() => {
+    const current: PanelSnapshot = { threadId: currentThreadId, open, closable };
+    const last = previous.current;
+    previous.current = current;
+    if (!last || last.threadId !== current.threadId) return;
+    if (!last.open || !current.open) return;
+    if (last.closable > 0 && current.closable === 0) panel.close();
+  }, [panel, currentThreadId, open, closable]);
+
+  return null;
+}
 
 export default definePluginApp(app => {
-  app.contentScripts.register({
+  app.composer.customize({
     id: "auto-hide-panel",
-    mount() {
-      const selector = '[data-testid="thread-secondary-panel-top-chrome"]';
-      let previous: { strip: Element; count: number; url: string } | null = null;
-      let frame = 0;
-      const scan = () => {
-        frame = 0;
-        const strips = Array.from(document.querySelectorAll(selector)).filter(
-          strip => strip.getClientRects().length > 0,
-        );
-        if (strips.length !== 1) {
-          previous = null;
-          return;
-        }
-        const strip = strips[0]!;
-        const count = strip.querySelectorAll("[data-tab-pill-close]").length;
-        const url = location.href;
-        const shouldHide = previous?.strip === strip && previous.url === url
-          && previous.count > 0 && count === 0;
-        previous = { strip, count, url };
-        if (!shouldHide) return;
-        const toggles = Array.from(document.querySelectorAll<HTMLButtonElement>(
-          'button[aria-label^="Hide right panel"]',
-        )).filter(button => button.getClientRects().length > 0 && !button.disabled);
-        if (toggles.length === 1) toggles[0]!.click();
-      };
-      const schedule = () => {
-        if (!frame) frame = requestAnimationFrame(scan);
-      };
-      const observer = new MutationObserver(schedule);
-      observer.observe(document.body, { childList: true, subtree: true });
-      window.addEventListener("popstate", schedule);
-      scan();
-      return () => {
-        observer.disconnect();
-        window.removeEventListener("popstate", schedule);
-        cancelAnimationFrame(frame);
-      };
-    },
+    scopes: ["thread"],
+    banners: [{ id: "auto-hide-panel", chrome: "bare", component: AutoHidePanel }],
   });
 });
