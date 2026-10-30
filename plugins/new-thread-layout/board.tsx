@@ -20,8 +20,6 @@ import { usePreviews, type Preview } from "./previews";
 import { useComposeTopBar } from "./crumb";
 
 const DONE_OPEN_KEY = "new-thread-layout:done-open";
-/** Below this main-panel width the schedule card would overlap the column, so it joins the list instead. */
-const CARD_MIN_WIDTH = 1060;
 
 function previewLine(p: Preview | null | undefined): string {
   if (!p) return "";
@@ -37,12 +35,9 @@ function plainClick(e: React.MouseEvent): boolean {
 function Row({ row, preview, now, onOpen }: { row: BoardRow; preview: Preview | null | undefined; now: number; onOpen: Open }) {
   const t = row.thread as PluginSidebarThread;
   const rowStatus = useSidebarThreadRowStatus(t.id);
-  const next = formatNextRun(row.nextRunAt, now);
   const second = t.isArchived
     ? [t.archivedAt ? `Done ${formatAgo(t.archivedAt, now)}` : "Done", previewLine(preview)].filter(Boolean).join(" · ")
-    : next
-      ? `Next run ${next}${row.automationNames.length ? ` · ${row.automationNames.join(", ")}` : ""}`
-      : previewLine(preview);
+    : previewLine(preview);
   const meta = row.children ? `${row.children} child` : "";
   return (
     <a
@@ -71,22 +66,25 @@ function Row({ row, preview, now, onOpen }: { row: BoardRow; preview: Preview | 
   );
 }
 
-/** One schedule line: automation name, the next run, and the thread it runs in as the tooltip. */
-function ScheduledLine({ row, now, onOpen }: { row: ScheduledRow; now: number; onOpen: Open }) {
+/** One automation as a small card: next run, name, and the thread it runs in. */
+function AutomationCard({ row, now, onOpen }: { row: ScheduledRow; now: number; onOpen: Open }) {
   const next = formatNextRun(row.automation.nextRunAt, now);
   const t = row.thread as PluginSidebarThread | null;
-  const title = t ? `${row.automation.name} · runs in ${t.displayTitle}` : `${row.automation.name} · runs in a new thread`;
+  const title = `${row.automation.name} · runs in ${t ? t.displayTitle : "a new thread"}`;
   const body = (
     <>
-      <Icon name="Clock" className="ph-card-icon" aria-hidden />
-      <span className="ph-card-name">{row.automation.name}</span>
-      {next ? <span className="ph-card-value">{next}</span> : null}
+      <span className="ph-auto-head">
+        <Icon name="Clock" className="ph-auto-icon" aria-hidden />
+        <span className="ph-auto-when">{next ?? "Not scheduled"}</span>
+      </span>
+      <span className="ph-auto-name">{row.automation.name}</span>
+      <span className="ph-auto-where">{t ? t.displayTitle : "New thread"}</span>
     </>
   );
-  if (!t) return <div className="ph-card-row" title={title}>{body}</div>;
+  if (!t) return <div className="ph-auto" title={title}>{body}</div>;
   return (
     <a
-      className="ph-card-row ph-card-link"
+      className="ph-auto ph-auto-link"
       href={t.href}
       title={title}
       onClick={e => {
@@ -100,13 +98,30 @@ function ScheduledLine({ row, now, onOpen }: { row: ScheduledRow; now: number; o
   );
 }
 
-function ScheduleCard({ rows, now, onOpen }: { rows: ScheduledRow[]; now: number; onOpen: Open }) {
+function AutomationStrip({ rows, now, onOpen }: { rows: ScheduledRow[]; now: number; onOpen: Open }) {
   if (!rows.length) return null;
   return (
-    <div className="ph-card" aria-label="Scheduled">
-      {rows.map(r => <ScheduledLine key={r.automation.id} row={r} now={now} onOpen={onOpen} />)}
+    <div className="ph-autos" aria-label="Scheduled">
+      {rows.map(r => <AutomationCard key={r.automation.id} row={r} now={now} onOpen={onOpen} />)}
     </div>
   );
+}
+
+/** A holder right under the New thread screen's top bar, outside the scrolling list. */
+function useStripHolder(topBar: HTMLElement | null): HTMLElement | null {
+  const [holder, setHolder] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!topBar) return;
+    const el = document.createElement("div");
+    el.className = "ph-autos-holder";
+    topBar.after(el);
+    setHolder(el);
+    return () => {
+      el.remove();
+      setHolder(null);
+    };
+  }, [topBar]);
+  return holder;
 }
 
 function Group({ label, count, open, onToggle, children }: { label: string; count: number; open?: boolean; onToggle?: () => void; children: React.ReactNode }) {
@@ -160,20 +175,6 @@ function useStoredFlag(key: string, initial: boolean): [boolean, () => void] {
   return [value, toggle];
 }
 
-/** Width of the element's parent (the compose frame), live. */
-function useFrameWidth(el: HTMLElement | null): number {
-  const [width, setWidth] = useState(() => el?.parentElement?.clientWidth ?? 0);
-  useEffect(() => {
-    const frame = el?.parentElement;
-    if (!frame) return;
-    const ro = new ResizeObserver(() => setWidth(frame.clientWidth));
-    ro.observe(frame);
-    setWidth(frame.clientWidth);
-    return () => ro.disconnect();
-  }, [el]);
-  return width;
-}
-
 export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectionProps) {
   // The slot's projectId is null on the plain compose route; the composer's selected project is the one in view.
   const composer = useComposer();
@@ -191,7 +192,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
   });
   const project = sidebar.projects.find(p => p.id === projectId) ?? null;
   const topBar = useComposeTopBar();
-  const frameWidth = useFrameWidth(topBar);
+  const stripHolder = useStripHolder(topBar);
   const [doneOpen, toggleDone] = useStoredFlag(DONE_OPEN_KEY, false);
 
   // Page archived threads back until the Recently done window is covered.
@@ -236,26 +237,14 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
       )
     : null;
 
-  const cardFits = !!board && board.scheduled.length > 0 && frameWidth >= CARD_MIN_WIDTH;
-  // The docked card takes the frame's right edge; the column centers in the rest (see app.css).
-  useEffect(() => {
-    const frame = topBar?.parentElement;
-    if (!frame) return;
-    if (cardFits) frame.setAttribute("data-ph-docked", "");
-    else frame.removeAttribute("data-ph-docked");
-    return () => frame.removeAttribute("data-ph-docked");
-  }, [topBar, cardFits]);
-
   if (!projectId || !board) return crumb;
-  const schedule = <ScheduleCard rows={board.scheduled} now={now} onOpen={open} />;
   const empty = !board.pinned.length && !board.inProgress.length && !board.scheduled.length && !board.done.length;
   return (
     <div className="ph-board" data-ph-board="">
       {crumb}
-      {cardFits && topBar?.parentElement ? createPortal(<div className="ph-card-dock">{schedule}</div>, topBar.parentElement) : null}
+      {stripHolder ? createPortal(<AutomationStrip rows={board.scheduled} now={now} onOpen={open} />, stripHolder) : null}
       {sidebar.status === "loading" ? <p className="ph-empty">Loading…</p> : null}
       {sidebar.status === "ready" && empty ? <p className="ph-empty">Nothing in progress here yet.</p> : null}
-      {!cardFits ? <div className="ph-card-inline">{schedule}</div> : null}
       <Group label="Pinned" count={board.pinned.length}>
         {board.pinned.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} />)}
       </Group>

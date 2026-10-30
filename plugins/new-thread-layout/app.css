@@ -180,37 +180,37 @@ a.ph-row:hover { background: var(--state-hover, color-mix(in oklab, var(--foregr
   app-region: no-drag;
 }
 
-/* Schedule card: the look of bb's thread context card, docked top-right of the New thread screen. */
-.ph-card-dock {
-  position: absolute;
-  top: calc(var(--bb-app-chrome-row-height, 2.5rem) + 0.5rem);
-  right: 0.75rem;
-  z-index: 3;
-  width: 280px;
-  -webkit-app-region: no-drag;
-  app-region: no-drag;
+/* Automations: a row of small cards under the top bar, outside the scrolling list, aligned with the column. */
+.ph-autos-holder { flex: none; }
+.ph-autos-holder:empty { display: none; }
+.ph-autos {
+  display: flex;
+  gap: 0.5rem;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0.25rem 1rem 0.75rem;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
-[data-ph-docked] > [class~="@container/page"] { padding-right: calc(280px + 1.5rem); }
-.ph-card {
+.ph-autos::-webkit-scrollbar { display: none; }
+.ph-auto {
   display: flex;
   flex-direction: column;
-  padding: 0.375rem 0;
+  gap: 0.125rem;
+  flex: 0 0 auto;
+  width: 172px;
+  padding: 0.5rem 0.75rem 0.55rem;
   border: 1px solid var(--border);
   border-radius: 0.75rem;
   background: var(--card, var(--background));
-  font-size: 13px;
-}
-.ph-card-inline { max-width: 420px; }
-.ph-card-row {
-  display: grid;
-  grid-template-columns: 16px minmax(0, 1fr) auto;
-  align-items: center;
-  column-gap: 0.5rem;
-  padding: 0.375rem 0.75rem;
   color: var(--foreground);
   text-decoration: none;
+  font-size: 12px;
+  line-height: 1.35;
 }
-a.ph-card-link:hover { background: var(--state-hover, color-mix(in oklab, var(--foreground) 6%, transparent)); }
-.ph-card-icon { width: 15px; height: 15px; color: var(--muted-foreground); }
-.ph-card-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.ph-card-value { font-size: 12px; color: var(--muted-foreground); white-space: nowrap; font-variant-numeric: tabular-nums; }
+a.ph-auto-link:hover { background: var(--state-hover, color-mix(in oklab, var(--foreground) 6%, transparent)); }
+.ph-auto-head { display: flex; align-items: center; gap: 0.35rem; color: var(--muted-foreground); }
+.ph-auto-icon { width: 13px; height: 13px; flex: none; }
+.ph-auto-when { font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ph-auto-name { font-size: 13px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ph-auto-where { color: var(--muted-foreground); opacity: 0.8; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }

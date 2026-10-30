@@ -46,7 +46,7 @@ describe("buildBoard", () => {
     expect(b.scheduled).toEqual([]);
   });
 
-  it("puts read idle automation threads under Scheduled and keeps unread or pinned ones where they are", () => {
+  it("lists every upcoming automation under Scheduled; read idle bound threads leave In progress, unread or pinned ones stay", () => {
     const threads = [
       thread({ id: "daily", updatedAt: NOW - H }),
       thread({ id: "loud", isUnread: true }),
@@ -64,6 +64,7 @@ describe("buildBoard", () => {
     expect(b.pinned[0].nextRunAt).toBe(NOW + H);
     expect(b.pinned[0].automationNames).toEqual(["Manager"]);
     expect(b.scheduled.map(r => [r.automation.name, r.thread?.id ?? null])).toEqual([
+      ["Manager", "manager"],
       ["Daily", "daily"],
       ["Loud", "loud"],
       ["Fresh", null],

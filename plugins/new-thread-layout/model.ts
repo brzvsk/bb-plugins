@@ -94,7 +94,6 @@ export function buildBoard(threads: readonly BoardThread[], automations: readonl
   const byId = new Map(mine.map(t => [t.id, t] as const));
 
   const pinned = roots.filter(t => t.isPinned && !t.isArchived).map(row);
-  const pinnedIds = new Set(pinned.map(r => r.thread.id));
 
   // A read, idle automation thread lives under Scheduled with its automation; it comes back here when it needs attention.
   const inProgress = roots
@@ -105,7 +104,6 @@ export function buildBoard(threads: readonly BoardThread[], automations: readonl
 
   const scheduled: ScheduledRow[] = automations
     .filter(a => a.enabled !== false && a.nextRunAt != null && a.nextRunAt >= now)
-    .filter(a => !pinnedIds.has(boundThreadId(a) ?? ""))
     .sort((a, b) => (a.nextRunAt ?? 0) - (b.nextRunAt ?? 0))
     .map(a => ({ automation: a, thread: byId.get(boundThreadId(a) ?? "") ?? null }));
 
