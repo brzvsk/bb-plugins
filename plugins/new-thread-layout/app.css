@@ -137,7 +137,10 @@ a.ph-row:hover { background: var(--state-hover, color-mix(in oklab, var(--foregr
   top: 0;
   bottom: 0;
   right: 0;
-  display: none;
+  /* Hidden without leaving layout: the ⋯ menu anchors to its button and must keep it while it animates closed. */
+  display: inline-flex;
+  opacity: 0;
+  pointer-events: none;
   align-items: stretch;
   padding: 0 0.125rem 0 0.75rem;
   border-radius: 0 0.375rem 0.375rem 0;
@@ -150,7 +153,7 @@ a.ph-row:hover { background: var(--state-hover, color-mix(in oklab, var(--foregr
 }
 .ph-row-wrap:hover > .ph-actions,
 .ph-row-wrap:focus-within > .ph-actions,
-.ph-row-wrap[data-ph-menu-open] > .ph-actions { display: inline-flex; }
+.ph-row-wrap[data-ph-menu-open] > .ph-actions { opacity: 1; pointer-events: auto; }
 .ph-action {
   display: inline-flex;
   align-items: center;
