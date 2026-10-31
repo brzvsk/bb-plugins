@@ -14,14 +14,15 @@ import {
   useComposer,
   useSdk,
   useSidebarThreadDraft,
+  useSidebarThreadDraftIds,
   useSidebarThreadRowStatus,
   type PluginHomepageSectionProps,
   type PluginSidebarThread,
 } from "@get-bb/plugin-sdk/app";
 import { automationActionsContract, automationsContract, type Automation } from "./contracts";
 import { formatDay, formatNextRun, formatStamp, formatTime, readDraft } from "./format";
-import { buildBoard, buildOverview, DONE_WINDOW_MS, type BoardRow, type ScheduledRow } from "./model";
-import { usePreviews, type Preview } from "./previews";
+import { buildBoard, buildOverview, boundThreadId, CONTINUE_WINDOW_MS, DONE_WINDOW_MS, type BoardRow, type ScheduledRow } from "./model";
+import { useAuthorTouched, usePreviews, type Preview } from "./previews";
 import { HomeLink, frameOf, useChromeRowPlacement, useComposeTopBar } from "./crumb";
 import { attachSwipeBack } from "./swipe";
 import { rememberOrigin } from "./origin";
@@ -461,9 +462,28 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
     void archived.fetchNextPage();
   }, [archived, oldestArchived, now]);
 
+  // Every automation with its project: home's schedule and which threads automations drive.
+  const allAutomations = experimental_useRpcQuery({
+    pluginId: "automations",
+    contract: automationsContract,
+    method: "automations_overview",
+    input: null,
+  });
+  // Automation threads the author is involved in: a draft, or their own message in the last two hours.
+  const draftIds = useSidebarThreadDraftIds();
+  const allAutomationList = useMemo(
+    () => [...(automations.data ?? []), ...(allAutomations.data?.automations.map(e => e.automation) ?? [])],
+    [automations.data, allAutomations.data],
+  );
+  const boundThreads = useMemo(() => {
+    const ids = new Set(allAutomationList.map(a => boundThreadId(a)).filter((id): id is string => !!id));
+    return sidebar.threads.filter(t => ids.has(t.id) && !t.isArchived).map(t => ({ id: t.id, updatedAt: t.updatedAt }));
+  }, [allAutomationList, sidebar.threads]);
+  const touched = useAuthorTouched(sdk.threads, boundThreads, now, CONTINUE_WINDOW_MS);
+  const involved = useMemo(() => new Set([...draftIds, ...touched]), [draftIds, touched]);
   const board = useMemo(
-    () => (projectId ? buildBoard(sidebar.threads, automations.data ?? [], projectId, now) : null),
-    [sidebar.threads, automations.data, projectId, now],
+    () => (projectId ? buildBoard(sidebar.threads, automations.data ?? [], projectId, now, { involved }) : null),
+    [sidebar.threads, automations.data, projectId, now, involved],
   );
   // A swipe back from the thread returns to the screen it was opened from (see origin.ts).
   const atHomeRef = useRef(false);
@@ -496,13 +516,6 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
     [atHome, sidebar.projects, sidebar.threads, arrangement.order, arrangement.hidden],
   );
   // Home overview: what is live across the visible projects, and every project's schedule.
-  const allAutomations = experimental_useRpcQuery({
-    pluginId: "automations",
-    contract: automationsContract,
-    method: "automations_overview",
-    input: null,
-    enabled: atHome,
-  });
   const overview = useMemo(
     () =>
       atHome
@@ -512,9 +525,10 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
             tabs.map(t => t.id),
             personal?.id ?? null,
             now,
+            { involved },
           )
         : null,
-    [atHome, sidebar.threads, allAutomations.data, tabs, personal?.id, now],
+    [atHome, sidebar.threads, allAutomations.data, tabs, personal?.id, now, involved],
   );
   const projectLabel = useMemo(() => {
     const names = new Map(sidebar.projects.map(p => [p.id, p.name] as const));

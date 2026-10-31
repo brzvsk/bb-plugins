@@ -10,6 +10,7 @@ export interface Preview {
 export interface EventRow {
   type: string;
   data?: unknown;
+  createdAt?: number;
 }
 
 interface EventsClient {
@@ -153,4 +154,59 @@ export function usePreviews(client: EventsClient, threads: readonly { id: string
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, client, tick]);
   return previews;
+}
+
+/** When the author last wrote in a thread: their own turn, not bb's notices or an automation's prompt. */
+export function lastAuthorTurnAt(eventsNewestFirst: readonly EventRow[]): number | null {
+  for (const e of eventsNewestFirst) {
+    if (e.type !== "client/turn/requested") continue;
+    const data = obj(e.data);
+    if (!data || data.initiator !== "user") continue;
+    const kind = str(data.systemMessageKind);
+    if (kind && kind !== "unlabeled") continue;
+    const input = Array.isArray(data.input) ? data.input : [];
+    const text = input.map(part => str(obj(part)?.text)).join("\n").trim();
+    // Automations re-prompt their thread as the user, prefixed "[bb automation due:…]".
+    if (!text || SYSTEM_NOTICE.test(text)) continue;
+    return typeof e.createdAt === "number" ? e.createdAt : null;
+  }
+  return null;
+}
+
+const AUTHOR_TURN_REFRESH_MS = 60_000;
+
+/**
+ * The given threads in which the author wrote within `windowMs`, fetched once per thread and
+ * refreshed as they change (by `updatedAt`) and every minute.
+ */
+export function useAuthorTouched(client: EventsClient, threads: readonly { id: string; updatedAt: number }[], now: number, windowMs: number): ReadonlySet<string> {
+  const [lastTurns, setLastTurns] = useState<ReadonlyMap<string, number | null>>(new Map());
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setTick(n => n + 1), AUTHOR_TURN_REFRESH_MS);
+    return () => clearInterval(timer);
+  }, []);
+  const key = threads.map(t => `${t.id}:${t.updatedAt}`).join(",");
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      for (const t of threads) {
+        try {
+          const events = await client.events.list({ threadId: t.id, order: "desc", limit: "40", types: ["client/turn/requested"] });
+          if (cancelled) return;
+          const at = lastAuthorTurnAt(events);
+          setLastTurns(prev => (prev.get(t.id) === at ? prev : new Map(prev).set(t.id, at)));
+        } catch {
+          // Unknown: the thread stays out of the lists unless something else brings it in.
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, client, tick]);
+  const touched = new Set<string>();
+  for (const [id, at] of lastTurns) if (at !== null && at >= now - windowMs) touched.add(id);
+  return touched;
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildBoard, buildOverview, statusOf, type BoardThread } from "./model";
 import { formatAgo, formatDay, formatNextRun, formatStamp, firstLine, readDraft } from "./format";
-import { latestActivity } from "./previews";
+import { lastAuthorTurnAt, latestActivity } from "./previews";
 
 const NOW = Date.parse("2026-10-30T12:00:00+03:00");
 const H = 60 * 60 * 1000;
@@ -47,7 +47,7 @@ describe("buildBoard", () => {
     expect(b.scheduled).toEqual([]);
   });
 
-  it("lists every upcoming automation under Scheduled and keeps bound threads in the lists with their next run", () => {
+  it("lists every upcoming automation under Scheduled; its thread joins the lists when active or the author is involved", () => {
     const threads = [
       thread({ id: "daily", updatedAt: NOW - H }),
       thread({ id: "loud", isUnread: true }),
@@ -61,8 +61,11 @@ describe("buildBoard", () => {
       { id: "a5", projectId: "p1", name: "Paused", enabled: false, nextRunAt: NOW + 4 * H },
     ];
     const b = buildBoard(threads, automations, "p1", NOW);
-    expect(b.inProgress.map(r => r.thread.id).sort()).toEqual(["daily", "loud"]);
-    expect(b.inProgress.find(r => r.thread.id === "daily")?.nextRunAt).toBe(NOW + 2 * H);
+    // Quiet automation threads live under Scheduled; unread ones show, and so do ones the author is involved in.
+    expect(b.inProgress.map(r => r.thread.id)).toEqual(["loud"]);
+    const involved = buildBoard(threads, automations, "p1", NOW, { involved: new Set(["daily"]) });
+    expect(involved.inProgress.map(r => r.thread.id).sort()).toEqual(["daily", "loud"]);
+    expect(involved.inProgress.find(r => r.thread.id === "daily")?.nextRunAt).toBe(NOW + 2 * H);
     expect(b.pinned[0].nextRunAt).toBe(NOW + H);
     expect(b.pinned[0].automationNames).toEqual(["Manager"]);
     expect(b.scheduled.map(r => [r.automation.name, r.thread?.id ?? null])).toEqual([
@@ -233,5 +236,13 @@ describe("buildOverview", () => {
     expect(o.scheduled.map(r => r.automation.name)).toEqual(["Soon", "Later", "Paused at home"]);
     expect(o.done.map(r => r.thread.id)).toEqual(["gone"]);
     expect(buildOverview([thread({ id: "bound", projectId: "a", isUnread: true })], [{ id: "q", projectId: "a", name: "Daily", enabled: true, nextRunAt: NOW + H, execution: { targetThreadId: "bound" } }], ["a"], null, NOW).needsYou[0].nextRunAt).toBe(NOW + H);
+  });
+});
+
+describe("lastAuthorTurnAt", () => {
+  const turn = (text: string, at: number, extra: Record<string, unknown> = {}) => ({ type: "client/turn/requested", createdAt: at, data: { initiator: "user", systemMessageKind: "unlabeled", input: [{ type: "text", text }], ...extra } });
+  it("skips automation prompts and bb notices", () => {
+    expect(lastAuthorTurnAt([turn("[bb automation due:auto_1] Проверка почты", 3), turn("глянь ответ", 2), turn("старое", 1)])).toBe(2);
+    expect(lastAuthorTurnAt([turn("[bb system] done", 3), turn("x", 2, { systemMessageKind: "child-completed" })])).toBeNull();
   });
 });
