@@ -15,6 +15,17 @@ export function formatNextRun(at: number | null | undefined, now: number): strin
   return `${date.getDate()} ${month}, ${time}`;
 }
 
+/** Messenger-style stamp for the last message: "10:42" today, "Mon" within the week, "28 Oct" before. */
+export function formatStamp(at: number, now: number): string {
+  const date = new Date(at);
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const days = Math.floor((today.getTime() - new Date(at).setHours(0, 0, 0, 0)) / DAY_MS);
+  if (days <= 0) return `${date.getHours()}:${String(date.getMinutes()).padStart(2, "0")}`;
+  if (days < 7) return date.toLocaleString("en-GB", { weekday: "short" });
+  return `${date.getDate()} ${date.toLocaleString("en-GB", { month: "short" })}`;
+}
+
 /** "just now", "5 min ago", "3 h ago", "yesterday", "4 days ago". */
 export function formatAgo(at: number, now: number): string {
   const diff = Math.max(0, now - at);

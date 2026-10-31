@@ -17,6 +17,8 @@ export interface BoardThread {
   archivedAt: number | null;
   isHidden: boolean;
   updatedAt: number;
+  /** When the thread last had something worth reading (a message, a finished turn). */
+  latestAttentionAt?: number;
   /** Live background work in the thread (bb's sidebar activity counts). */
   activity?: { workflows: number; backgroundAgents: number; backgroundCommands: number };
 }

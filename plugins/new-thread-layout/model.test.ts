@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildBoard, statusOf, type BoardThread } from "./model";
-import { formatAgo, formatNextRun, firstLine, readDraft } from "./format";
+import { formatAgo, formatNextRun, formatStamp, firstLine, readDraft } from "./format";
 import { latestActivity } from "./previews";
 
 const NOW = Date.parse("2026-10-30T12:00:00+03:00");
@@ -120,6 +120,12 @@ describe("format", () => {
     expect(formatNextRun(NOW + 7 * 24 * H, NOW)).toMatch(/^6 Nov, 12:00$/);
     expect(formatNextRun(NOW - 1, NOW)).toBeNull();
     expect(formatNextRun(null, NOW)).toBeNull();
+  });
+  it("stamps the last message like a messenger", () => {
+    expect(formatStamp(NOW - 2 * H, NOW)).toBe("10:00");
+    expect(formatStamp(NOW - 24 * H, NOW)).toBe("Thu");
+    expect(formatStamp(NOW - 6 * 24 * H, NOW)).toBe("Sat");
+    expect(formatStamp(NOW - 7 * 24 * H, NOW)).toBe("23 Oct");
   });
   it("formats how long ago", () => {
     expect(formatAgo(NOW - 20_000, NOW)).toBe("just now");

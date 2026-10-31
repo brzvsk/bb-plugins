@@ -17,7 +17,7 @@ import {
   type PluginSidebarThread,
 } from "@get-bb/plugin-sdk/app";
 import { automationActionsContract, automationsContract, type Automation } from "./contracts";
-import { formatAgo, formatNextRun, readDraft } from "./format";
+import { formatAgo, formatNextRun, formatStamp, readDraft } from "./format";
 import { buildBoard, DONE_WINDOW_MS, type BoardRow, type ScheduledRow } from "./model";
 import { usePreviews, type Preview } from "./previews";
 import { useChromeRowPlacement, useComposeTopBar } from "./crumb";
@@ -68,6 +68,7 @@ function Row({ row, preview, now, onOpen, actionKeys }: { row: BoardRow; preview
         <span className="ph-title">
           <span className="ph-title-text"><ThreadTitle threadId={t.id} /></span>
           {meta ? <span className="ph-meta">{meta}</span> : null}
+          <span className="ph-stamp">{formatStamp(t.latestAttentionAt || t.updatedAt, now)}</span>
         </span>
         {draft ? (
           <span className="ph-second ph-second-draft">

@@ -359,3 +359,14 @@ a.ph-row[data-ph-working] .ph-main .ph-draft-label { color: var(--destructive, #
   height: 7px;
   background: #3b82f6;
 }
+
+/* Time of the last message at the end of the title line, messenger style. */
+.ph-stamp {
+  flex: none;
+  margin-left: auto;
+  padding-left: 0.75rem;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+a.ph-row[data-ph-working] .ph-main .ph-stamp { color: var(--muted-foreground) !important; }
