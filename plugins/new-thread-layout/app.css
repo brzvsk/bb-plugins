@@ -316,8 +316,23 @@ a.ph-row[data-ph-pinned][data-ph-working] .ph-main {
   a.ph-row[data-ph-working] .ph-main * { color: inherit !important; }
 }
 
-/* Second line by kind: the author's turn ("You: …"), the agent's reply, its thinking in italics. */
-.ph-second[data-ph-kind="thinking"] { font-style: italic; }
+/* Second line: the agent's words (reply or thought) follow its provider's mark, monochrome. */
+.ph-agent-mark {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: -2px;
+  margin-right: 0.35rem;
+  opacity: 0.7;
+}
+/* bb draws the logo as a mask filled with the provider's tint; fill it with the text colour instead. */
+.ph-agent-mark .ph-agent-mark-icon {
+  width: 12px !important;
+  height: 12px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  color: var(--foreground) !important;
+}
+.ph-agent-mark img { width: 12px; height: 12px; filter: grayscale(1); }
 
 /* Project / thread ⋯ ahead of the panel tabs while the right panel is maximized. */
 .ph-maxnav-holder { display: inline-flex; flex: none; min-width: 0; max-width: 45%; }
@@ -481,3 +496,6 @@ a.ph-row[data-ph-pinned] .ph-glyph:not([data-ph-status]) .ph-pin { display: inli
   white-space: nowrap;
 }
 .ph-more-item:hover { background: var(--state-hover, color-mix(in oklab, var(--foreground) 6%, transparent)); }
+/* The provider mark stays visible in running rows, whose text is painted by the shimmer. */
+a.ph-row[data-ph-working] .ph-main .ph-agent-mark,
+a.ph-row[data-ph-working] .ph-main .ph-agent-mark * { color: var(--foreground) !important; }

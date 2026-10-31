@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ThreadTitle,
   experimental_Icon as Icon,
+  experimental_ProviderIcon as ProviderIcon,
+  experimental_useProviders,
   experimental_ThreadStatusGlyph as StatusGlyph,
   experimental_useRpcMutation,
   experimental_useThreadActions,
@@ -85,7 +87,13 @@ function Row({ row, preview, now, onOpen, actionKeys, project }: { row: BoardRow
             <span className="ph-draft-label">Draft:</span> {draft}
           </span>
         ) : second ? (
-          <span className="ph-second" data-ph-kind={preview?.kind}>{second}</span>
+          <span className="ph-second" data-ph-kind={preview?.kind}>
+            {/* The agent speaking (its reply or its thought), in its provider's mark, monochrome. */}
+            {!t.isArchived && (preview?.kind === "agent" || preview?.kind === "thinking") ? (
+              <AgentMark providerId={t.providerId} />
+            ) : null}
+            {second}
+          </span>
         ) : null}
       </span>
     </a>
@@ -158,6 +166,17 @@ function ScheduleThreadActions({ thread }: { thread: PluginSidebarThread }) {
           <ActionButton key={e.key} icon={e.action.icon} label={e.action.label} disabled={e.action.disabled} onClick={() => void e.action.run()} />
         ))}
     </>
+  );
+}
+
+/** The thread's agent provider mark (Anthropic, OpenAI, …), drawn monochrome before its words. */
+function AgentMark({ providerId }: { providerId: string }) {
+  const { providers } = experimental_useProviders();
+  const provider = providers.find(p => p.id === providerId) ?? { id: providerId };
+  return (
+    <span className="ph-agent-mark" title={"displayName" in provider ? String(provider.displayName) : providerId}>
+      <ProviderIcon providerKind="agent" provider={provider} className="ph-agent-mark-icon" aria-hidden />
+    </span>
   );
 }
 
