@@ -468,3 +468,38 @@ a.ph-row[data-ph-pinned] .ph-glyph:not([data-ph-status]) .ph-pin { display: inli
 .ph-group-hint { font-weight: 400; color: var(--muted-foreground); }
 .ph-count[data-ph-tone="warn"] { color: #f59e0b; opacity: 1; font-weight: 600; }
 .ph-count[data-ph-tone="bad"] { color: #ef4444; opacity: 1; font-weight: 600; }
+
+/* A pinned thread that is running: full-strength text with a dimming band sweeping across it.
+   Only pinned rows shimmer; other running rows stay quiet behind bb's spinner. */
+@keyframes ph-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+a.ph-row[data-ph-pinned][data-ph-working] .ph-main {
+  background: linear-gradient(
+    90deg,
+    var(--foreground) 0%,
+    var(--foreground) 35%,
+    color-mix(in oklab, var(--foreground) 35%, transparent) 50%,
+    var(--foreground) 65%,
+    var(--foreground) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: ph-shimmer 2.4s linear infinite;
+}
+a.ph-row[data-ph-pinned][data-ph-working] .ph-main,
+a.ph-row[data-ph-pinned][data-ph-working] .ph-main * { color: transparent !important; }
+/* Marks that keep their own colour inside the shimmer. */
+a.ph-row[data-ph-pinned][data-ph-working] .ph-main .ph-agent-mark,
+a.ph-row[data-ph-pinned][data-ph-working] .ph-main .ph-agent-mark * { color: var(--foreground) !important; }
+a.ph-row[data-ph-pinned][data-ph-working] .ph-main .ph-draft-label { color: var(--destructive, #e5484d) !important; }
+a.ph-row[data-ph-pinned][data-ph-working] .ph-main .ph-stamp,
+a.ph-row[data-ph-pinned][data-ph-working] .ph-main .ph-row-project,
+a.ph-row[data-ph-pinned][data-ph-working] .ph-main .ph-meta { color: var(--muted-foreground) !important; }
+@media (prefers-reduced-motion: reduce) {
+  a.ph-row[data-ph-pinned][data-ph-working] .ph-main { animation: none; background: none; }
+  a.ph-row[data-ph-pinned][data-ph-working] .ph-main,
+  a.ph-row[data-ph-pinned][data-ph-working] .ph-main * { color: inherit !important; }
+}
