@@ -569,7 +569,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
   }, [atHome, personal?.id, topBar, composer]);
 
   // At home the top bar lists the projects, like tabs, in the thread list's order.
-  const arrangement = useProjectArrangement();
+  const arrangement = useProjectArrangement(projectId);
   const tabs = useMemo(
     () => (atHome ? projectTabs(sidebar.projects, sidebar.threads, arrangement.order, arrangement.hidden) : []),
     [atHome, sidebar.projects, sidebar.threads, arrangement.order, arrangement.hidden],

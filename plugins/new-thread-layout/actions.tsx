@@ -7,11 +7,15 @@ import {
   type PluginSidebarThread,
   type PluginThreadActionTarget,
 } from "@get-bb/plugin-sdk/app";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { threadListContract } from "./contracts";
 
+function useThreadListPreferencesQuery() {
+  return experimental_useRpcQuery({ pluginId: "thread-list", contract: threadListContract, method: "listPreferences", input: null });
+}
+
 function useThreadListPreferences() {
-  return experimental_useRpcQuery({ pluginId: "thread-list", contract: threadListContract, method: "listPreferences", input: null }).data?.preferences;
+  return useThreadListPreferencesQuery().data?.preferences;
 }
 
 /** The quick actions the author picked for thread-list rows (Customize actions). */
@@ -20,8 +24,19 @@ export function useRowActionKeys(): readonly string[] {
 }
 
 /** The sidebar's project order and hidden projects, as the author arranged the thread list. */
-export function useProjectArrangement(): { order: readonly string[]; hidden: readonly string[] } {
-  const prefs = useThreadListPreferences();
+export function useProjectArrangement(view?: string | null): { order: readonly string[]; hidden: readonly string[] } {
+  const query = useThreadListPreferencesQuery();
+  // bb does not push preference changes to other readers, so a reorder in the sidebar would reach us
+  // only after a reload: read again for every screen shown (`view`) and whenever the window regains focus.
+  const refetch = useRef(query.refetch);
+  refetch.current = query.refetch;
+  useEffect(() => {
+    void refetch.current();
+    const onFocus = () => void refetch.current();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [view]);
+  const prefs = query.data?.preferences;
   return { order: prefs?.sectionOrder ?? [], hidden: prefs?.hiddenGroups ?? [] };
 }
 
