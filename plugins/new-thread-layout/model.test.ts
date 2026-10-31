@@ -40,8 +40,9 @@ describe("buildBoard", () => {
     ];
     const b = buildBoard(threads, [], "p1", NOW);
     expect(b.pinned.map(r => r.thread.id)).toEqual(["pin"]);
-    expect(b.inProgress.map(r => r.thread.id)).toEqual(["work", "idle"]);
-    expect(b.inProgress[1].children).toBe(1);
+    expect(b.running.map(r => r.thread.id)).toEqual(["work"]);
+    expect(b.inProgress.map(r => r.thread.id)).toEqual(["idle"]);
+    expect(b.inProgress[0].children).toBe(1);
     expect(b.done.map(r => r.thread.id)).toEqual(["done"]);
     expect(b.scheduled).toEqual([]);
   });
@@ -72,13 +73,29 @@ describe("buildBoard", () => {
     ]);
   });
 
-  it("orders in progress by work, then attention, then recency", () => {
+  it("separates running threads from idle ones, attention first, then recency", () => {
     const threads = [
       thread({ id: "recent", updatedAt: NOW }),
       thread({ id: "ask", hasPendingInteraction: true, updatedAt: NOW - 9 * H }),
       thread({ id: "busy", runtimeStatus: "active", updatedAt: NOW - 9 * H }),
     ];
-    expect(buildBoard(threads, [], "p1", NOW).inProgress.map(r => r.thread.id)).toEqual(["busy", "ask", "recent"]);
+    const b = buildBoard(threads, [], "p1", NOW);
+    expect(b.running.map(r => r.thread.id)).toEqual(["busy"]);
+    expect(b.inProgress.map(r => r.thread.id)).toEqual(["ask", "recent"]);
+  });
+
+  it("counts a root as running while any descendant or background work runs", () => {
+    const threads = [
+      thread({ id: "lead" }),
+      thread({ id: "child", parentThreadId: "lead" }),
+      thread({ id: "grandchild", parentThreadId: "child", runtimeStatus: "active" }),
+      thread({ id: "bg", activity: { workflows: 0, backgroundAgents: 1, backgroundCommands: 0 } }),
+      thread({ id: "quiet" }),
+      thread({ id: "finished-kid", parentThreadId: "quiet", runtimeStatus: "active", isArchived: true, archivedAt: NOW }),
+    ];
+    const b = buildBoard(threads, [], "p1", NOW);
+    expect(b.running.map(r => r.thread.id).sort()).toEqual(["bg", "lead"]);
+    expect(b.inProgress.map(r => r.thread.id)).toEqual(["quiet"]);
   });
 });
 

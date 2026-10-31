@@ -17,6 +17,8 @@ export interface BoardThread {
   archivedAt: number | null;
   isHidden: boolean;
   updatedAt: number;
+  /** Live background work in the thread (bb's sidebar activity counts). */
+  activity?: { workflows: number; backgroundAgents: number; backgroundCommands: number };
 }
 
 export interface BoardRow {
@@ -42,6 +44,9 @@ export interface ScheduledRow {
 
 export interface Board {
   pinned: BoardRow[];
+  /** Root threads where an agent is working, in the thread itself or in any of its descendants. */
+  running: BoardRow[];
+  /** The other unarchived root threads. */
   inProgress: BoardRow[];
   scheduled: ScheduledRow[];
   done: BoardRow[];
@@ -70,12 +75,34 @@ export function boundThreadId(a: Automation): string | null {
   return a.execution?.targetThreadId ?? a.lastRunThreadId ?? null;
 }
 
+function selfWorking(t: BoardThread): boolean {
+  if (t.isArchived) return false;
+  const a = t.activity;
+  return WORKING.has(t.runtimeStatus) || !!(a && (a.workflows || a.backgroundAgents || a.backgroundCommands));
+}
+
 export function buildBoard(threads: readonly BoardThread[], automations: readonly Automation[], projectId: string, now: number): Board {
   const mine = threads.filter(t => t.projectId === projectId && !t.isHidden);
   const children = new Map<string, number>();
+  const kids = new Map<string, BoardThread[]>();
   for (const t of mine) {
-    if (t.parentThreadId && !t.isArchived) children.set(t.parentThreadId, (children.get(t.parentThreadId) ?? 0) + 1);
+    if (!t.parentThreadId || t.isArchived) continue;
+    children.set(t.parentThreadId, (children.get(t.parentThreadId) ?? 0) + 1);
+    const list = kids.get(t.parentThreadId) ?? [];
+    list.push(t);
+    kids.set(t.parentThreadId, list);
   }
+  // Work anywhere under a thread counts as the thread running.
+  const runningMemo = new Map<string, boolean>();
+  const runningTree = (t: BoardThread, seen: Set<string> = new Set()): boolean => {
+    const known = runningMemo.get(t.id);
+    if (known !== undefined) return known;
+    if (seen.has(t.id)) return false;
+    seen.add(t.id);
+    const result = selfWorking(t) || (kids.get(t.id) ?? []).some(k => runningTree(k, seen));
+    runningMemo.set(t.id, result);
+    return result;
+  };
   const bound = new Map<string, { names: string[]; nextRunAt: number | null }>();
   for (const a of automations) {
     const id = boundThreadId(a);
@@ -88,7 +115,15 @@ export function buildBoard(threads: readonly BoardThread[], automations: readonl
   }
   const row = (thread: BoardThread): BoardRow => {
     const b = bound.get(thread.id);
-    return { thread, ...statusOf(thread), children: children.get(thread.id) ?? 0, nextRunAt: b?.nextRunAt ?? null, automationNames: b?.names ?? [] };
+    const status = statusOf(thread);
+    return {
+      thread,
+      ...status,
+      working: status.working || (!thread.isArchived && runningTree(thread)),
+      children: children.get(thread.id) ?? 0,
+      nextRunAt: b?.nextRunAt ?? null,
+      automationNames: b?.names ?? [],
+    };
   };
   const roots = mine.filter(t => t.parentThreadId === null);
   const byId = new Map(mine.map(t => [t.id, t] as const));
@@ -96,11 +131,13 @@ export function buildBoard(threads: readonly BoardThread[], automations: readonl
   const pinned = roots.filter(t => t.isPinned && !t.isArchived).map(row);
 
   // A read, idle automation thread lives under Scheduled with its automation; it comes back here when it needs attention.
-  const inProgress = roots
+  const open = roots
     .filter(t => !t.isArchived && !t.isPinned)
     .map(row)
     .filter(r => !(bound.has(r.thread.id) && !r.working && !r.attention && !r.thread.isUnread))
-    .sort((a, b) => Number(b.working) - Number(a.working) || Number(b.attention) - Number(a.attention) || b.thread.updatedAt - a.thread.updatedAt);
+    .sort((a, b) => Number(b.attention) - Number(a.attention) || b.thread.updatedAt - a.thread.updatedAt);
+  const running = open.filter(r => r.working);
+  const inProgress = open.filter(r => !r.working);
 
   // Upcoming runs by time, then paused automations so they can be resumed from here.
   const upcoming = automations
@@ -114,5 +151,5 @@ export function buildBoard(threads: readonly BoardThread[], automations: readonl
     .sort((a, b) => (b.archivedAt ?? 0) - (a.archivedAt ?? 0))
     .map(row);
 
-  return { pinned, inProgress, scheduled, done };
+  return { pinned, running, inProgress, scheduled, done };
 }

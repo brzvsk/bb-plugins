@@ -331,7 +331,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
     [sidebar.threads, automations.data, projectId, now],
   );
   const previewTargets = useMemo(
-    () => (board ? [...board.pinned, ...board.inProgress, ...(topTab === "done" || !board.scheduled.length ? board.done : [])].map(r => ({ id: r.thread.id, updatedAt: r.thread.updatedAt })) : []),
+    () => (board ? [...board.pinned, ...board.running, ...board.inProgress, ...(topTab === "done" || !board.scheduled.length ? board.done : [])].map(r => ({ id: r.thread.id, updatedAt: r.thread.updatedAt })) : []),
     [board, topTab],
   );
   const previews = usePreviews(sdk.threads, previewTargets);
@@ -356,7 +356,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
     : null;
 
   if (!projectId || !board) return crumb;
-  const empty = !board.pinned.length && !board.inProgress.length && !board.scheduled.length && !board.done.length;
+  const empty = !board.pinned.length && !board.running.length && !board.inProgress.length && !board.scheduled.length && !board.done.length;
   return (
     <div className="ph-board" data-ph-board="">
       {crumb}
@@ -375,6 +375,9 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
       {sidebar.status === "ready" && empty ? <p className="ph-empty">Nothing in progress here yet.</p> : null}
       <Group label="Pinned" count={board.pinned.length}>
         {board.pinned.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} />)}
+      </Group>
+      <Group label="Running" count={board.running.length}>
+        {board.running.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} />)}
       </Group>
       <Group label="Idle" count={board.inProgress.length}>
         {board.inProgress.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} />)}
