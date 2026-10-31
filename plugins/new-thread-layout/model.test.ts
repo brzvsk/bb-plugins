@@ -47,7 +47,7 @@ describe("buildBoard", () => {
     expect(b.scheduled).toEqual([]);
   });
 
-  it("lists every upcoming automation under Scheduled; read idle bound threads leave In progress, unread or pinned ones stay", () => {
+  it("lists every upcoming automation under Scheduled and keeps bound threads in the lists with their next run", () => {
     const threads = [
       thread({ id: "daily", updatedAt: NOW - H }),
       thread({ id: "loud", isUnread: true }),
@@ -61,7 +61,8 @@ describe("buildBoard", () => {
       { id: "a5", projectId: "p1", name: "Paused", enabled: false, nextRunAt: NOW + 4 * H },
     ];
     const b = buildBoard(threads, automations, "p1", NOW);
-    expect(b.inProgress.map(r => r.thread.id)).toEqual(["loud"]);
+    expect(b.inProgress.map(r => r.thread.id).sort()).toEqual(["daily", "loud"]);
+    expect(b.inProgress.find(r => r.thread.id === "daily")?.nextRunAt).toBe(NOW + 2 * H);
     expect(b.pinned[0].nextRunAt).toBe(NOW + H);
     expect(b.pinned[0].automationNames).toEqual(["Manager"]);
     expect(b.scheduled.map(r => [r.automation.name, r.thread?.id ?? null])).toEqual([
@@ -231,5 +232,6 @@ describe("buildOverview", () => {
     expect(o.recent.map(r => r.thread.id)).toEqual(["fresher", "fresh"]);
     expect(o.scheduled.map(r => r.automation.name)).toEqual(["Soon", "Later", "Paused at home"]);
     expect(o.done.map(r => r.thread.id)).toEqual(["gone"]);
+    expect(buildOverview([thread({ id: "bound", projectId: "a", isUnread: true })], [{ id: "q", projectId: "a", name: "Daily", enabled: true, nextRunAt: NOW + H, execution: { targetThreadId: "bound" } }], ["a"], null, NOW).needsYou[0].nextRunAt).toBe(NOW + H);
   });
 });

@@ -47,6 +47,7 @@ function Row({ row, preview, now, onOpen, actionKeys, project }: { row: BoardRow
   const rowStatus = useSidebarThreadRowStatus(t.id);
   const { hasUnsubmittedDraft } = useSidebarThreadDraft(t.id);
   const hasStatus = t.isArchived || t.indicator !== "none" || !!rowStatus || hasUnsubmittedDraft;
+  const nextRun = !t.isArchived ? formatNextRun(row.nextRunAt, now) : null;
   // Like a messenger: an unsent draft takes the second line, "Draft:" in red.
   const draft = hasUnsubmittedDraft && !t.isArchived ? readDraft(t.projectId, t.id) : null;
   const second = previewText(preview);
@@ -65,9 +66,16 @@ function Row({ row, preview, now, onOpen, actionKeys, project }: { row: BoardRow
         onOpen(t);
       }}
     >
-      <span className="ph-glyph" data-ph-status={hasStatus || undefined}>
+      <span className="ph-glyph" data-ph-status={hasStatus || !!nextRun || undefined}>
         <span className="ph-glyph-status">
-          <StatusGlyph indicator={t.indicator} rowStatus={rowStatus} archived={t.isArchived} hideIdleDraftLabel />
+          {hasStatus || !nextRun ? (
+            <StatusGlyph indicator={t.indicator} rowStatus={rowStatus} archived={t.isArchived} hideIdleDraftLabel />
+          ) : (
+            // Lowest-priority status: an automation will run in this thread next.
+            <span className="ph-next-run" title={`Next run ${nextRun}${row.automationNames.length ? ` · ${row.automationNames.join(", ")}` : ""}`}>
+              <Icon name="Clock" className="ph-clock" aria-hidden />
+            </span>
+          )}
         </span>
         {!t.isArchived ? <PinToggle thread={t} /> : null}
       </span>

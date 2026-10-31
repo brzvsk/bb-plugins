@@ -132,11 +132,10 @@ export function buildBoard(threads: readonly BoardThread[], automations: readonl
 
   const pinned = roots.filter(t => t.isPinned && !t.isArchived).map(row);
 
-  // A read, idle automation thread lives under Scheduled with its automation; it comes back here when it needs attention.
+  // Automation threads stay in the lists too; their next run shows as a clock in the left slot.
   const open = roots
     .filter(t => !t.isArchived && !t.isPinned)
     .map(row)
-    .filter(r => !(bound.has(r.thread.id) && !r.working && !r.attention && !r.thread.isUnread))
     .sort((a, b) => Number(b.attention) - Number(a.attention) || b.thread.updatedAt - a.thread.updatedAt);
   const running = open.filter(r => r.working);
   const inProgress = open.filter(r => !r.working);
@@ -188,7 +187,8 @@ export function buildOverview(
   const recentRows: BoardRow[] = [];
   const lastActive = (r: BoardRow) => r.thread.latestAttentionAt || r.thread.updatedAt;
   for (const id of projectIds) {
-    const b = buildBoard(threads, [], id, now);
+    // With the project's automations, so rows know their next run (the clock in the left slot).
+    const b = buildBoard(threads, automations.filter(a => a.projectId === id), id, now);
     for (const r of [...b.pinned, ...b.running, ...b.inProgress]) {
       if (r.working) running.push(r);
       else if (r.attention || r.thread.isUnread) needsYou.push(r);
@@ -209,7 +209,7 @@ export function buildOverview(
   const paused = automations.filter(a => a.enabled === false && a.projectId === homeProjectId);
   const scheduled = [...upcoming, ...paused].map(a => ({ automation: a, thread: byId.get(boundThreadId(a) ?? "") ?? null }));
   const done = [...projectIds, ...(homeProjectId ? [homeProjectId] : [])]
-    .flatMap(id => buildBoard(threads, [], id, now).done)
+    .flatMap(id => buildBoard(threads, automations.filter(a => a.projectId === id), id, now).done)
     .sort((a, b) => (b.thread.archivedAt ?? 0) - (a.thread.archivedAt ?? 0));
   return { needsYou, running, recent: recentRows, scheduled, done };
 }
