@@ -94,12 +94,14 @@ describe("buildBoard", () => {
       thread({ id: "child", parentThreadId: "lead" }),
       thread({ id: "grandchild", parentThreadId: "child", runtimeStatus: "active" }),
       thread({ id: "bg", activity: { workflows: 0, backgroundAgents: 1, backgroundCommands: 0 } }),
+      thread({ id: "ci", isUnread: true, activity: { workflows: 0, backgroundAgents: 0, backgroundCommands: 1 } }),
       thread({ id: "quiet" }),
       thread({ id: "finished-kid", parentThreadId: "quiet", runtimeStatus: "active", isArchived: true, archivedAt: NOW }),
     ];
     const b = buildBoard(threads, [], "p1", NOW);
     expect(b.running.map(r => r.thread.id).sort()).toEqual(["bg", "lead"]);
-    expect(b.inProgress.map(r => r.thread.id)).toEqual(["quiet"]);
+    // A background command after the turn is not work in progress: the thread waits, quietly.
+    expect(b.inProgress.map(r => [r.thread.id, r.background]).sort()).toEqual([["ci", true], ["quiet", false]]);
   });
 });
 
@@ -251,5 +253,14 @@ describe("lastAuthorTurnAt", () => {
   it("skips automation prompts and bb notices", () => {
     expect(lastAuthorTurnAt([turn("[bb automation due:auto_1] Проверка почты", 3), turn("глянь ответ", 2), turn("старое", 1)])).toBe(2);
     expect(lastAuthorTurnAt([turn("[bb system] done", 3), turn("x", 2, { systemMessageKind: "child-completed" })])).toBeNull();
+  });
+});
+
+describe("background commands at home", () => {
+  it("keep an unread thread whose turn is over out of Waiting for you while CI still runs", () => {
+    const o = buildOverview([thread({ id: "ci", projectId: "a", isUnread: true, latestAttentionAt: NOW - H, activity: { workflows: 0, backgroundAgents: 0, backgroundCommands: 1 } })], [], ["a"], null, NOW);
+    expect(o.needsYou).toEqual([]);
+    expect(o.running).toEqual([]);
+    expect(o.recent.map(r => r.thread.id)).toEqual(["ci"]);
   });
 });

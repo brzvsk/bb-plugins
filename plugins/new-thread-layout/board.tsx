@@ -61,7 +61,7 @@ function Row({ row, preview, now, onOpen, actionKeys, project }: { row: BoardRow
       href={t.href}
       data-ph-working={(row.working && !t.isArchived) || undefined}
       data-ph-pinned={(t.isPinned && !t.isArchived) || undefined}
-      data-ph-loud={(!t.isArchived && (t.isUnread || t.isPinned || row.attention)) || undefined}
+      data-ph-loud={(!t.isArchived && (t.isPinned || row.attention || (t.isUnread && !row.background))) || undefined}
       onClick={e => {
         if (!plainClick(e)) return;
         e.preventDefault();
@@ -70,7 +70,10 @@ function Row({ row, preview, now, onOpen, actionKeys, project }: { row: BoardRow
     >
       <span className="ph-glyph" data-ph-status={hasStatus || !!nextRun || undefined}>
         <span className="ph-glyph-status">
-          {hasStatus || !nextRun ? (
+          {row.background ? (
+            // bb's own glyph for a background command: the reply is in, something external still runs.
+            <StatusGlyph indicator="background-command" rowStatus={rowStatus} hideIdleDraftLabel />
+          ) : hasStatus || !nextRun ? (
             <StatusGlyph indicator={t.indicator} rowStatus={rowStatus} archived={t.isArchived} hideIdleDraftLabel />
           ) : (
             // Lowest-priority status: an automation will run in this thread next.

@@ -30,8 +30,13 @@ export interface BoardRow {
   status: string;
   /** Accented status: the thread needs the author. */
   attention: boolean;
-  /** Live work is going on in the thread. */
+  /** The agent's turn is in progress here, or in a background agent, workflow or child thread. */
   working: boolean;
+  /**
+   * The turn is over but a background command (CI watch, a long build) still runs: the thread waits
+   * on something external. It stays quiet and out of "Waiting for you" until the agent wakes again.
+   */
+  background: boolean;
   /** Child threads under this root. */
   children: number;
   /** Next run of an automation bound to this thread, epoch ms. */
@@ -78,10 +83,16 @@ export function boundThreadId(a: Automation): string | null {
   return a.execution?.targetThreadId ?? a.lastRunThreadId ?? null;
 }
 
+/** An agent works: its turn is in progress, or a background agent or workflow (delegated work). */
 function selfWorking(t: BoardThread): boolean {
   if (t.isArchived) return false;
   const a = t.activity;
-  return WORKING.has(t.runtimeStatus) || !!(a && (a.workflows || a.backgroundAgents || a.backgroundCommands));
+  return WORKING.has(t.runtimeStatus) || !!(a && (a.workflows || a.backgroundAgents));
+}
+
+/** Only a background command is left after the turn: waiting on something external. */
+function backgroundOnly(t: BoardThread): boolean {
+  return !t.isArchived && !WORKING.has(t.runtimeStatus) && !!t.activity?.backgroundCommands;
 }
 
 export interface BoardOptions {
@@ -127,10 +138,12 @@ export function buildBoard(threads: readonly BoardThread[], automations: readonl
   const row = (thread: BoardThread): BoardRow => {
     const b = bound.get(thread.id);
     const status = statusOf(thread);
+    const working = status.working || (!thread.isArchived && runningTree(thread));
     return {
       thread,
       ...status,
-      working: status.working || (!thread.isArchived && runningTree(thread)),
+      working,
+      background: !working && backgroundOnly(thread),
       children: children.get(thread.id) ?? 0,
       nextRunAt: b?.nextRunAt ?? null,
       automationNames: b?.names ?? [],
@@ -147,7 +160,7 @@ export function buildBoard(threads: readonly BoardThread[], automations: readonl
   const open = roots
     .filter(t => !t.isArchived && !t.isPinned)
     .map(row)
-    .filter(r => !bound.has(r.thread.id) || r.working || r.attention || r.thread.isUnread || !!options.involved?.has(r.thread.id))
+    .filter(r => !bound.has(r.thread.id) || r.working || r.background || r.attention || r.thread.isUnread || !!options.involved?.has(r.thread.id))
     .sort((a, b) => Number(b.attention) - Number(a.attention) || b.thread.updatedAt - a.thread.updatedAt);
   const running = open.filter(r => r.working);
   const inProgress = open.filter(r => !r.working);
@@ -211,6 +224,8 @@ export function buildOverview(
     if (id === homeProjectId) continue;
     for (const r of [...b.running, ...b.inProgress]) {
       if (r.working) running.push(r);
+      // Waiting on a background command: not yours yet, even if the last reply is unread.
+      else if (r.background) recentRows.push(r);
       else if (r.attention || r.thread.isUnread) needsYou.push(r);
       else if (lastActive(r) >= now - CONTINUE_WINDOW_MS) recentRows.push(r);
     }
