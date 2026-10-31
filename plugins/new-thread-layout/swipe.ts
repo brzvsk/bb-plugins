@@ -21,7 +21,7 @@ const NEW_TOUCH_GAP = 120;
  * the first event of a touch is cancelable; some input paths mark every event cancelable, and a
  * swipe streaming events every few milliseconds must not restart on each of them.
  */
-const CANCELABLE_GAP = 45;
+const CANCELABLE_GAP = 90;
 const HOLD_GAP = 600;
 const DECIDE = 8;
 const GLIDE_MIN = 6;
@@ -35,6 +35,20 @@ function canScrollLeft(event: Event): boolean {
     if (!/auto|scroll|overlay/.test(getComputedStyle(node).overflowX)) return false;
     return node.scrollLeft > 1;
   });
+}
+
+/**
+ * Shared by every attached swipe: after one goes back, the screen it lands on may attach its own
+ * swipe while the trackpad is still sending the same gesture's momentum. Ignore wheel input until
+ * it has been quiet for a moment, so one swipe goes back exactly one step.
+ */
+const SETTLE_MS = 350;
+const shared = { settling: false, lastWheel: 0 };
+
+/** For tests: forget a previous swipe's settling state. */
+export function resetSwipeBackState(): void {
+  shared.settling = false;
+  shared.lastWheel = 0;
 }
 
 export function attachSwipeBack(doc: Document, opts: SwipeBackOptions): () => void {
@@ -95,6 +109,7 @@ export function attachSwipeBack(doc: Document, opts: SwipeBackOptions): () => vo
     if (mode !== "gesture") return;
     if (-x / THRESHOLD >= 1) {
       mode = "done";
+      shared.settling = true;
       hide(200);
       opts.onBack();
       return;
@@ -104,6 +119,12 @@ export function attachSwipeBack(doc: Document, opts: SwipeBackOptions): () => vo
   };
   const onWheel = (event: WheelEvent) => {
     const t = now();
+    const sinceAny = t - shared.lastWheel;
+    shared.lastWheel = t;
+    if (shared.settling) {
+      if (sinceAny < SETTLE_MS) return;
+      shared.settling = false;
+    }
     const gap = t - last;
     const fresh = gap > NEW_TOUCH_GAP || (event.cancelable && gap > CANCELABLE_GAP);
     last = t;

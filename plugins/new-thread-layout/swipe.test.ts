@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { attachSwipeBack } from "./swipe";
+import { attachSwipeBack, resetSwipeBackState } from "./swipe";
 
 function wheel(target: Element, deltaX: number, cancelable: boolean, deltaY = 0) {
   target.dispatchEvent(new WheelEvent("wheel", { deltaX, deltaY, cancelable, bubbles: true }));
@@ -8,6 +8,7 @@ function wheel(target: Element, deltaX: number, cancelable: boolean, deltaY = 0)
 
 describe("attachSwipeBack", () => {
   afterEach(() => {
+    resetSwipeBackState();
     document.body.innerHTML = "";
     vi.useRealTimers();
   });
@@ -69,6 +70,39 @@ describe("attachSwipeBack", () => {
       vi.advanceTimersByTime(8);
     }
     expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it("goes back one step per swipe: the next screen ignores the same gesture's momentum", () => {
+    vi.useFakeTimers();
+    const first = document.createElement("div");
+    const second = document.createElement("div");
+    document.body.append(first, second);
+    const backFromThread = vi.fn();
+    const backFromProject = vi.fn();
+    const dispose = attachSwipeBack(document, { area: () => first, onBack: backFromThread });
+    vi.advanceTimersByTime(500);
+    wheel(first, -12, true);
+    for (let i = 0; i < 20; i++) {
+      vi.advanceTimersByTime(8);
+      wheel(first, -10, false);
+    }
+    expect(backFromThread).toHaveBeenCalledTimes(1);
+    // The thread screen goes away and the project's New thread screen starts listening mid-momentum.
+    dispose();
+    attachSwipeBack(document, { area: () => second, onBack: backFromProject });
+    for (let i = 0; i < 40; i++) {
+      vi.advanceTimersByTime(8);
+      wheel(second, -10, i % 7 === 0);
+    }
+    vi.advanceTimersByTime(1000);
+    expect(backFromProject).not.toHaveBeenCalled();
+    // A new swipe after the trackpad went quiet goes back again.
+    wheel(second, -12, true);
+    for (let i = 0; i < 20; i++) {
+      vi.advanceTimersByTime(8);
+      wheel(second, -10, false);
+    }
+    expect(backFromProject).toHaveBeenCalledTimes(1);
   });
 
   it("cancels a short swipe and ignores vertical scrolls, swipes left and swipes outside the area", () => {
