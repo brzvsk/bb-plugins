@@ -260,9 +260,11 @@ a.ph-row:hover { background: var(--state-hover, color-mix(in oklab, var(--foregr
   gap: 0.375rem;
   padding: 1rem 0 0.75rem;
   color: var(--muted-foreground);
+  /* This theme's muted text is close to the foreground; opacity carries it, like the quiet rows. */
+  opacity: 0.5;
   font-size: 12px;
 }
-.ph-tab-empty svg { width: 16px; height: 16px; opacity: 0.7; }
+.ph-tab-empty svg { width: 20px; height: 20px; }
 .ph-autos[data-ph-overlay] .ph-tab-empty { padding-top: 2.5rem; }
 .ph-tabs { display: flex; align-items: baseline; gap: 0.25rem; margin-bottom: 0.125rem; }
 .ph-tab {
