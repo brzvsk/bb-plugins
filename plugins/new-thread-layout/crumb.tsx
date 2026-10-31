@@ -120,38 +120,59 @@ export function ThreadProjectCrumb() {
   );
 }
 
-const CHROME_CONTROLS = 'button[data-sidebar][aria-label^="Toggle sidebar"], button[aria-label="Go back"], button[aria-label="Go forward"]';
+/** Pixels from a CSS length custom property on `el`, or null when unset or not a plain px/number. */
+function cssPx(el: Element, name: string): number | null {
+  const raw = getComputedStyle(el).getPropertyValue(name).trim();
+  if (!raw) return null;
+  const n = parseFloat(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Buttons of the window's own row: anything clickable entirely above the card, in its left half. */
+function windowRowControls(card: DOMRect, own: Element): DOMRect[] {
+  return Array.from(document.querySelectorAll<HTMLElement>('button, [role="button"]'))
+    .filter(b => !own.contains(b) && !b.closest(".ph-autos-holder, [data-ph-topbar]"))
+    .map(b => b.getBoundingClientRect())
+    .filter(r => r.width > 0 && r.height > 0 && r.top >= 0 && r.bottom <= card.top + 1 && r.left < card.left + card.width / 2);
+}
 
 /**
  * In the desktop app's framed layout the window's own row (traffic lights, back, forward, sidebar
  * toggle) sits above the content card, and bb lifts a thread's header into that row. On the New
- * thread screen there is no such header, so put the project name there ourselves: right of the
- * last window control and centered on it. Wherever those controls are not above the card (the
- * web app, an expanded sidebar beside the card), the name stays in the card's top row.
+ * thread screen there is no such header, so put the project name there ourselves: after the
+ * window controls, centered on them. bb publishes that geometry as CSS variables
+ * (--bb-window-title-bar-controls-end, --bb-macos-traffic-light-center-y); without them the
+ * buttons above the card stand in. Wherever no window row runs above the card (the web app),
+ * the name stays in the card's top row.
  */
 export function useChromeRowPlacement(topBar: HTMLElement | null): void {
   useEffect(() => {
     const frame = topBar?.parentElement;
     if (!topBar || !frame) return;
     let placed = false;
+    const reset = () => {
+      if (!placed) return;
+      topBar.removeAttribute("style");
+      frame.removeAttribute("data-ph-chrome");
+      placed = false;
+    };
     const place = () => {
       const card = frame.getBoundingClientRect();
-      const controls = Array.from(document.querySelectorAll<HTMLElement>(CHROME_CONTROLS))
-        .map(b => b.getBoundingClientRect())
-        .filter(r => r.width > 0 && r.bottom <= card.top + 1 && r.left < card.right);
-      if (!controls.length) {
-        if (placed) {
-          topBar.removeAttribute("style");
-          frame.removeAttribute("data-ph-chrome");
-          placed = false;
-        }
+      const controls = windowRowControls(card, topBar);
+      const root = document.documentElement;
+      const varEnd = cssPx(frame, "--bb-window-title-bar-controls-end") ?? cssPx(root, "--bb-window-title-bar-controls-end");
+      const varMid = cssPx(frame, "--bb-macos-traffic-light-center-y") ?? cssPx(root, "--bb-macos-traffic-light-center-y");
+      const domEnd = controls.length ? Math.max(...controls.map(r => r.right)) : null;
+      const domMid = controls.length ? controls.reduce((sum, r) => sum + r.top + r.height / 2, 0) / controls.length : null;
+      const mid = domMid ?? varMid;
+      const end = Math.max(domEnd ?? 0, varEnd ?? 0) || null;
+      // A window row exists only when its middle runs above the card.
+      if (mid === null || end === null || mid >= card.top) {
+        reset();
         return;
       }
-      const right = Math.max(...controls.map(r => r.right));
-      const mid = controls.reduce((sum, r) => sum + r.top + r.height / 2, 0) / controls.length;
-      const left = Math.max(right + 12, card.left + 12);
       topBar.style.position = "fixed";
-      topBar.style.left = `${left}px`;
+      topBar.style.left = `${Math.max(end + 12, card.left + 12)}px`;
       topBar.style.top = `${mid}px`;
       topBar.style.height = "auto";
       topBar.style.padding = "0";
