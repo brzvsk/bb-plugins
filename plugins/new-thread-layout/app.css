@@ -266,10 +266,10 @@ a.ph-row:hover { background: var(--state-hover, color-mix(in oklab, var(--foregr
 .ph-auto-where { min-width: 0; font-size: 12px; color: var(--muted-foreground); opacity: 0.8; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
 /* Thread rows are quiet by default (opacity: this theme's muted and foreground text are close).
-   Unread, pinned, needs-you and running rows are at full strength (running ones show bb's spinner). */
+   Unread, pinned and needs-you rows are at full strength; running rows stay quiet behind bb's spinner,
+   since work that runs on its own needs no attention. */
 a.ph-row:not(.ph-auto-row) { opacity: 0.5; transition: opacity 120ms; }
 a.ph-row[data-ph-loud],
-a.ph-row[data-ph-working],
 .ph-row-wrap:hover > a.ph-row,
 .ph-row-wrap[data-ph-menu-open] > a.ph-row { opacity: 1; }
 /* Pinned rows are the accent: a denser title. */
