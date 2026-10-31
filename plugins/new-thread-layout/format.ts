@@ -1,6 +1,6 @@
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** "Today, 12:00", "Tomorrow, 9:00", "11 Nov, 22:00"; null for no upcoming run. */
+/** "Today, 12:00", "Tomorrow, 9:00", "Monday, 9:00" within the week, then "11 Nov, 22:00"; null for no upcoming run. */
 export function formatNextRun(at: number | null | undefined, now: number): string | null {
   if (at == null || at < now) return null;
   const date = new Date(at);
@@ -10,6 +10,7 @@ export function formatNextRun(at: number | null | undefined, now: number): strin
   const days = Math.floor((new Date(at).setHours(0, 0, 0, 0) - today.getTime()) / DAY_MS);
   if (days === 0) return `Today, ${time}`;
   if (days === 1) return `Tomorrow, ${time}`;
+  if (days < 7) return `${date.toLocaleString("en-GB", { weekday: "long" })}, ${time}`;
   const month = date.toLocaleString("en-GB", { month: "short" });
   return `${date.getDate()} ${month}, ${time}`;
 }

@@ -115,7 +115,9 @@ describe("format", () => {
   it("formats next runs relative to today", () => {
     expect(formatNextRun(NOW + 2 * H, NOW)).toMatch(/^Today, 14:00$/);
     expect(formatNextRun(NOW + 24 * H, NOW)).toMatch(/^Tomorrow, 12:00$/);
-    expect(formatNextRun(NOW + 5 * 24 * H, NOW)).toMatch(/^4 Nov, 12:00$/);
+    expect(formatNextRun(NOW + 3 * 24 * H, NOW)).toMatch(/^Monday, 12:00$/);
+    expect(formatNextRun(NOW + 6 * 24 * H, NOW)).toMatch(/^Thursday, 12:00$/);
+    expect(formatNextRun(NOW + 7 * 24 * H, NOW)).toMatch(/^6 Nov, 12:00$/);
     expect(formatNextRun(NOW - 1, NOW)).toBeNull();
     expect(formatNextRun(null, NOW)).toBeNull();
   });
