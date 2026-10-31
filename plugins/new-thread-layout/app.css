@@ -240,20 +240,18 @@ a.ph-row:hover { background: var(--state-hover, color-mix(in oklab, var(--foregr
 }
 .ph-autos .ph-rows { max-height: 11rem; overflow-y: auto; scrollbar-width: thin; }
 .ph-autos[data-ph-tab="done"] .ph-rows { max-height: 14rem; }
-/* Last week opened on purpose: a tall panel over the lists below, so the archive reads as one column. */
+/* Last week opened on purpose: a tall list over the lists below, so the archive reads as one column.
+   No card: the page's own background only hides what is underneath, rows stay in the column. */
 .ph-autos[data-ph-overlay] { position: relative; }
 .ph-autos[data-ph-overlay] .ph-rows {
   position: absolute;
   top: 100%;
-  left: 0.5rem;
-  right: 0.5rem;
+  left: 1.25rem;
+  right: 1.25rem;
   z-index: 30;
   max-height: calc(100vh - 16rem);
-  padding: 0.25rem 0.75rem 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  background: var(--popover, var(--background));
-  box-shadow: 0 12px 32px color-mix(in oklab, var(--foreground) 14%, transparent);
+  padding-bottom: 0.75rem;
+  background: var(--background);
 }
 .ph-tabs { display: flex; align-items: baseline; gap: 0.25rem; margin-bottom: 0.125rem; }
 .ph-tab {
