@@ -211,6 +211,8 @@ a.ph-row:hover { background: var(--state-hover, color-mix(in oklab, var(--foregr
   flex: none;
   position: relative;
   z-index: 1;
+  /* Only the list takes clicks; the rest of this full-width strip must not cover the name. */
+  pointer-events: none;
   -webkit-app-region: no-drag;
   app-region: no-drag;
 }
@@ -229,6 +231,7 @@ a.ph-row:hover { background: var(--state-hover, color-mix(in oklab, var(--foregr
 }
 .ph-autos-holder:empty { display: none; }
 .ph-autos {
+  pointer-events: auto;
   max-width: 760px;
   margin: 0 auto;
   padding: 0.25rem 1.25rem 0.75rem;

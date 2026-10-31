@@ -145,13 +145,12 @@ function windowRowControls(card: DOMRect, frame: Element): DOMRect[] {
 }
 
 /**
- * In the desktop app's framed layout the window's own row (traffic lights, back, forward, sidebar
- * toggle) sits above the content card, and bb lifts a thread's header into that row. On the New
- * thread screen there is no such header, so put the project name there ourselves: after the
- * window controls, centered on them. bb publishes that geometry as CSS variables
- * (--bb-window-title-bar-controls-end, --bb-macos-traffic-light-center-y); without them the
- * buttons above the card stand in. Wherever no window row runs above the card (the web app),
- * the name stays in the card's top row.
+ * The desktop app on macOS lifts every page header into the window's own row (traffic lights,
+ * back, forward, sidebar toggle), centered on the traffic lights; bb publishes that center as
+ * --bb-macos-traffic-light-center-y, which the web app does not set. The New thread screen has
+ * no such header, so put the project name there ourselves, where a thread's header puts its
+ * title: after the window controls when they lie over the card (collapsed sidebar), else at the
+ * card's left inset. Without that variable the name stays in the card's top row.
  */
 export function useChromeRowPlacement(topBar: HTMLElement | null): void {
   useEffect(() => {
@@ -165,22 +164,16 @@ export function useChromeRowPlacement(topBar: HTMLElement | null): void {
       placed = false;
     };
     const place = () => {
-      const card = frame.getBoundingClientRect();
-      const controls = windowRowControls(card, frame);
-      const root = document.documentElement;
-      const varEnd = cssPx(frame, "--bb-window-title-bar-controls-end") ?? cssPx(root, "--bb-window-title-bar-controls-end");
-      const varMid = cssPx(frame, "--bb-macos-traffic-light-center-y") ?? cssPx(root, "--bb-macos-traffic-light-center-y");
-      const domEnd = controls.length ? Math.max(...controls.map(r => r.right)) : null;
-      const domMid = controls.length ? controls.reduce((sum, r) => sum + r.top + r.height / 2, 0) / controls.length : null;
-      const mid = domMid ?? varMid;
-      const end = Math.max(domEnd ?? 0, varEnd ?? 0) || null;
-      // Follow the window row when its controls lie over the card (above it, or overlaying its top).
-      if (mid === null || end === null || !controls.length) {
+      const mid = cssPx(frame, "--bb-macos-traffic-light-center-y") ?? cssPx(document.documentElement, "--bb-macos-traffic-light-center-y");
+      if (mid === null) {
         reset();
         return;
       }
+      const card = frame.getBoundingClientRect();
+      const controls = windowRowControls(card, frame);
+      const after = controls.length ? Math.max(...controls.map(r => r.right)) + 12 : 0;
       topBar.style.position = "fixed";
-      topBar.style.left = `${Math.max(end + 12, card.left + 12)}px`;
+      topBar.style.left = `${Math.max(after, card.left + 16)}px`;
       topBar.style.top = `${mid}px`;
       topBar.style.height = "auto";
       topBar.style.padding = "0";
