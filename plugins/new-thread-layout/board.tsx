@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ThreadTitle,
   experimental_Icon as Icon,
@@ -279,39 +279,90 @@ type TopTab = "scheduled" | "done";
  * The fixed zone under the top bar: a switch between the project's schedule and
  * its recently done threads. Only tabs with something in them are offered.
  */
+// Lucide calendar-clock and archive; bb's icon set has neither.
+const TOP_EMPTY: Record<TopTab, [ReactNode, string]> = {
+  scheduled: [
+    <>
+      <path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5" />
+      <path d="M16 2v4M8 2v4M3 10h5" />
+      <path d="M17.5 17.5 16 16.3V14" />
+      <circle cx="16" cy="16" r="6" />
+    </>,
+    "Nothing is scheduled yet",
+  ],
+  done: [
+    <>
+      <rect width="20" height="5" x="2" y="3" rx="1" />
+      <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8M10 12h4" />
+    </>,
+    "Nothing archived this week",
+  ],
+};
+
 function TopPanel({ tab, onTab, scheduled, done }: { tab: TopTab; onTab: (tab: TopTab) => void; scheduled: ReactNode[]; done: ReactNode[] }) {
-  const tabs = ([
+  const tabs = [
     ["scheduled", "Scheduled", scheduled],
     ["done", "Last week", done],
-  ] as const).filter(([, , rows]) => rows.length > 0);
-  if (!tabs.length) return null;
-  const active = tabs.find(([id]) => id === tab) ?? tabs[0];
-  // Last week chosen on purpose covers the lists below as a tall panel for scanning the archive;
+  ] as const;
+  const rows = tab === "done" ? done : scheduled;
+  // Last week covers the lists below as a tall panel for scanning the archive;
   // the active tab again or Escape folds it back to Scheduled.
-  const overlay = tab === "done" && active[0] === "done";
+  const overlay = tab === "done";
   useEffect(() => {
     if (!overlay) return;
     const close = (e: KeyboardEvent) => e.key === "Escape" && onTab("scheduled");
     document.addEventListener("keydown", close);
     return () => document.removeEventListener("keydown", close);
   }, [overlay, onTab]);
+  const [icon, emptyText] = TOP_EMPTY[tab];
+  const tabsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const tabsEl = tabsRef.current;
+    if (!tabsEl) return;
+    // On wide screens the tabs share the top bar's row; a long project name would run into them.
+    const fit = () => {
+      tabsEl.style.marginLeft = "";
+      const crumb = document.querySelector<HTMLElement>(".ph-topbar .ph-crumb-row");
+      if (!crumb) return;
+      const a = crumb.getBoundingClientRect();
+      const t = tabsEl.getBoundingClientRect();
+      if (a.bottom <= t.top || t.bottom <= a.top) return;
+      const shift = a.right + 16 - t.left;
+      if (shift > 0) tabsEl.style.marginLeft = `${shift}px`;
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(document.body);
+    const crumb = document.querySelector(".ph-topbar .ph-crumb-row");
+    if (crumb) observer.observe(crumb);
+    return () => observer.disconnect();
+  });
   return (
-    <section className="ph-autos ph-group" data-ph-tab={active[0]} data-ph-overlay={overlay || undefined}>
-      <div className="ph-tabs" role="tablist">
-        {tabs.map(([id, label, rows]) => (
+    <section className="ph-autos ph-group" data-ph-tab={tab} data-ph-overlay={overlay || undefined}>
+      <div className="ph-tabs" role="tablist" ref={tabsRef}>
+        {tabs.map(([id, label, list]) => (
           <button
             key={id}
             type="button"
             role="tab"
-            aria-selected={id === active[0]}
+            aria-selected={id === tab}
             className="ph-group-title ph-tab"
             onClick={() => onTab(overlay && id === "done" ? "scheduled" : id)}
           >
-            {label} <span className="ph-count">{rows.length}</span>
+            {label}{list.length ? <> <span className="ph-count">{list.length}</span></> : null}
           </button>
         ))}
       </div>
-      <div className="ph-rows" role="tabpanel">{active[2]}</div>
+      <div className="ph-rows" role="tabpanel">
+        {rows.length ? rows : (
+          <div className="ph-tab-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              {icon}
+            </svg>
+            {emptyText}
+          </div>
+        )}
+      </div>
     </section>
   );
 }
@@ -414,6 +465,17 @@ function Group({ label, hint, count, countTone, children }: { label: string; hin
   );
 }
 
+/** The open tab follows you between project homes and back from a thread; a reload starts on Scheduled. */
+let openTopTab: TopTab = "scheduled";
+function useTopTab(): [TopTab, (tab: TopTab) => void] {
+  const [tab, setTab] = useState(openTopTab);
+  const set = useCallback((next: TopTab) => {
+    openTopTab = next;
+    setTab(next);
+  }, []);
+  return [tab, set];
+}
+
 function useNow(): number {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -444,8 +506,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
   const stripHolder = useStripHolder(topBar);
   const actionKeys = useRowActionKeys();
   const automationActions = useAutomationActions(automations.refetch);
-  // Scheduled on arrival; Last week is opened on purpose and drops over the lists below.
-  const [topTab, setTopTab] = useState<TopTab>("scheduled");
+  const [topTab, setTopTab] = useTopTab();
 
   // Page archived threads back until the Recently done window is covered.
   const archived = sidebar.experimental_archived;
