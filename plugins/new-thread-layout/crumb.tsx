@@ -327,6 +327,8 @@ export function HomeLink({ current, onHome }: { current: boolean; onHome?: () =>
       }}
     >
       <Icon name="Home" className="ph-home-icon" aria-hidden />
+      <span className="ph-home-label">Home</span>
+      {current ? null : <span className="ph-crumb-sep" aria-hidden>/</span>}
     </a>
   );
 }
