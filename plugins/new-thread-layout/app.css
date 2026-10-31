@@ -289,6 +289,22 @@ a.ph-row[data-ph-working] .ph-main {
 }
 a.ph-row[data-ph-working] .ph-main,
 a.ph-row[data-ph-working] .ph-main * { color: transparent !important; }
+/* Pinned rows are the accent: a denser title, and when running the opposite wave, full-strength
+   text with a dimming band sweeping across it. */
+a.ph-row[data-ph-pinned] .ph-title-text { font-weight: 500; }
+a.ph-row[data-ph-pinned][data-ph-working] .ph-main {
+  background: linear-gradient(
+    90deg,
+    var(--foreground) 0%,
+    var(--foreground) 35%,
+    color-mix(in oklab, var(--foreground) 35%, transparent) 50%,
+    var(--foreground) 65%,
+    var(--foreground) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
 @media (prefers-reduced-motion: reduce) {
   a.ph-row[data-ph-working] .ph-main { animation: none; background: none; }
   a.ph-row[data-ph-working] .ph-main,
