@@ -266,14 +266,13 @@ a.ph-row:hover { background: var(--state-hover, color-mix(in oklab, var(--foregr
 .ph-auto-where { min-width: 0; font-size: 12px; color: var(--muted-foreground); opacity: 0.8; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
 /* Thread rows are quiet by default (opacity: this theme's muted and foreground text are close).
-   Unread, pinned and needs-you rows are at full strength; running rows too, with a shimmer on the title. */
+   Unread, pinned, needs-you and running rows are at full strength (running ones show bb's spinner). */
 a.ph-row:not(.ph-auto-row) { opacity: 0.5; transition: opacity 120ms; }
 a.ph-row[data-ph-loud],
 a.ph-row[data-ph-working],
 .ph-row-wrap:hover > a.ph-row,
 .ph-row-wrap[data-ph-menu-open] > a.ph-row { opacity: 1; }
-/* Pinned rows are the accent: a denser title, and when running the opposite wave, full-strength
-   text with a dimming band sweeping across it. */
+/* Pinned rows are the accent: a denser title. */
 a.ph-row[data-ph-pinned] .ph-title-text { font-weight: 500; }
 
 /* Second line: the agent's words (reply or thought) follow its provider's mark, monochrome. */
@@ -364,7 +363,7 @@ a.ph-row[data-ph-pinned] .ph-title-text { font-weight: 500; }
 .ph-home-icon { width: 15px; height: 15px; }
 
 /* Home: the projects as tabs after the home icon, in the thread list's order. Quiet unless
-   something unread or waiting is in them; a working project shimmers. */
+   something unread or waiting is in them. */
 /* At home: a row of projects right above the composer. */
 .ph-projects-holder { padding: 0 0.25rem 0.5rem; }
 .ph-projects {
