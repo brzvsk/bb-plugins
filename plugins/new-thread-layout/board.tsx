@@ -24,8 +24,10 @@ import { ThreadRowActions, actionTarget, useRowActionKeys } from "./actions";
 
 const TOP_TAB_KEY = "new-thread-layout:top-tab";
 
-function previewLine(p: Preview | null | undefined): string {
+function previewText(p: Preview | null | undefined): string {
   if (!p) return "";
+  if (p.kind === "user") return `You: ${p.text}`;
+  if (p.kind === "thinking") return `Thinking: ${p.text}`;
   return p.text;
 }
 
@@ -39,8 +41,8 @@ function Row({ row, preview, now, onOpen, actionKeys }: { row: BoardRow; preview
   const t = row.thread as PluginSidebarThread;
   const rowStatus = useSidebarThreadRowStatus(t.id);
   const second = t.isArchived
-    ? [t.archivedAt ? `Done ${formatAgo(t.archivedAt, now)}` : "Done", previewLine(preview)].filter(Boolean).join(" · ")
-    : previewLine(preview);
+    ? [t.archivedAt ? `Done ${formatAgo(t.archivedAt, now)}` : "Done", previewText(preview)].filter(Boolean).join(" · ")
+    : previewText(preview);
   const meta = row.children ? `${row.children} child` : "";
   return (
     <ThreadRowActions thread={t} keys={actionKeys}>
@@ -64,7 +66,7 @@ function Row({ row, preview, now, onOpen, actionKeys }: { row: BoardRow; preview
           <span className="ph-title-text"><ThreadTitle threadId={t.id} /></span>
           {meta ? <span className="ph-meta">{meta}</span> : null}
         </span>
-        {second ? <span className="ph-second">{second}</span> : null}
+        {second ? <span className="ph-second" data-ph-kind={preview?.kind}>{second}</span> : null}
       </span>
     </a>
     </ThreadRowActions>
@@ -333,7 +335,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
     [sidebar.threads, automations.data, projectId, now],
   );
   const previewTargets = useMemo(
-    () => (board ? [...board.pinned, ...board.running, ...board.inProgress, ...(topTab === "done" || !board.scheduled.length ? board.done : [])].map(r => ({ id: r.thread.id, updatedAt: r.thread.updatedAt })) : []),
+    () => (board ? [...board.pinned, ...board.running, ...board.inProgress, ...(topTab === "done" || !board.scheduled.length ? board.done : [])].map(r => ({ id: r.thread.id, updatedAt: r.thread.updatedAt, live: r.working })) : []),
     [board, topTab],
   );
   const previews = usePreviews(sdk.threads, previewTargets);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildBoard, statusOf, type BoardThread } from "./model";
 import { formatAgo, formatNextRun, firstLine } from "./format";
-import { lastPreview } from "./previews";
+import { latestActivity } from "./previews";
 
 const NOW = Date.parse("2026-10-30T12:00:00+03:00");
 const H = 60 * 60 * 1000;
@@ -130,8 +130,23 @@ describe("format", () => {
     expect(firstLine("\n\n  Hello   world\nmore")).toBe("Hello world");
     expect(firstLine("**Пилот закончен.** Ни `uv`")).toBe("Пилот закончен. Ни uv");
     expect(firstLine("## Title")).toBe("Title");
-    expect(lastPreview([{ role: "user", preview: "hi" }, { role: "assistant", preview: "\n" }])).toEqual({ role: "user", text: "hi" });
-    expect(lastPreview([])).toBeNull();
-    expect(lastPreview([{ role: "user", preview: "сделай" }, { role: "user", preview: "[bb system] @thread:thr_x completed: READY" }])).toEqual({ role: "user", text: "сделай" });
+  });
+});
+
+describe("latestActivity", () => {
+  const turn = (text: string, extra: Record<string, unknown> = {}) => ({ type: "client/turn/requested", data: { initiator: "user", systemMessageKind: "unlabeled", input: [{ type: "text", text }], ...extra } });
+  const done = (item: Record<string, unknown>) => ({ type: "item/completed", data: { item } });
+  const started = (item: Record<string, unknown>) => ({ type: "item/started", data: { item } });
+
+  it("takes the newest of user turns, agent messages, thoughts and tool steps", () => {
+    expect(latestActivity([done({ type: "agentMessage", text: "**Готово.** Всё проверил" }), turn("сделай")])).toEqual({ kind: "agent", text: "Готово. Всё проверил" });
+    expect(latestActivity([turn("сделай"), done({ type: "agentMessage", text: "x" })])).toEqual({ kind: "user", text: "сделай" });
+    expect(latestActivity([done({ type: "reasoning", summary: [], content: ["Checking the header\n\nmore"] })])).toEqual({ kind: "thinking", text: "Checking the header" });
+    expect(latestActivity([started({ type: "commandExecution", presentation: { label: { pending: "Running command", completed: "Ran command" }, title: "npm test" } })])).toEqual({ kind: "tool", text: "Running command · npm test" });
+  });
+
+  it("skips bb notices, non-author turns and empty items", () => {
+    expect(latestActivity([turn("[bb system] @thread:thr_x completed"), turn("сам", { initiator: "agent" }), started({ type: "agentMessage", text: "" }), turn("ок")])).toEqual({ kind: "user", text: "ок" });
+    expect(latestActivity([])).toBeNull();
   });
 });
