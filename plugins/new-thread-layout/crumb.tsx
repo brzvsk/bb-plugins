@@ -62,8 +62,15 @@ function useHolders(find: () => Element[], place: (host: Element) => HTMLElement
 }
 
 const findComposeFrames = () => Array.from(document.querySelectorAll(COMPOSE_FRAME));
+const barFrames = new WeakMap<Element, Element>();
+/** The New thread screen's frame a top bar belongs to, also while the bar sits in <body>. */
+export function frameOf(bar: Element | null | undefined): Element | null {
+  if (!bar) return null;
+  return barFrames.get(bar) ?? bar.parentElement;
+}
 const placeComposeBar = (host: Element) => {
   const bar = document.createElement("div");
+  barFrames.set(bar, host);
   bar.className = "ph-topbar";
   bar.dataset.phTopbar = "";
   host.prepend(bar);
@@ -233,13 +240,23 @@ function windowRowControls(card: DOMRect, frame: Element): DOMRect[] {
  */
 export function useChromeRowPlacement(topBar: HTMLElement | null): void {
   useEffect(() => {
-    const frame = topBar?.parentElement;
+    const frame = frameOf(topBar);
     if (!topBar || !frame) return;
     let placed = false;
+    // Electron builds the window's drag region from every app-region rule in document order, so a
+    // no-drag control inside the card loses to bb's title bar coming later. In the window row the
+    // bar therefore lives at the end of <body>, and goes back to the top of the frame afterwards.
+    const toBody = () => {
+      if (topBar.parentElement !== document.body) document.body.append(topBar);
+    };
+    const toFrame = () => {
+      if (topBar.parentElement !== frame && frame.isConnected) frame.prepend(topBar);
+    };
     const reset = () => {
       if (!placed) return;
       topBar.removeAttribute("style");
       frame.removeAttribute("data-ph-chrome");
+      toFrame();
       placed = false;
     };
     const place = () => {
@@ -259,6 +276,7 @@ export function useChromeRowPlacement(topBar: HTMLElement | null): void {
       topBar.style.transform = "translateY(-50%)";
       topBar.style.zIndex = "60";
       frame.setAttribute("data-ph-chrome", "");
+      toBody();
       placed = true;
     };
     place();
@@ -269,6 +287,7 @@ export function useChromeRowPlacement(topBar: HTMLElement | null): void {
       window.removeEventListener("resize", place);
       topBar.removeAttribute("style");
       frame.removeAttribute("data-ph-chrome");
+      toFrame();
     };
   }, [topBar]);
 }

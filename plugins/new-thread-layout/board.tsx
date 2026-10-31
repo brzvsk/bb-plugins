@@ -20,7 +20,7 @@ import { automationActionsContract, automationsContract, type Automation } from 
 import { formatAgo, formatNextRun, formatStamp, readDraft } from "./format";
 import { buildBoard, DONE_WINDOW_MS, type BoardRow, type ScheduledRow } from "./model";
 import { usePreviews, type Preview } from "./previews";
-import { HomeLink, useChromeRowPlacement, useComposeTopBar } from "./crumb";
+import { HomeLink, frameOf, useChromeRowPlacement, useComposeTopBar } from "./crumb";
 import { attachSwipeBack } from "./swipe";
 import { ThreadRowActions, actionTarget, useProjectArrangement, useRowActionKeys } from "./actions";
 import { projectTabs } from "./projects";
@@ -255,7 +255,10 @@ function useStripHolder(topBar: HTMLElement | null): HTMLElement | null {
     if (!topBar) return;
     const el = document.createElement("div");
     el.className = "ph-autos-holder";
-    topBar.after(el);
+    // Right after the bar inside the frame; while the bar sits in <body> (window row), first in the frame.
+    const frame = frameOf(topBar);
+    if (topBar.parentElement === frame) topBar.after(el);
+    else frame?.prepend(el);
     setHolder(el);
     return () => {
       el.remove();
@@ -363,7 +366,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
   useEffect(() => {
     if (atHome || !personal) return;
     return attachSwipeBack(document, {
-      area: () => topBar?.parentElement ?? null,
+      area: () => frameOf(topBar),
       onBack: () => void composer.setSelection({ projectId: personal.id }),
     });
   }, [atHome, personal?.id, topBar, composer]);
@@ -375,7 +378,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
     [atHome, sidebar.projects, sidebar.threads, arrangement.order, arrangement.hidden],
   );
   useEffect(() => {
-    const frame = topBar?.parentElement;
+    const frame = frameOf(topBar);
     if (!frame) return;
     if (atHome) frame.setAttribute("data-ph-home", "");
     else frame.removeAttribute("data-ph-home");
