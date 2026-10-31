@@ -29,7 +29,6 @@ import { rememberOrigin } from "./origin";
 import { PinToggle, ThreadRowActions, actionTarget, useProjectArrangement, useRowActionKeys } from "./actions";
 import { hiddenProjects, projectTabs } from "./projects";
 
-const TOP_TAB_KEY = "new-thread-layout:top-tab";
 
 function previewText(p: Preview | null | undefined): string {
   if (!p) return "";
@@ -287,8 +286,17 @@ function TopPanel({ tab, onTab, scheduled, done }: { tab: TopTab; onTab: (tab: T
   ] as const).filter(([, , rows]) => rows.length > 0);
   if (!tabs.length) return null;
   const active = tabs.find(([id]) => id === tab) ?? tabs[0];
+  // Last week chosen on purpose covers the lists below as a tall panel for scanning the archive;
+  // the active tab again or Escape folds it back to Scheduled.
+  const overlay = tab === "done" && active[0] === "done";
+  useEffect(() => {
+    if (!overlay) return;
+    const close = (e: KeyboardEvent) => e.key === "Escape" && onTab("scheduled");
+    document.addEventListener("keydown", close);
+    return () => document.removeEventListener("keydown", close);
+  }, [overlay, onTab]);
   return (
-    <section className="ph-autos ph-group" data-ph-tab={active[0]}>
+    <section className="ph-autos ph-group" data-ph-tab={active[0]} data-ph-overlay={overlay || undefined}>
       <div className="ph-tabs" role="tablist">
         {tabs.map(([id, label, rows]) => (
           <button
@@ -297,7 +305,7 @@ function TopPanel({ tab, onTab, scheduled, done }: { tab: TopTab; onTab: (tab: T
             role="tab"
             aria-selected={id === active[0]}
             className="ph-group-title ph-tab"
-            onClick={() => onTab(id)}
+            onClick={() => onTab(overlay && id === "done" ? "scheduled" : id)}
           >
             {label} <span className="ph-count">{rows.length}</span>
           </button>
@@ -415,26 +423,6 @@ function useNow(): number {
   return now;
 }
 
-function useStoredTab(key: string, initial: TopTab): [TopTab, (tab: TopTab) => void] {
-  const [value, setValue] = useState<TopTab>(() => {
-    try {
-      const v = localStorage.getItem(key);
-      return v === "done" || v === "scheduled" ? v : initial;
-    } catch {
-      return initial;
-    }
-  });
-  const set = (tab: TopTab) => {
-    setValue(tab);
-    try {
-      localStorage.setItem(key, tab);
-    } catch {
-      // storage unavailable; keep in memory
-    }
-  };
-  return [value, set];
-}
-
 export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectionProps) {
   // The slot's projectId is null on the plain compose route; the composer's selected project is the one in view.
   const composer = useComposer();
@@ -456,7 +444,8 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
   const stripHolder = useStripHolder(topBar);
   const actionKeys = useRowActionKeys();
   const automationActions = useAutomationActions(automations.refetch);
-  const [topTab, setTopTab] = useStoredTab(TOP_TAB_KEY, "scheduled");
+  // Scheduled on arrival; Last week is opened on purpose and drops over the lists below.
+  const [topTab, setTopTab] = useState<TopTab>("scheduled");
 
   // Page archived threads back until the Recently done window is covered.
   const archived = sidebar.experimental_archived;
