@@ -23,8 +23,6 @@ Uses BB DOM attributes (`root-compose-main-panel`, `root-compose-compact-home`, 
 
 Build: `npm ci --include=dev --ignore-scripts`, `npm run typecheck`, `npm test`, `npm run build`. Install from the repository root: `bb plugin install . --plugin new-thread-layout`.
 
-When a project's name starts with an emoji, that emoji frames the composer on the project home and in its threads: a 45° trail off the top-left and bottom-right corners, from large and medium-bright to small and faint (left out where there is no room beside the composer).
-
 ## Smoke check
 
 `smoke.js` is a read-only live check for a headless `bb browser-automation` session (usage in its header). It walks Home, the Last week overlay, an in-place project switch and a thread's way back, and names the bb hook each check depends on, so a bb update that breaks one shows which.

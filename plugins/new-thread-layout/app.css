@@ -547,12 +547,3 @@ a.ph-row[data-ph-pinned]:is([data-ph-working], [data-ph-background]) .ph-main .p
   a.ph-row[data-ph-pinned]:is([data-ph-working], [data-ph-background]) .ph-main,
   a.ph-row[data-ph-pinned]:is([data-ph-working], [data-ph-background]) .ph-main * { color: inherit !important; }
 }
-
-/* The project's emoji off the composer's top-left and bottom-right corners, fading outward. */
-.ph-emoji-trail { position: absolute; inset: 0; pointer-events: none; }
-.ph-emoji-trail > span {
-  position: absolute;
-  line-height: 1;
-  filter: saturate(0.55);
-  user-select: none;
-}

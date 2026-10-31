@@ -26,7 +26,6 @@ import { useAuthorTouched, usePreviews, type Preview } from "./previews";
 import { HomeLink, frameOf, useChromeRowPlacement, useComposeTopBar } from "./crumb";
 import { attachSwipeBack } from "./swipe";
 import { rememberOrigin } from "./origin";
-import { leadingEmoji, useEmojiFrame } from "./frame";
 import { PinToggle, ThreadRowActions, actionTarget, useProjectArrangement, useRowActionKeys } from "./actions";
 import { hiddenProjects, projectTabs } from "./projects";
 
@@ -590,10 +589,6 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
       target: () => ({ home: true }),
     });
   }, [atHome, personal?.id, topBar, composer]);
-
-  // A project's emoji frames the composer, so the project in view reads at a glance; Home has none.
-  const frameScope = useMemo(() => (topBar ? () => frameOf(topBar) ?? null : null), [topBar]);
-  useEmojiFrame(atHome ? null : leadingEmoji(project?.name), frameScope);
 
   // At home the top bar lists the projects, like tabs, in the thread list's order.
   const arrangement = useProjectArrangement(projectId);
