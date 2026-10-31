@@ -540,9 +540,18 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
   }, [allAutomationList, sidebar.threads]);
   const touched = useAuthorTouched(sdk.threads, boundThreads, now, CONTINUE_WINDOW_MS);
   const involved = useMemo(() => new Set([...draftIds, ...touched]), [draftIds, touched]);
+  // Until this project's own list arrives, its automations from the overview fill in, so the schedule
+  // does not blink empty when switching projects; a list still held from the previous project is filtered out.
+  const projectAutomations = useMemo(
+    () =>
+      (automations.data ?? allAutomations.data?.automations.map(e => e.automation) ?? []).filter(
+        a => a.projectId === projectId,
+      ),
+    [automations.data, allAutomations.data, projectId],
+  );
   const board = useMemo(
-    () => (projectId ? buildBoard(sidebar.threads, automations.data ?? [], projectId, now, { involved }) : null),
-    [sidebar.threads, automations.data, projectId, now, involved],
+    () => (projectId ? buildBoard(sidebar.threads, projectAutomations, projectId, now, { involved }) : null),
+    [sidebar.threads, projectAutomations, projectId, now, involved],
   );
   // A swipe back from the thread returns to the screen it was opened from (see origin.ts).
   const atHomeRef = useRef(false);
@@ -558,6 +567,9 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
   const goHome = () => {
     if (personal) void composer.setSelection({ projectId: personal.id });
   };
+  // Home and project homes are one screen adapting to the selected project: switching the composer's
+  // project keeps it mounted, where a route change would tear the page down to bb's skeleton.
+  const goProject = (id: string) => void composer.setSelection({ projectId: id });
   // Swipe right on a project's New thread screen goes back to the home screen.
   useEffect(() => {
     if (atHome || !personal) return;
@@ -637,7 +649,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
                   onClick={e => {
                     if (!plainClick(e)) return;
                     e.preventDefault();
-                    navigate.toProject(tab.id);
+                    goProject(tab.id);
                   }}
                 >
                   {tab.unread ? <span className="ph-project-dot" aria-hidden /> : null}
@@ -653,7 +665,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
                   })()}
                 </a>
               ))}
-              <MoreProjects projects={more} onOpen={id => navigate.toProject(id)} />
+              <MoreProjects projects={more} onOpen={goProject} />
             </span>,
           tabsHolder,
         )
@@ -672,7 +684,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
               onClick={e => {
                 if (!plainClick(e)) return;
                 e.preventDefault();
-                navigate.toProject(project.id);
+                goProject(project.id);
               }}
             >
               <span className="ph-crumb-name">{project.name}</span>
