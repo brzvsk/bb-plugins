@@ -352,3 +352,10 @@ a.ph-row[data-ph-pinned][data-ph-working] .ph-main {
 /* An unsent draft on the second line, messenger style. */
 .ph-draft-label { color: var(--destructive, #e5484d); }
 a.ph-row[data-ph-working] .ph-main .ph-draft-label { color: var(--destructive, #e5484d) !important; }
+
+/* The unread dot in blue, a touch larger, on Project Home only (bb's own glyph, matched by its label). */
+.ph-glyph [aria-label="Unread thread succeeded"] {
+  width: 7px;
+  height: 7px;
+  background: #3b82f6;
+}
