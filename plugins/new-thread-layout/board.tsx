@@ -24,7 +24,7 @@ import { HomeLink, frameOf, useChromeRowPlacement, useComposeTopBar } from "./cr
 import { attachSwipeBack } from "./swipe";
 import { rememberOrigin } from "./origin";
 import { PinToggle, ThreadRowActions, actionTarget, useProjectArrangement, useRowActionKeys } from "./actions";
-import { projectTabs } from "./projects";
+import { hiddenProjects, projectTabs } from "./projects";
 
 const TOP_TAB_KEY = "new-thread-layout:top-tab";
 
@@ -259,6 +259,52 @@ function TopPanel({ tab, onTab, scheduled, done }: { tab: TopTab; onTab: (tab: T
   );
 }
 
+/** "+" at the end of home's project row: the projects hidden in the thread list, like its "More". */
+function MoreProjects({ projects, onOpen }: { projects: { id: string; name: string; href: string }[]; onOpen: (id: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: Event) => {
+      if (e instanceof KeyboardEvent ? e.key === "Escape" : !ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", close, true);
+    document.addEventListener("keydown", close, true);
+    return () => {
+      document.removeEventListener("pointerdown", close, true);
+      document.removeEventListener("keydown", close, true);
+    };
+  }, [open]);
+  if (!projects.length) return null;
+  return (
+    <span className="ph-more" ref={ref}>
+      <button type="button" className="ph-project-tab ph-more-button" aria-label="More projects" title="More projects" aria-expanded={open} onClick={() => setOpen(o => !o)}>
+        <Icon name="Plus" className="ph-more-icon" aria-hidden />
+      </button>
+      {open ? (
+        <span className="ph-more-menu" role="menu">
+          {projects.map(p => (
+            <a
+              key={p.id}
+              role="menuitem"
+              className="ph-more-item"
+              href={p.href}
+              onClick={e => {
+                if (!plainClick(e)) return;
+                e.preventDefault();
+                setOpen(false);
+                onOpen(p.id);
+              }}
+            >
+              {p.name}
+            </a>
+          ))}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 /** A holder at the top of the sticky composer block of the given New thread frame. */
 function useComposerTopHolder(frame: Element | null): HTMLElement | null {
   const [holder, setHolder] = useState<HTMLElement | null>(null);
@@ -459,6 +505,10 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
 
   // At home the projects sit right above the composer, within thumb's reach of a new message.
   const tabsHolder = useComposerTopHolder(atHome ? frameOf(topBar) : null);
+  const more = useMemo(
+    () => (atHome ? hiddenProjects(sidebar.projects, arrangement.hidden) : []),
+    [atHome, sidebar.projects, arrangement.hidden],
+  );
   const projectTabsRow =
     atHome && tabs.length && tabsHolder
       ? createPortal(
@@ -469,7 +519,6 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
                   className="ph-project-tab"
                   href={tab.href}
                   data-ph-unread={tab.unread || undefined}
-                  data-ph-running={tab.running || undefined}
                   data-ph-attention={tab.attention || undefined}
                   title={[tab.name, tab.attention ? "needs you" : null, tab.running ? "working" : null, tab.unread ? "unread" : null].filter(Boolean).join(" · ")}
                   onClick={e => {
@@ -491,6 +540,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
                   })()}
                 </a>
               ))}
+              <MoreProjects projects={more} onOpen={id => navigate.toProject(id)} />
             </span>,
           tabsHolder,
         )

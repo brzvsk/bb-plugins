@@ -43,3 +43,15 @@ export function projectTabs(
       };
     });
 }
+
+/** The projects hidden in the thread list (its "More"), by name: reachable from home's "+" menu. */
+export function hiddenProjects(
+  projects: readonly { id: string; name: string; href: string; isPersonal: boolean }[],
+  hidden: readonly string[],
+): { id: string; name: string; href: string }[] {
+  const hiddenIds = new Set(hidden.filter(g => g.startsWith("project:")).map(g => g.slice(8)));
+  return projects
+    .filter(p => !p.isPersonal && hiddenIds.has(p.id))
+    .sort((a, b) => a.name.replace(/^\P{L}+/u, "").localeCompare(b.name.replace(/^\P{L}+/u, "")))
+    .map(({ id, name, href }) => ({ id, name, href }));
+}
