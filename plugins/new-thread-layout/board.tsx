@@ -27,7 +27,6 @@ const TOP_TAB_KEY = "new-thread-layout:top-tab";
 function previewText(p: Preview | null | undefined): string {
   if (!p) return "";
   if (p.kind === "user") return `You: ${p.text}`;
-  if (p.kind === "thinking") return `Thinking: ${p.text}`;
   return p.text;
 }
 

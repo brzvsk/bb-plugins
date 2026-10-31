@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { firstLine } from "./format";
 
-/** What the second line shows: the newest thing that happened in the thread. */
+/** What the second line shows: the newest thing said in the thread. */
 export interface Preview {
-  kind: "user" | "agent" | "thinking" | "tool";
+  kind: "user" | "agent" | "thinking";
   text: string;
 }
 
@@ -16,7 +16,12 @@ interface EventsClient {
   events: { list(args: { threadId: string; order?: "asc" | "desc"; limit?: string; types?: readonly [string, ...string[]] }): Promise<readonly EventRow[]> };
 }
 
-const EVENT_TYPES = ["client/turn/requested", "item/completed", "item/started"] as const;
+const EVENT_TYPES = ["client/turn/requested", "item/completed", "item/reasoning/textDelta", "item/reasoning/summaryTextDelta", "item/agentMessage/delta"] as const;
+const DELTA_KIND: Record<string, Preview["kind"]> = {
+  "item/reasoning/textDelta": "thinking",
+  "item/reasoning/summaryTextDelta": "thinking",
+  "item/agentMessage/delta": "agent",
+};
 /** bb's own notices (child completions and the like) arrive as user turns: "[bb system] …". */
 const SYSTEM_NOTICE = /^\[bb[ \]]/i;
 
@@ -24,21 +29,41 @@ type Obj = Record<string, unknown>;
 const obj = (v: unknown): Obj | null => (v && typeof v === "object" ? (v as Obj) : null);
 const str = (v: unknown): string => (typeof v === "string" ? v : "");
 
-function presentation(item: Obj, pending: boolean): string | null {
-  const p = obj(item.presentation);
-  if (!p) return null;
-  const label = obj(p.label);
-  const verb = str(label?.[pending ? "pending" : "completed"]) || str(label?.completed) || str(label?.pending);
-  const title = firstLine(str(p.title));
-  const text = [verb, title].filter(Boolean).join(" · ");
-  return text || null;
-}
-
-/** The newest user turn, agent message, thought or tool step among events listed newest first. */
+/**
+ * The newest author turn, agent message or thought among events listed newest first. Tool steps
+ * are skipped. A thought or reply still streaming is pieced together from its deltas; one with no
+ * text yet gives way to the event before it.
+ */
 export function latestActivity(eventsNewestFirst: readonly EventRow[]): Preview | null {
+  let streaming: { itemId: string; kind: Preview["kind"]; parts: string[] } | null = null;
+  const flush = (): Preview | null => {
+    if (!streaming) return null;
+    const text = firstLine(streaming.parts.slice().reverse().join(""));
+    const kind = streaming.kind;
+    streaming = null;
+    return text ? { kind, text } : null;
+  };
   for (const e of eventsNewestFirst) {
     const data = obj(e.data);
     if (!data) continue;
+    const deltaKind = DELTA_KIND[e.type];
+    if (deltaKind) {
+      const itemId = str(data.itemId);
+      if (streaming && streaming.itemId !== itemId) {
+        const done = flush();
+        if (done) return done;
+      }
+      streaming ??= { itemId, kind: deltaKind, parts: [] };
+      streaming.parts.push(str(data.delta));
+      continue;
+    }
+    const item = obj(data.item);
+    // The completed item of the deltas being collected supersedes them; any other event ends them.
+    if (streaming && !(e.type === "item/completed" && item && str(item.id) === streaming.itemId)) {
+      const done = flush();
+      if (done) return done;
+    }
+    streaming = null;
     if (e.type === "client/turn/requested") {
       if (data.initiator !== "user") continue;
       const kind = str(data.systemMessageKind);
@@ -48,29 +73,17 @@ export function latestActivity(eventsNewestFirst: readonly EventRow[]): Preview 
       if (text && !SYSTEM_NOTICE.test(text)) return { kind: "user", text };
       continue;
     }
-    const item = obj(data.item);
     if (!item) continue;
-    const started = e.type === "item/started";
-    switch (item.type) {
-      case "agentMessage": {
-        const text = firstLine(str(item.text));
-        if (text && !started) return { kind: "agent", text };
-        continue;
-      }
-      case "reasoning": {
-        const parts = [...(Array.isArray(item.summary) ? item.summary : []), ...(Array.isArray(item.content) ? item.content : [])];
-        const text = firstLine(parts.map(str).filter(Boolean).join("\n"));
-        if (text) return { kind: "thinking", text };
-        if (started) return { kind: "thinking", text: "…" };
-        continue;
-      }
-      default: {
-        const text = presentation(item, started);
-        if (text) return { kind: "tool", text };
-      }
+    if (item.type === "agentMessage") {
+      const text = firstLine(str(item.text));
+      if (text) return { kind: "agent", text };
+    } else if (item.type === "reasoning") {
+      const parts = [...(Array.isArray(item.summary) ? item.summary : []), ...(Array.isArray(item.content) ? item.content : [])];
+      const text = firstLine(parts.map(str).filter(Boolean).join("\n"));
+      if (text) return { kind: "thinking", text };
     }
   }
-  return null;
+  return flush();
 }
 
 const CONCURRENCY = 4;
@@ -115,7 +128,7 @@ export function usePreviews(client: EventsClient, threads: readonly { id: string
       if (!t || !mounted.current) return;
       inFlight.current.add(t.id);
       try {
-        const events = await client.events.list({ threadId: t.id, order: "desc", limit: "60", types: EVENT_TYPES });
+        const events = await client.events.list({ threadId: t.id, order: "desc", limit: "80", types: EVENT_TYPES });
         if (!mounted.current) return;
         loaded.current.set(t.id, t.updatedAt);
         const preview = latestActivity(events);

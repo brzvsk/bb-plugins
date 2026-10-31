@@ -312,6 +312,5 @@ a.ph-row[data-ph-pinned][data-ph-working] .ph-main {
   a.ph-row[data-ph-working] .ph-main * { color: inherit !important; }
 }
 
-/* Second line by kind: the author's turn, the agent's reply, its thinking, a tool step. */
+/* Second line by kind: the author's turn ("You: …"), the agent's reply, its thinking in italics. */
 .ph-second[data-ph-kind="thinking"] { font-style: italic; }
-.ph-second[data-ph-kind="tool"] { font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; }

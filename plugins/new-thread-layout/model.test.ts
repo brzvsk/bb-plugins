@@ -136,17 +136,24 @@ describe("format", () => {
 describe("latestActivity", () => {
   const turn = (text: string, extra: Record<string, unknown> = {}) => ({ type: "client/turn/requested", data: { initiator: "user", systemMessageKind: "unlabeled", input: [{ type: "text", text }], ...extra } });
   const done = (item: Record<string, unknown>) => ({ type: "item/completed", data: { item } });
-  const started = (item: Record<string, unknown>) => ({ type: "item/started", data: { item } });
+  const delta = (type: string, itemId: string, text: string) => ({ type, data: { itemId, delta: text } });
 
-  it("takes the newest of user turns, agent messages, thoughts and tool steps", () => {
-    expect(latestActivity([done({ type: "agentMessage", text: "**Готово.** Всё проверил" }), turn("сделай")])).toEqual({ kind: "agent", text: "Готово. Всё проверил" });
-    expect(latestActivity([turn("сделай"), done({ type: "agentMessage", text: "x" })])).toEqual({ kind: "user", text: "сделай" });
-    expect(latestActivity([done({ type: "reasoning", summary: [], content: ["Checking the header\n\nmore"] })])).toEqual({ kind: "thinking", text: "Checking the header" });
-    expect(latestActivity([started({ type: "commandExecution", presentation: { label: { pending: "Running command", completed: "Ran command" }, title: "npm test" } })])).toEqual({ kind: "tool", text: "Running command · npm test" });
+  it("takes the newest of author turns, agent messages and thoughts, skipping tool steps", () => {
+    expect(latestActivity([done({ type: "agentMessage", id: "a", text: "**Готово.** Всё проверил" }), turn("сделай")])).toEqual({ kind: "agent", text: "Готово. Всё проверил" });
+    expect(latestActivity([turn("сделай"), done({ type: "agentMessage", id: "a", text: "x" })])).toEqual({ kind: "user", text: "сделай" });
+    expect(latestActivity([done({ type: "commandExecution", id: "c", presentation: { title: "npm test" } }), done({ type: "reasoning", id: "r", summary: [], content: ["Checking the header\n\nmore"] })])).toEqual({ kind: "thinking", text: "Checking the header" });
+  });
+
+  it("pieces a streaming thought or reply together and falls back while it has no text", () => {
+    const streaming = [delta("item/reasoning/textDelta", "r2", " the header"), delta("item/reasoning/textDelta", "r2", "Checking"), done({ type: "agentMessage", id: "a1", text: "раньше" })];
+    expect(latestActivity(streaming)).toEqual({ kind: "thinking", text: "Checking the header" });
+    expect(latestActivity([delta("item/agentMessage/delta", "a2", "Почти"), done({ type: "agentMessage", id: "a1", text: "раньше" })])).toEqual({ kind: "agent", text: "Почти" });
+    expect(latestActivity([delta("item/reasoning/textDelta", "r3", "  "), done({ type: "agentMessage", id: "a1", text: "раньше" })])).toEqual({ kind: "agent", text: "раньше" });
+    expect(latestActivity([done({ type: "reasoning", id: "r4", content: ["Целиком"] }), delta("item/reasoning/textDelta", "r4", "Цел")])).toEqual({ kind: "thinking", text: "Целиком" });
   });
 
   it("skips bb notices, non-author turns and empty items", () => {
-    expect(latestActivity([turn("[bb system] @thread:thr_x completed"), turn("сам", { initiator: "agent" }), started({ type: "agentMessage", text: "" }), turn("ок")])).toEqual({ kind: "user", text: "ок" });
+    expect(latestActivity([turn("[bb system] @thread:thr_x completed"), turn("сам", { initiator: "agent" }), done({ type: "agentMessage", id: "e", text: "" }), turn("ок")])).toEqual({ kind: "user", text: "ок" });
     expect(latestActivity([])).toBeNull();
   });
 });
