@@ -9,8 +9,13 @@ export interface SwipeBackOptions {
   /** The element the swipe must start in; null while the screen has none. */
   area(): Element | null;
   onBack(): void;
+  /** Where the swipe goes, shown beside the arrow before the fingers lift: the home icon or a name. */
+  target?(): { home: true } | { name: string } | null;
   now?: () => number;
 }
+
+const HOME_SVG =
+  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>';
 
 const THRESHOLD = 160;
 const GAP = 220;
@@ -62,6 +67,8 @@ export function attachSwipeBack(doc: Document, opts: SwipeBackOptions): () => vo
   let mode: "idle" | "deciding" | "gesture" | "ignored" | "done" = "idle";
   let indicator: HTMLDivElement | null = null;
   let clip: HTMLDivElement | null = null;
+  let label: HTMLDivElement | null = null;
+  let labelKey = "";
   let hideTimer: ReturnType<typeof setTimeout> | undefined;
   let glide = 0;
   let prev = 0;
@@ -83,9 +90,18 @@ export function attachSwipeBack(doc: Document, opts: SwipeBackOptions): () => vo
       "transition:opacity .15s,background-color .12s;opacity:0;";
     el.innerHTML =
       '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12H5M11 5l-7 7 7 7"/></svg>';
+    const tag = doc.createElement("div");
+    tag.setAttribute("data-ph-swipe-target", "");
+    tag.style.cssText =
+      "position:absolute;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:6px;" +
+      "height:30px;padding:0 12px;border-radius:999px;color:#fff;font:500 13px/1 system-ui,-apple-system,sans-serif;" +
+      "white-space:nowrap;transition:opacity .15s,background-color .12s;opacity:0;";
     clip.appendChild(el);
+    clip.appendChild(tag);
     doc.body.appendChild(clip);
     indicator = el;
+    label = tag;
+    labelKey = "";
     return el;
   };
   const show = (progress: number) => {
@@ -101,11 +117,26 @@ export function attachSwipeBack(doc: Document, opts: SwipeBackOptions): () => vo
     el.style.left = `${-SIZE + p * (SIZE / 2)}px`;
     el.style.opacity = String(Math.min(1, p * 2));
     el.style.backgroundColor = p >= 1 ? "rgba(24,24,24,.92)" : "rgba(60,60,60,.55)";
+    // The destination rides beside the arrow, so it is clear where the swipe goes before letting go.
+    const target = opts.target?.() ?? null;
+    if (label) {
+      const key = !target ? "" : "home" in target ? "home" : `name:${target.name}`;
+      if (key !== labelKey) {
+        labelKey = key;
+        if (!target) label.textContent = "";
+        else if ("home" in target) label.innerHTML = HOME_SVG + "<span>Home</span>";
+        else label.textContent = target.name;
+      }
+      label.style.left = `${p * (SIZE / 2) + 10}px`;
+      label.style.opacity = target ? String(Math.min(1, p * 1.6)) : "0";
+      label.style.backgroundColor = p >= 1 ? "rgba(24,24,24,.92)" : "rgba(60,60,60,.55)";
+    }
   };
   const hide = (delay: number) => {
     clearTimeout(hideTimer);
     hideTimer = setTimeout(() => {
       if (indicator) indicator.style.opacity = "0";
+      if (label) label.style.opacity = "0";
     }, delay);
   };
   const release = () => {

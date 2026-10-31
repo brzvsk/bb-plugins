@@ -127,6 +127,12 @@ export function ThreadProjectCrumb() {
         if (originOf(threadId) === "home" && personal) navigate.toCompose({ projectId: personal.id });
         else navigate.toProject(projectId);
       },
+      target: () => {
+        const personal = projects.find(p => p.isPersonal);
+        if ((originOf(threadId) === "home" && personal) || projectId === personal?.id) return { home: true };
+        const name = projects.find(p => p.id === projectId)?.name;
+        return name ? { name } : null;
+      },
     });
   }, [threadId, projectId, navigate, projects]);
   const maxHolders = useHolders(findPanelTabStrips, placePanelNav);

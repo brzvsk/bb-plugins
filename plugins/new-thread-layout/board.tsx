@@ -259,6 +259,25 @@ function TopPanel({ tab, onTab, scheduled, done }: { tab: TopTab; onTab: (tab: T
   );
 }
 
+/** A holder at the top of the sticky composer block of the given New thread frame. */
+function useComposerTopHolder(frame: Element | null): HTMLElement | null {
+  const [holder, setHolder] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!frame) return;
+    const block = frame.querySelector('[data-testid="root-compose-compact-composer"]');
+    if (!block) return;
+    const el = document.createElement("div");
+    el.className = "ph-projects-holder";
+    block.prepend(el);
+    setHolder(el);
+    return () => {
+      el.remove();
+      setHolder(null);
+    };
+  }, [frame]);
+  return holder;
+}
+
 /** A holder right under the New thread screen's top bar, outside the scrolling list. */
 function useStripHolder(topBar: HTMLElement | null): HTMLElement | null {
   const [holder, setHolder] = useState<HTMLElement | null>(null);
@@ -380,6 +399,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
     return attachSwipeBack(document, {
       area: () => frameOf(topBar),
       onBack: () => void composer.setSelection({ projectId: personal.id }),
+      target: () => ({ home: true }),
     });
   }, [atHome, personal?.id, topBar, composer]);
 
@@ -437,11 +457,11 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
     return () => frame.removeAttribute("data-ph-home");
   }, [topBar, atHome]);
 
-  const crumb = topBar
-    ? createPortal(
-        <span className="ph-crumb-row">
-          <HomeLink current={atHome} onHome={goHome} />
-          {atHome && tabs.length ? (
+  // At home the projects sit right above the composer, within thumb's reach of a new message.
+  const tabsHolder = useComposerTopHolder(atHome ? frameOf(topBar) : null);
+  const projectTabsRow =
+    atHome && tabs.length && tabsHolder
+      ? createPortal(
             <span className="ph-projects" role="navigation" aria-label="Projects">
               {tabs.map(tab => (
                 <a
@@ -471,8 +491,16 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
                   })()}
                 </a>
               ))}
-            </span>
-          ) : null}
+            </span>,
+          tabsHolder,
+        )
+      : null;
+
+  const crumb = topBar
+    ? createPortal(
+        <span className="ph-crumb-row">
+          <HomeLink current={atHome} onHome={goHome} />
+
           {project && !atHome ? (
             <a
               className="ph-crumb ph-crumb-link"
@@ -499,6 +527,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
   return (
     <div className="ph-board" data-ph-board="">
       {crumb}
+      {projectTabsRow}
       {stripHolder
         ? createPortal(
             <TopPanel
