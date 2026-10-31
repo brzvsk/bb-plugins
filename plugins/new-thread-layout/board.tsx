@@ -23,7 +23,7 @@ import { usePreviews, type Preview } from "./previews";
 import { HomeLink, frameOf, useChromeRowPlacement, useComposeTopBar } from "./crumb";
 import { attachSwipeBack } from "./swipe";
 import { rememberOrigin } from "./origin";
-import { ThreadRowActions, actionTarget, useProjectArrangement, useRowActionKeys } from "./actions";
+import { PinToggle, ThreadRowActions, actionTarget, useProjectArrangement, useRowActionKeys } from "./actions";
 import { projectTabs } from "./projects";
 
 const TOP_TAB_KEY = "new-thread-layout:top-tab";
@@ -44,6 +44,7 @@ function Row({ row, preview, now, onOpen, actionKeys, project }: { row: BoardRow
   const t = row.thread as PluginSidebarThread;
   const rowStatus = useSidebarThreadRowStatus(t.id);
   const { hasUnsubmittedDraft } = useSidebarThreadDraft(t.id);
+  const hasStatus = t.isArchived || t.indicator !== "none" || !!rowStatus || hasUnsubmittedDraft;
   // Like a messenger: an unsent draft takes the second line, "Draft:" in red.
   const draft = hasUnsubmittedDraft && !t.isArchived ? readDraft(t.projectId, t.id) : null;
   const second = t.isArchived
@@ -64,8 +65,11 @@ function Row({ row, preview, now, onOpen, actionKeys, project }: { row: BoardRow
         onOpen(t);
       }}
     >
-      <span className="ph-glyph">
-        <StatusGlyph indicator={t.indicator} rowStatus={rowStatus} archived={t.isArchived} hideIdleDraftLabel />
+      <span className="ph-glyph" data-ph-status={hasStatus || undefined}>
+        <span className="ph-glyph-status">
+          <StatusGlyph indicator={t.indicator} rowStatus={rowStatus} archived={t.isArchived} hideIdleDraftLabel />
+        </span>
+        {!t.isArchived ? <PinToggle thread={t} /> : null}
       </span>
       <span className="ph-main">
         <span className="ph-title">

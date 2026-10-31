@@ -40,6 +40,33 @@ export function actionTarget(t: PluginSidebarThread): PluginThreadActionTarget {
   };
 }
 
+const PIN_KEY = "bb--core/pin";
+
+/**
+ * Pin / unpin from the row's left slot, where the status glyph sits: the glyph has priority, the
+ * pin shows on hover; without a status a pinned row keeps showing its pin.
+ */
+export function PinToggle({ thread }: { thread: PluginSidebarThread }) {
+  const [entry] = experimental_useThreadActions(actionTarget(thread), { keys: [PIN_KEY] });
+  if (!entry) return null;
+  return (
+    <button
+      type="button"
+      className="ph-pin"
+      aria-label={entry.action.label}
+      title={entry.action.label}
+      aria-pressed={thread.isPinned}
+      disabled={entry.action.disabled}
+      onClick={e => {
+        stop(e);
+        void entry.action.run();
+      }}
+    >
+      <Icon name="Pin" className="ph-pin-icon" aria-hidden />
+    </button>
+  );
+}
+
 function stop(e: React.SyntheticEvent) {
   e.preventDefault();
   e.stopPropagation();
@@ -59,7 +86,8 @@ export function ThreadRowActions({ thread, keys, children }: { thread: PluginSid
         {children}
         <span className="ph-actions">
           {quick
-            .filter(e => !e.action.choices)
+            // Pinning lives in the row's left slot (PinToggle), not among the hover actions.
+            .filter(e => !e.action.choices && e.key !== PIN_KEY)
             .map(e => (
               <button
                 key={e.key}

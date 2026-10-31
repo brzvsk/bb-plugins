@@ -447,3 +447,26 @@ a.ph-row[data-ph-working] .ph-main .ph-stamp { color: var(--muted-foreground) !i
 /* Home overview: the thread's project, muted, before its title. */
 .ph-row-project { color: var(--muted-foreground); font-weight: 400; }
 a.ph-row[data-ph-working] .ph-main .ph-row-project { color: var(--muted-foreground) !important; }
+
+/* Left slot: the status glyph first; the pin shows on hover, or stays when a pinned row has no status. */
+.ph-glyph { position: relative; }
+.ph-glyph-status { display: inline-flex; align-items: center; justify-content: center; }
+.ph-pin {
+  position: absolute;
+  inset: -4px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 0.375rem;
+  background: none;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.ph-pin-icon { width: 13px; height: 13px; }
+.ph-pin[aria-pressed="true"] { color: var(--foreground); }
+.ph-pin:hover { background: var(--state-hover, color-mix(in oklab, var(--foreground) 8%, transparent)); color: var(--foreground); }
+a.ph-row[data-ph-pinned] .ph-glyph:not([data-ph-status]) .ph-pin { display: inline-flex; }
+.ph-row-wrap:hover .ph-pin { display: inline-flex; }
+.ph-row-wrap:hover .ph-glyph-status { visibility: hidden; }
