@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildBoard, buildOverview, statusOf, type BoardThread } from "./model";
-import { formatAgo, formatNextRun, formatStamp, firstLine, readDraft } from "./format";
+import { formatAgo, formatDay, formatNextRun, formatStamp, firstLine, readDraft } from "./format";
 import { latestActivity } from "./previews";
 
 const NOW = Date.parse("2026-10-30T12:00:00+03:00");
@@ -34,7 +34,7 @@ describe("buildBoard", () => {
       thread({ id: "idle", updatedAt: NOW - H }),
       thread({ id: "child", parentThreadId: "idle" }),
       thread({ id: "done", isArchived: true, archivedAt: NOW - 3 * H }),
-      thread({ id: "old", isArchived: true, archivedAt: NOW - 60 * H }),
+      thread({ id: "old", isArchived: true, archivedAt: NOW - 8 * 24 * H }),
       thread({ id: "other", projectId: "p2" }),
       thread({ id: "hidden", isHidden: true }),
     ];
@@ -126,6 +126,12 @@ describe("format", () => {
     expect(formatStamp(NOW - 24 * H, NOW)).toBe("Thu");
     expect(formatStamp(NOW - 6 * 24 * H, NOW)).toBe("Sat");
     expect(formatStamp(NOW - 7 * 24 * H, NOW)).toBe("23 Oct");
+  });
+  it("names days for grouped lists", () => {
+    expect(formatDay(NOW - H, NOW)).toBe("Today");
+    expect(formatDay(NOW - 24 * H, NOW)).toBe("Yesterday");
+    expect(formatDay(NOW - 3 * 24 * H, NOW)).toBe("Tuesday");
+    expect(formatDay(NOW - 8 * 24 * H, NOW)).toBe("22 Oct");
   });
   it("formats how long ago", () => {
     expect(formatAgo(NOW - 20_000, NOW)).toBe("just now");
@@ -224,5 +230,6 @@ describe("buildOverview", () => {
     expect(o.running.map(r => r.thread.id).sort()).toEqual(["kidrun", "run"]);
     expect(o.recent.map(r => r.thread.id)).toEqual(["fresher", "fresh"]);
     expect(o.scheduled.map(r => r.automation.name)).toEqual(["Soon", "Later", "Paused at home"]);
+    expect(o.done.map(r => r.thread.id)).toEqual(["gone"]);
   });
 });

@@ -19,7 +19,7 @@ import {
   type PluginSidebarThread,
 } from "@get-bb/plugin-sdk/app";
 import { automationActionsContract, automationsContract, type Automation } from "./contracts";
-import { formatAgo, formatNextRun, formatStamp, readDraft } from "./format";
+import { formatDay, formatNextRun, formatStamp, formatTime, readDraft } from "./format";
 import { buildBoard, buildOverview, DONE_WINDOW_MS, type BoardRow, type ScheduledRow } from "./model";
 import { usePreviews, type Preview } from "./previews";
 import { HomeLink, frameOf, useChromeRowPlacement, useComposeTopBar } from "./crumb";
@@ -49,9 +49,7 @@ function Row({ row, preview, now, onOpen, actionKeys, project }: { row: BoardRow
   const hasStatus = t.isArchived || t.indicator !== "none" || !!rowStatus || hasUnsubmittedDraft;
   // Like a messenger: an unsent draft takes the second line, "Draft:" in red.
   const draft = hasUnsubmittedDraft && !t.isArchived ? readDraft(t.projectId, t.id) : null;
-  const second = t.isArchived
-    ? [t.archivedAt ? `Done ${formatAgo(t.archivedAt, now)}` : "Done", previewText(preview)].filter(Boolean).join(" · ")
-    : previewText(preview);
+  const second = previewText(preview);
   const meta = row.children ? `${row.children} child` : "";
   return (
     <ThreadRowActions thread={t} keys={actionKeys}>
@@ -80,7 +78,10 @@ function Row({ row, preview, now, onOpen, actionKeys, project }: { row: BoardRow
             <ThreadTitle threadId={t.id} />
           </span>
           {meta ? <span className="ph-meta">{meta}</span> : null}
-          <span className="ph-stamp">{formatStamp(t.latestAttentionAt || t.updatedAt, now)}</span>
+          {/* Archived rows sit under a day heading, so they show the time they were archived. */}
+          <span className="ph-stamp" title={t.isArchived ? "Archived" : undefined}>
+            {t.isArchived && t.archivedAt ? formatTime(t.archivedAt) : formatStamp(t.latestAttentionAt || t.updatedAt, now)}
+          </span>
         </span>
         {draft ? (
           <span className="ph-second ph-second-draft">
@@ -89,7 +90,7 @@ function Row({ row, preview, now, onOpen, actionKeys, project }: { row: BoardRow
         ) : second ? (
           <span className="ph-second" data-ph-kind={preview?.kind}>
             {/* The agent speaking (its reply or its thought), in its provider's mark, monochrome. */}
-            {!t.isArchived && (preview?.kind === "agent" || preview?.kind === "thinking") ? (
+            {preview?.kind === "agent" || preview?.kind === "thinking" ? (
               <AgentMark providerId={t.providerId} />
             ) : null}
             {second}
@@ -167,6 +168,18 @@ function ScheduleThreadActions({ thread }: { thread: PluginSidebarThread }) {
         ))}
     </>
   );
+}
+
+/** Archived rows grouped under day headings, newest day first. */
+function byDay(rows: readonly BoardRow[], now: number): [string, BoardRow[]][] {
+  const groups = new Map<string, BoardRow[]>();
+  for (const r of rows) {
+    const day = formatDay(r.thread.archivedAt ?? r.thread.updatedAt, now);
+    const list = groups.get(day) ?? [];
+    list.push(r);
+    groups.set(day, list);
+  }
+  return [...groups.entries()];
 }
 
 /** The thread's agent provider mark (Anthropic, OpenAI, …), drawn monochrome before its words. */
@@ -253,7 +266,7 @@ type TopTab = "scheduled" | "done";
 function TopPanel({ tab, onTab, scheduled, done }: { tab: TopTab; onTab: (tab: TopTab) => void; scheduled: ReactNode[]; done: ReactNode[] }) {
   const tabs = ([
     ["scheduled", "Scheduled", scheduled],
-    ["done", "Recently done", done],
+    ["done", "Last week", done],
   ] as const).filter(([, , rows]) => rows.length > 0);
   if (!tabs.length) return null;
   const active = tabs.find(([id]) => id === tab) ?? tabs[0];
@@ -507,7 +520,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
             ...board.pinned,
             ...board.running,
             ...board.inProgress,
-            ...(topTab === "done" || !board.scheduled.length ? board.done : []),
+            ...(topTab === "done" || !board.scheduled.length ? (overview ? overview.done : board.done) : []),
           ].map(r => ({ id: r.thread.id, updatedAt: r.thread.updatedAt, live: r.working }))
         : [],
     [board, topTab, overview],
@@ -605,7 +618,12 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
               scheduled={(overview ? overview.scheduled : board.scheduled).map(r => (
                 <AutomationLine key={r.automation.id} row={r} now={now} onOpen={open} actions={automationActions} project={overview ? projectLabel(r.automation.projectId) : undefined} />
               ))}
-              done={board.done.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} />)}
+              done={byDay(overview ? overview.done : board.done, now).flatMap(([day, rows]) => [
+                <div key={`day-${day}`} className="ph-day">{day}</div>,
+                ...rows.map(r => (
+                  <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} project={overview ? projectLabel(r.thread.projectId) : undefined} />
+                )),
+              ])}
             />,
             stripHolder,
           )

@@ -499,3 +499,12 @@ a.ph-row[data-ph-pinned] .ph-glyph:not([data-ph-status]) .ph-pin { display: inli
 /* The provider mark stays visible in running rows, whose text is painted by the shimmer. */
 a.ph-row[data-ph-working] .ph-main .ph-agent-mark,
 a.ph-row[data-ph-working] .ph-main .ph-agent-mark * { color: var(--foreground) !important; }
+
+/* "Last week": day headings between archived rows. */
+.ph-day {
+  padding: 0.5rem 0.5rem 0.125rem;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+.ph-day:first-child { padding-top: 0.125rem; }

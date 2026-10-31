@@ -26,6 +26,24 @@ export function formatStamp(at: number, now: number): string {
   return `${date.getDate()} ${date.toLocaleString("en-GB", { month: "short" })}`;
 }
 
+/** A day heading for grouped lists: "Today", "Yesterday", the weekday within the week, then "23 Oct". */
+export function formatDay(at: number, now: number): string {
+  const date = new Date(at);
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const days = Math.floor((today.getTime() - new Date(at).setHours(0, 0, 0, 0)) / DAY_MS);
+  if (days <= 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 7) return date.toLocaleString("en-GB", { weekday: "long" });
+  return `${date.getDate()} ${date.toLocaleString("en-GB", { month: "short" })}`;
+}
+
+/** "13:05". */
+export function formatTime(at: number): string {
+  const date = new Date(at);
+  return `${date.getHours()}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
 /** "just now", "5 min ago", "3 h ago", "yesterday", "4 days ago". */
 export function formatAgo(at: number, now: number): string {
   const diff = Math.max(0, now - at);

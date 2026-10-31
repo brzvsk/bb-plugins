@@ -54,8 +54,8 @@ export interface Board {
   done: BoardRow[];
 }
 
-/** How far back Recently done reaches. */
-export const DONE_WINDOW_MS = 48 * 60 * 60 * 1000;
+/** How far back "Last week" reaches. */
+export const DONE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 const WORKING = new Set(["active", "starting", "stopping", "provisioning", "waiting-for-host"]);
 
@@ -165,6 +165,8 @@ export interface Overview {
   recent: BoardRow[];
   /** Upcoming runs across every project, soonest first; paused ones only from home's own project. */
   scheduled: ScheduledRow[];
+  /** Threads archived within the last week across the projects and home, newest first. */
+  done: BoardRow[];
 }
 
 /**
@@ -206,5 +208,8 @@ export function buildOverview(
     .sort((a, b) => (a.nextRunAt ?? 0) - (b.nextRunAt ?? 0));
   const paused = automations.filter(a => a.enabled === false && a.projectId === homeProjectId);
   const scheduled = [...upcoming, ...paused].map(a => ({ automation: a, thread: byId.get(boundThreadId(a) ?? "") ?? null }));
-  return { needsYou, running, recent: recentRows, scheduled };
+  const done = [...projectIds, ...(homeProjectId ? [homeProjectId] : [])]
+    .flatMap(id => buildBoard(threads, [], id, now).done)
+    .sort((a, b) => (b.thread.archivedAt ?? 0) - (a.thread.archivedAt ?? 0));
+  return { needsYou, running, recent: recentRows, scheduled, done };
 }
