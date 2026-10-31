@@ -370,3 +370,22 @@ a.ph-row[data-ph-working] .ph-main .ph-draft-label { color: var(--destructive, #
   font-variant-numeric: tabular-nums;
 }
 a.ph-row[data-ph-working] .ph-main .ph-stamp { color: var(--muted-foreground) !important; }
+
+/* Home of all projects, left of the project name. */
+.ph-crumb-row { display: inline-flex; align-items: center; gap: 0.25rem; min-width: 0; }
+.ph-home {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin-left: -0.25rem;
+  border-radius: 0.375rem;
+  color: var(--muted-foreground);
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+.ph-home:hover { color: var(--foreground); background: var(--state-hover, color-mix(in oklab, var(--foreground) 6%, transparent)); }
+.ph-home[aria-current="page"] { color: var(--foreground); }
+.ph-home-icon { width: 15px; height: 15px; }

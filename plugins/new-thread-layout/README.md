@@ -9,6 +9,8 @@ On the New thread screen (wide layout):
 - the project name at the top-left of the screen, where a thread's header row sits; clicking it returns to the project (reselects it in the composer). In the macOS desktop app, where bb lifts every page header into the window's own row (traffic lights, back, forward, sidebar toggle), the name sits in that row too, centered on the traffic lights: after the window controls when they lie over the card, else at the card's inset, so it does not jump between a thread and the project home.
 - without a project, the original layout: the composer in the lower middle under a "Working on" heading whose project opens BB's own project dropdown (the native chip under the composer stays visible and works as before).
 
+The home of all projects is the New thread screen with bb's personal project ("No project"): a home icon left of the project name (top bar, thread headers, maximized panel) goes there, and a two-finger swipe right on a project's New thread screen does too. There the top bar shows the home icon alone and the board lists threads without a project.
+
 In every thread's header row, the project name precedes the title as a link; clicking it opens the project (the New thread screen with that project selected).
 
 With the right panel maximized bb hides the thread header; the same high-level navigation (project / thread title / ⋯ with bb's thread menu) then leads the panel's tab strip, followed by a separator, and disappears again when the panel is restored.

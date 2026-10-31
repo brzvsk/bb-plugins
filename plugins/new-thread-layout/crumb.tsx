@@ -140,6 +140,7 @@ export function ThreadProjectCrumb() {
         ? maxHolders.map((holder, i) =>
             createPortal(
               <span className="ph-maxnav">
+                <HomeLink current={false} />
                 <a
                   className="ph-crumb ph-crumb-link"
                   href={project.href}
@@ -174,6 +175,8 @@ export function ThreadProjectCrumb() {
         : null}
       {holders.map((holder, i) =>
         createPortal(
+          <span className="ph-crumb-row">
+          <HomeLink current={false} />
           <a
             className="ph-crumb ph-crumb-link"
             href={project.href}
@@ -186,7 +189,8 @@ export function ThreadProjectCrumb() {
           >
             <span className="ph-crumb-name">{project.name}</span>
             <span className="ph-crumb-sep" aria-hidden>/</span>
-          </a>,
+          </a>
+          </span>,
           holder,
           `${i}`,
         ),
@@ -267,4 +271,31 @@ export function useChromeRowPlacement(topBar: HTMLElement | null): void {
       frame.removeAttribute("data-ph-chrome");
     };
   }, [topBar]);
+}
+
+/**
+ * The home of all projects: the New thread screen with bb's personal project ("No project").
+ * Sits left of the project name in the top bar; on the home screen itself it is the current page.
+ */
+export function HomeLink({ current, onHome }: { current: boolean; onHome?: () => void }) {
+  const { projects } = experimental_useSidebarThreads();
+  const navigate = useBbNavigate();
+  const personal = projects.find(p => p.isPersonal) ?? null;
+  return (
+    <a
+      className="ph-home"
+      href={personal?.href ?? "/"}
+      title="All projects"
+      aria-label="All projects"
+      aria-current={current ? "page" : undefined}
+      onClick={e => {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+        e.preventDefault();
+        if (onHome) onHome();
+        else navigate.toCompose(personal ? { projectId: personal.id } : undefined);
+      }}
+    >
+      <Icon name="Home" className="ph-home-icon" aria-hidden />
+    </a>
+  );
 }

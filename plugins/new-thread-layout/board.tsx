@@ -20,7 +20,8 @@ import { automationActionsContract, automationsContract, type Automation } from 
 import { formatAgo, formatNextRun, formatStamp, readDraft } from "./format";
 import { buildBoard, DONE_WINDOW_MS, type BoardRow, type ScheduledRow } from "./model";
 import { usePreviews, type Preview } from "./previews";
-import { useChromeRowPlacement, useComposeTopBar } from "./crumb";
+import { HomeLink, useChromeRowPlacement, useComposeTopBar } from "./crumb";
+import { attachSwipeBack } from "./swipe";
 import { ThreadRowActions, actionTarget, useRowActionKeys } from "./actions";
 
 const TOP_TAB_KEY = "new-thread-layout:top-tab";
@@ -351,20 +352,40 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
   const previews = usePreviews(sdk.threads, previewTargets);
   const open: Open = t => navigate.toThread(t.id);
 
-  const crumb = topBar && project
+  // "No project" is bb's personal project: the home of all projects.
+  const personal = sidebar.projects.find(p => p.isPersonal) ?? null;
+  const atHome = !project || project.isPersonal;
+  const goHome = () => {
+    if (personal) void composer.setSelection({ projectId: personal.id });
+  };
+  // Swipe right on a project's New thread screen goes back to the home screen.
+  useEffect(() => {
+    if (atHome || !personal) return;
+    return attachSwipeBack(document, {
+      area: () => topBar?.parentElement ?? null,
+      onBack: () => void composer.setSelection({ projectId: personal.id }),
+    });
+  }, [atHome, personal?.id, topBar, composer]);
+
+  const crumb = topBar
     ? createPortal(
-        <a
-          className="ph-crumb ph-crumb-link"
-          href={project.href}
-          title={`Open ${project.name}`}
-          onClick={e => {
-            if (!plainClick(e)) return;
-            e.preventDefault();
-            navigate.toProject(project.id);
-          }}
-        >
-          <span className="ph-crumb-name">{project.name}</span>
-        </a>,
+        <span className="ph-crumb-row">
+          <HomeLink current={atHome} onHome={goHome} />
+          {project && !atHome ? (
+            <a
+              className="ph-crumb ph-crumb-link"
+              href={project.href}
+              title={`Open ${project.name}`}
+              onClick={e => {
+                if (!plainClick(e)) return;
+                e.preventDefault();
+                navigate.toProject(project.id);
+              }}
+            >
+              <span className="ph-crumb-name">{project.name}</span>
+            </a>
+          ) : null}
+        </span>,
         topBar,
       )
     : null;
