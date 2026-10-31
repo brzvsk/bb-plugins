@@ -178,3 +178,21 @@ describe("readDraft", () => {
     expect(readDraft("p1", "thr_a", store({ "bb.promptbox.contents-p1-thr_a-3": "{oops" }))).toBeNull();
   });
 });
+
+import { projectTabs } from "./projects";
+
+describe("projectTabs", () => {
+  const p = (id: string, name: string, isPersonal = false) => ({ id, name, href: `/projects/${id}`, isPersonal });
+  it("follows the thread list's order and hiding, leaves home out, and reports what is going on", () => {
+    const projects = [p("home", "Personal", true), p("a", "Alpha"), p("b", "Beta"), p("c", "Gamma"), p("z", "Zeta")];
+    const threads = [
+      thread({ id: "1", projectId: "b", isUnread: true }),
+      thread({ id: "2", projectId: "a", runtimeStatus: "active" }),
+      thread({ id: "3", projectId: "a", hasPendingInteraction: true }),
+      thread({ id: "4", projectId: "z", isUnread: true, isArchived: true, archivedAt: NOW }),
+    ];
+    const tabs = projectTabs(projects, threads, ["pinned", "project:b", "project:a", "threads"], ["project:c"]);
+    expect(tabs.map(t => t.id)).toEqual(["b", "a", "z"]);
+    expect(tabs.map(t => [t.unread, t.running, t.attention])).toEqual([[true, false, false], [false, true, true], [false, false, false]]);
+  });
+});

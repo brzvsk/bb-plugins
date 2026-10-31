@@ -10,10 +10,19 @@ import {
 import { useState, type ReactNode } from "react";
 import { threadListContract } from "./contracts";
 
+function useThreadListPreferences() {
+  return experimental_useRpcQuery({ pluginId: "thread-list", contract: threadListContract, method: "listPreferences", input: null }).data?.preferences;
+}
+
 /** The quick actions the author picked for thread-list rows (Customize actions). */
 export function useRowActionKeys(): readonly string[] {
-  const prefs = experimental_useRpcQuery({ pluginId: "thread-list", contract: threadListContract, method: "listPreferences", input: null });
-  return prefs.data?.preferences.rowActions ?? [];
+  return useThreadListPreferences()?.rowActions ?? [];
+}
+
+/** The sidebar's project order and hidden projects, as the author arranged the thread list. */
+export function useProjectArrangement(): { order: readonly string[]; hidden: readonly string[] } {
+  const prefs = useThreadListPreferences();
+  return { order: prefs?.sectionOrder ?? [], hidden: prefs?.hiddenGroups ?? [] };
 }
 
 export function actionTarget(t: PluginSidebarThread): PluginThreadActionTarget {

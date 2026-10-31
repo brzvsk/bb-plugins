@@ -219,7 +219,7 @@ a.ph-row:hover { background: var(--state-hover, color-mix(in oklab, var(--foregr
 /* On a wide screen the tabs share the top bar's row (the crumb sits at the far left, the column is centered).
    When the name moved up into the desktop window's own row, the card has no top bar row left to share. */
 @media (min-width: 1100px) {
-  :not([data-ph-chrome]) > .ph-autos-holder { margin-top: calc(-1 * var(--bb-app-chrome-row-height, 2.5rem)); }
+  :not([data-ph-chrome]):not([data-ph-home]) > .ph-autos-holder { margin-top: calc(-1 * var(--bb-app-chrome-row-height, 2.5rem)); }
   /* Tabs centered on the crumb's line, the list right under them rather than under the whole chrome row. */
   .ph-autos-holder .ph-tabs {
     height: 18px;
@@ -389,3 +389,57 @@ a.ph-row[data-ph-working] .ph-main .ph-stamp { color: var(--muted-foreground) !i
 .ph-home:hover { color: var(--foreground); background: var(--state-hover, color-mix(in oklab, var(--foreground) 6%, transparent)); }
 .ph-home[aria-current="page"] { color: var(--foreground); }
 .ph-home-icon { width: 15px; height: 15px; }
+
+/* Home: the projects as tabs after the home icon, in the thread list's order. Quiet unless
+   something unread or waiting is in them; a working project shimmers. */
+.ph-projects {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  min-width: 0;
+  max-width: min(70vw, 900px);
+  margin-left: 0.25rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+.ph-projects::-webkit-scrollbar { display: none; }
+.ph-project-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: none;
+  height: 26px;
+  padding: 0 0.6rem;
+  border-radius: 0.375rem;
+  font-size: 13px;
+  white-space: nowrap;
+  color: var(--foreground);
+  text-decoration: none;
+  opacity: 0.55;
+  transition: opacity 120ms;
+}
+.ph-project-tab:hover { opacity: 1; background: var(--state-hover, color-mix(in oklab, var(--foreground) 6%, transparent)); }
+.ph-project-tab[data-ph-unread],
+.ph-project-tab[data-ph-attention],
+.ph-project-tab[data-ph-running] { opacity: 1; }
+.ph-project-dot { width: 6px; height: 6px; flex: none; border-radius: 999px; background: #3b82f6; }
+.ph-project-tab[data-ph-running] .ph-project-name {
+  color: transparent;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--foreground) 40%, transparent) 0%,
+    color-mix(in oklab, var(--foreground) 40%, transparent) 35%,
+    var(--foreground) 50%,
+    color-mix(in oklab, var(--foreground) 40%, transparent) 65%,
+    color-mix(in oklab, var(--foreground) 40%, transparent) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: ph-shimmer 2.4s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ph-project-tab[data-ph-running] .ph-project-name { animation: none; color: var(--foreground); background: none; }
+}

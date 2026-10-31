@@ -28,7 +28,13 @@ export const threadListContract = {
   listPreferences: {
     input: z.null(),
     output: z.looseObject({
-      preferences: z.looseObject({ rowActions: z.array(z.string()).optional() }),
+      preferences: z.looseObject({
+        rowActions: z.array(z.string()).optional(),
+        /** Group order in the sidebar, e.g. "pinned", "project:<id>", "threads". */
+        sectionOrder: z.array(z.string()).optional(),
+        /** Groups the author hid from the sidebar, e.g. "project:<id>". */
+        hiddenGroups: z.array(z.string()).optional(),
+      }),
     }),
   },
 } as const;

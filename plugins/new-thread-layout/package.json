@@ -30,6 +30,7 @@
     "format.ts",
     "model.ts",
     "previews.ts",
+    "projects.ts",
     "server.ts",
     "README.md",
     "LICENSE",

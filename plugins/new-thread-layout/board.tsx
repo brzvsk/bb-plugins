@@ -22,7 +22,8 @@ import { buildBoard, DONE_WINDOW_MS, type BoardRow, type ScheduledRow } from "./
 import { usePreviews, type Preview } from "./previews";
 import { HomeLink, useChromeRowPlacement, useComposeTopBar } from "./crumb";
 import { attachSwipeBack } from "./swipe";
-import { ThreadRowActions, actionTarget, useRowActionKeys } from "./actions";
+import { ThreadRowActions, actionTarget, useProjectArrangement, useRowActionKeys } from "./actions";
+import { projectTabs } from "./projects";
 
 const TOP_TAB_KEY = "new-thread-layout:top-tab";
 
@@ -367,10 +368,56 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
     });
   }, [atHome, personal?.id, topBar, composer]);
 
+  // At home the top bar lists the projects, like tabs, in the thread list's order.
+  const arrangement = useProjectArrangement();
+  const tabs = useMemo(
+    () => (atHome ? projectTabs(sidebar.projects, sidebar.threads, arrangement.order, arrangement.hidden) : []),
+    [atHome, sidebar.projects, sidebar.threads, arrangement.order, arrangement.hidden],
+  );
+  useEffect(() => {
+    const frame = topBar?.parentElement;
+    if (!frame) return;
+    if (atHome) frame.setAttribute("data-ph-home", "");
+    else frame.removeAttribute("data-ph-home");
+    return () => frame.removeAttribute("data-ph-home");
+  }, [topBar, atHome]);
+
   const crumb = topBar
     ? createPortal(
         <span className="ph-crumb-row">
           <HomeLink current={atHome} onHome={goHome} />
+          {atHome && tabs.length ? (
+            <span className="ph-projects" role="navigation" aria-label="Projects">
+              {tabs.map(tab => (
+                <a
+                  key={tab.id}
+                  className="ph-project-tab"
+                  href={tab.href}
+                  data-ph-unread={tab.unread || undefined}
+                  data-ph-running={tab.running || undefined}
+                  data-ph-attention={tab.attention || undefined}
+                  title={[tab.name, tab.attention ? "needs you" : null, tab.running ? "working" : null, tab.unread ? "unread" : null].filter(Boolean).join(" · ")}
+                  onClick={e => {
+                    if (!plainClick(e)) return;
+                    e.preventDefault();
+                    navigate.toProject(tab.id);
+                  }}
+                >
+                  {tab.unread ? <span className="ph-project-dot" aria-hidden /> : null}
+                  {(() => {
+                    // A leading emoji stays out of the shimmer, which would paint it as a grey box.
+                    const m = /^(\p{Extended_Pictographic}[\p{Extended_Pictographic}\u200d\ufe0f]*\s*)/u.exec(tab.name);
+                    return (
+                      <>
+                        {m ? <span className="ph-project-emoji">{m[1].trim()}</span> : null}
+                        <span className="ph-project-name">{m ? tab.name.slice(m[1].length) : tab.name}</span>
+                      </>
+                    );
+                  })()}
+                </a>
+              ))}
+            </span>
+          ) : null}
           {project && !atHome ? (
             <a
               className="ph-crumb ph-crumb-link"
