@@ -408,37 +408,36 @@ a.ph-row[data-ph-pinned] .ph-title-text { font-weight: 500; }
 .ph-projects-scroll {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 2px;
   min-width: 0;
   overflow-x: auto;
   scrollbar-width: none;
 }
 .ph-projects-scroll::-webkit-scrollbar { display: none; }
+/* Styled as bb's own controls in this row: borderless, small, muted; selected like a pressed one. */
 .ph-project-tab {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 4px;
   flex: none;
-  height: 24px;
-  padding: 0 0.6rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  font-size: 13px;
+  height: 32px;
+  padding: 0 4px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.25;
   white-space: nowrap;
-  color: var(--foreground);
+  color: var(--muted-foreground);
   text-decoration: none;
-  opacity: 0.55;
-  transition: opacity 120ms;
+  transition: background-color 150ms, color 150ms;
 }
+.ph-project-tab:hover { background: var(--state-hover, color-mix(in oklab, var(--foreground) 6%, transparent)); transition-duration: 0ms; }
+.ph-project-tab[data-ph-attention] { color: var(--foreground); }
 .ph-project-tab[aria-current="page"] {
-  opacity: 1;
-  border-color: transparent;
+  color: var(--foreground);
   background: var(--state-active, color-mix(in oklab, var(--foreground) 10%, transparent));
 }
-.ph-project-home { width: 13px; height: 13px; }
-.ph-project-tab:hover { opacity: 1; background: var(--state-hover, color-mix(in oklab, var(--foreground) 6%, transparent)); }
-.ph-project-tab[data-ph-unread],
-.ph-project-tab[data-ph-attention] { opacity: 1; }
+.ph-project-home { width: 16px; height: 16px; }
 .ph-project-dot { width: 6px; height: 6px; flex: none; border-radius: 999px; background: #3b82f6; }
 
 /* Home overview: the thread's project, muted, before its title. */
@@ -469,7 +468,7 @@ a.ph-row[data-ph-pinned] .ph-glyph:not([data-ph-status]) .ph-pin { display: inli
 
 /* "+" with the projects hidden in the thread list; the row sits at the bottom, so it opens upward. */
 .ph-more { position: relative; display: inline-flex; }
-.ph-more-button { width: 24px; padding: 0; justify-content: center; cursor: pointer; background: none; }
+.ph-more-button { width: 32px; padding: 0; justify-content: center; cursor: pointer; background: none; border: 0; }
 .ph-more-icon { width: 14px; height: 14px; }
 .ph-more-menu {
   position: absolute;
