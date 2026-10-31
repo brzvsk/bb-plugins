@@ -22,3 +22,7 @@ Data comes from bb's sidebar thread view (active and archived lifecycles), the b
 Uses BB DOM attributes (`root-compose-main-panel`, `root-compose-compact-home`, `data-promptbox-project-control`, `app-page-header-content-row`, `thread-detail-timeline-panel`); future BB layout changes may require an update. The compact (mobile) home is unchanged. The homepage slot's `projectId` is null on the plain compose route, so the board reads the composer's selected project.
 
 Build: `npm ci --include=dev --ignore-scripts`, `npm run typecheck`, `npm test`, `npm run build`. Install from the repository root: `bb plugin install . --plugin new-thread-layout`.
+
+## Smoke check
+
+`smoke.js` is a read-only live check for a headless `bb browser-automation` session (usage in its header). It walks Home, the Last week overlay, an in-place project switch and a thread's way back, and names the bb hook each check depends on, so a bb update that breaks one shows which.
