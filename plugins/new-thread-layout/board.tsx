@@ -667,7 +667,6 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
                     goProject(tab.id);
                   }}
                 >
-                  {tab.unread ? <span className="ph-project-dot" aria-hidden /> : null}
                   {(() => {
                     // A leading emoji stays out of the shimmer, which would paint it as a grey box.
                     const m = /^(\p{Extended_Pictographic}[\p{Extended_Pictographic}\u200d\ufe0f]*\s*)/u.exec(tab.name);
@@ -678,6 +677,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
                       </>
                     );
                   })()}
+                  {tab.unread ? <span className="ph-project-dot" aria-hidden /> : null}
                 </a>
               ))}
               </span>
