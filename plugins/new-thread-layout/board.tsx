@@ -20,7 +20,7 @@ import {
   type PluginSidebarThread,
 } from "@get-bb/plugin-sdk/app";
 import { automationActionsContract, automationsContract, type Automation } from "./contracts";
-import { formatDay, formatNextRun, formatStamp, formatTime, readDraft } from "./format";
+import { formatArchivedDay, formatNextRun, formatStamp, formatTime, readDraft } from "./format";
 import { buildBoard, buildOverview, boundThreadId, CONTINUE_WINDOW_MS, DONE_WINDOW_MS, type BoardRow, type ScheduledRow } from "./model";
 import { useAuthorTouched, usePreviews, type Preview } from "./previews";
 import { HomeLink, frameOf, useChromeRowPlacement, useComposeTopBar } from "./crumb";
@@ -187,7 +187,7 @@ function ScheduleThreadActions({ thread }: { thread: PluginSidebarThread }) {
 function byDay(rows: readonly BoardRow[], now: number): [string, BoardRow[]][] {
   const groups = new Map<string, BoardRow[]>();
   for (const r of rows) {
-    const day = formatDay(r.thread.archivedAt ?? r.thread.updatedAt, now);
+    const day = formatArchivedDay(r.thread.archivedAt ?? r.thread.updatedAt, now);
     const list = groups.get(day) ?? [];
     list.push(r);
     groups.set(day, list);

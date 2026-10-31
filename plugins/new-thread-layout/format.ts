@@ -38,6 +38,12 @@ export function formatDay(at: number, now: number): string {
   return `${date.getDate()} ${date.toLocaleString("en-GB", { month: "short" })}`;
 }
 
+/** Archive day headings: "Archived today", "Archived yesterday", "Archived on Tuesday", "Archived on 22 Oct". */
+export function formatArchivedDay(at: number, now: number): string {
+  const day = formatDay(at, now);
+  return day === "Today" || day === "Yesterday" ? `Archived ${day.toLowerCase()}` : `Archived on ${day}`;
+}
+
 /** "13:05". */
 export function formatTime(at: number): string {
   const date = new Date(at);

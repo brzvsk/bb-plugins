@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildBoard, buildOverview, statusOf, type BoardThread } from "./model";
-import { formatAgo, formatDay, formatNextRun, formatStamp, firstLine, readDraft } from "./format";
+import { formatAgo, formatArchivedDay, formatDay, formatNextRun, formatStamp, firstLine, readDraft } from "./format";
 import { lastAuthorTurnAt, latestActivity } from "./previews";
 
 const NOW = Date.parse("2026-10-30T12:00:00+03:00");
@@ -138,6 +138,10 @@ describe("format", () => {
     expect(formatDay(NOW - 24 * H, NOW)).toBe("Yesterday");
     expect(formatDay(NOW - 3 * 24 * H, NOW)).toBe("Tuesday");
     expect(formatDay(NOW - 8 * 24 * H, NOW)).toBe("22 Oct");
+    expect(formatArchivedDay(NOW - H, NOW)).toBe("Archived today");
+    expect(formatArchivedDay(NOW - 24 * H, NOW)).toBe("Archived yesterday");
+    expect(formatArchivedDay(NOW - 3 * 24 * H, NOW)).toBe("Archived on Tuesday");
+    expect(formatArchivedDay(NOW - 8 * 24 * H, NOW)).toBe("Archived on 22 Oct");
   });
   it("formats how long ago", () => {
     expect(formatAgo(NOW - 20_000, NOW)).toBe("just now");
