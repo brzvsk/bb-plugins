@@ -424,7 +424,8 @@ a.ph-row[data-ph-pinned] .ph-title-text { font-weight: 500; }
   padding: 0 4px;
   border-radius: 6px;
   font-size: 12px;
-  font-weight: 500;
+  /* Regular weight, like the row in a started thread: the projects' capitals already speak loud. */
+  font-weight: 400;
   line-height: 1.25;
   white-space: nowrap;
   color: var(--muted-foreground);
