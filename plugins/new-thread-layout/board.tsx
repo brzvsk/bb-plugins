@@ -389,12 +389,13 @@ function useStripHolder(topBar: HTMLElement | null): HTMLElement | null {
   return holder;
 }
 
-function Group({ label, count, children }: { label: string; count: number; children: ReactNode }) {
+function Group({ label, hint, count, countTone, children }: { label: string; hint?: string; count: number; countTone?: "warn" | "bad"; children: ReactNode }) {
   if (!count) return null;
   return (
     <section className="ph-group">
       <h3 className="ph-group-title">
-        {label} <span className="ph-count">{count}</span>
+        {label}
+        {hint ? <span className="ph-group-hint"> — {hint}</span> : null} <span className="ph-count" data-ph-tone={countTone}>{count}</span>
       </h3>
       <div className="ph-rows">{children}</div>
     </section>
@@ -658,7 +659,13 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
       {sidebar.status === "ready" && empty ? <p className="ph-empty">Nothing in progress here yet.</p> : null}
       {overview ? (
         <>
-          <Group label="Pinned" count={overview.pinned.length}>
+          {/* Pins are what you work on right now: a few is focus, many is a warning. */}
+          <Group
+            label="Pinned"
+            hint="focused on now"
+            count={overview.pinned.length}
+            countTone={overview.pinned.length > 4 ? "bad" : overview.pinned.length >= 3 ? "warn" : undefined}
+          >
             {overview.pinned.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} project={projectLabel(r.thread.projectId)} />)}
           </Group>
           <Group label="Waiting for you" count={overview.needsYou.length}>

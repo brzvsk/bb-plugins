@@ -510,3 +510,8 @@ a.ph-row[data-ph-working] .ph-main .ph-agent-mark * { color: var(--foreground) !
 .ph-day:first-child { padding-top: 0.125rem; }
 
 .ph-clock-pinned { color: var(--foreground); opacity: 0.9; }
+
+/* Pinned at home: how many things you hold in focus. */
+.ph-group-hint { font-weight: 400; color: var(--muted-foreground); }
+.ph-count[data-ph-tone="warn"] { color: #f59e0b; opacity: 1; font-weight: 600; }
+.ph-count[data-ph-tone="bad"] { color: #ef4444; opacity: 1; font-weight: 600; }
