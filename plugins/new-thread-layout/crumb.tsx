@@ -1,9 +1,11 @@
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
+import { attachSwipeBack } from "./swipe";
 import { experimental_useSidebarThreads, useBbContext, useBbNavigate } from "@get-bb/plugin-sdk/app";
 
 const COMPOSE_PANEL = '[data-panel-id="root-compose-main-panel"]';
 const COMPOSE_FRAME = `${COMPOSE_PANEL} [data-split-pane-id] > .relative.flex.h-full`;
+const THREAD_TIMELINE = '[data-panel-id="thread-detail-timeline-panel"]';
 const THREAD_HEADER_ROW = '[data-panel-id="thread-detail-timeline-panel"] [data-testid="app-page-header-content-row"]';
 
 /**
@@ -83,6 +85,15 @@ export function ThreadProjectCrumb() {
   const navigate = useBbNavigate();
   const holders = useHolders(findThreadHeaderRows, placeThreadCrumb);
   const project = projectId ? projects.find(p => p.id === projectId) ?? null : null;
+  const { threadId } = useBbContext();
+  // Swipe right on a thread's timeline to go back to its project's home.
+  useEffect(() => {
+    if (!threadId || !projectId) return;
+    return attachSwipeBack(document, {
+      area: () => document.querySelector(THREAD_TIMELINE),
+      onBack: () => navigate.toProject(projectId),
+    });
+  }, [threadId, projectId, navigate]);
   if (!project) return null;
   return (
     <>

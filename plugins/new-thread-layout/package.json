@@ -25,6 +25,7 @@
     "actions.tsx",
     "board.tsx",
     "crumb.tsx",
+    "swipe.ts",
     "contracts.ts",
     "format.ts",
     "model.ts",

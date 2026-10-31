@@ -11,6 +11,8 @@ On the New thread screen (wide layout):
 
 In every thread's header row, the project name precedes the title as a link; clicking it opens the project (the New thread screen with that project selected).
 
+On a thread, a two-finger trackpad swipe right over the timeline goes back to the project's home, like Chrome's back swipe (gesture and arrow ported from browser-gestures): a dark arrow slides in from the timeline's left edge, lifting with it fully out navigates, pulling back cancels. Horizontal scrollers inside the timeline (wide code blocks) keep the swipe until they reach their left edge; vertical scrolls, swipes left and modifier keys are ignored. A finger held completely still commits after about 0.6 s, since a page cannot see fingers lift.
+
 Data comes from bb's sidebar thread view (active and archived lifecycles), the bundled Automations plugin's `automations_list` RPC, and `threads.conversationOutline` (role `assistant`) for the agent's last messages (a few at a time, refetched when a thread's `updatedAt` changes). No server code, settings or storage.
 
 Uses BB DOM attributes (`root-compose-main-panel`, `root-compose-compact-home`, `data-promptbox-project-control`, `app-page-header-content-row`, `thread-detail-timeline-panel`); future BB layout changes may require an update. The compact (mobile) home is unchanged. The homepage slot's `projectId` is null on the plain compose route, so the board reads the composer's selected project.
