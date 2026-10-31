@@ -505,16 +505,16 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
       {sidebar.status === "ready" && empty ? <p className="ph-empty">Nothing in progress here yet.</p> : null}
       {overview ? (
         <>
-          <Group label="Needs you" count={overview.needsYou.length}>
+          <Group label="Waiting for you" count={overview.needsYou.length}>
             {overview.needsYou.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} project={projectLabel(r.thread.projectId)} />)}
           </Group>
-          <Group label="Running" count={overview.running.length}>
+          <Group label="Running now" count={overview.running.length}>
             {overview.running.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} project={projectLabel(r.thread.projectId)} />)}
           </Group>
-          <Group label="Continue" count={overview.recent.length}>
+          <Group label="Continue where you left off" count={overview.recent.length}>
             {overview.recent.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} project={projectLabel(r.thread.projectId)} />)}
           </Group>
-          <Group label="No project" count={board.pinned.length + board.running.length + board.inProgress.length}>
+          <Group label="Without a project" count={board.pinned.length + board.running.length + board.inProgress.length}>
             {[...board.pinned, ...board.running, ...board.inProgress].map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} />)}
           </Group>
         </>
