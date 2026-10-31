@@ -178,7 +178,8 @@ a.ph-row:hover { background: var(--state-hover, color-mix(in oklab, var(--foregr
   align-items: center;
   flex: none;
   height: var(--bb-app-chrome-row-height, 2.5rem);
-  padding: 0 0.75rem;
+  /* Same inset as bb's page header (px-4), so the name sits where a thread's header puts it. */
+  padding: 0 1rem;
 }
 .ph-crumb-holder { display: inline-flex; align-items: center; flex: none; }
 .ph-crumb {

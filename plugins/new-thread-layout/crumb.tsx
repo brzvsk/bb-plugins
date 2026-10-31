@@ -128,12 +128,20 @@ function cssPx(el: Element, name: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Buttons of the window's own row: anything clickable entirely above the card, in its left half. */
-function windowRowControls(card: DOMRect, own: Element): DOMRect[] {
+/** How close to the window's top edge the window's own row sits. */
+const WINDOW_ROW_MAX_MID = 48;
+
+/**
+ * Buttons of the window's own row lying over the card: bb's controls (back, forward, sidebar
+ * toggle) near the window's top edge whose span reaches into the card's left half. With an
+ * expanded sidebar they sit over the sidebar instead and do not count.
+ */
+function windowRowControls(card: DOMRect, frame: Element): DOMRect[] {
   return Array.from(document.querySelectorAll<HTMLElement>('button, [role="button"]'))
-    .filter(b => !own.contains(b) && !b.closest(".ph-autos-holder, [data-ph-topbar]"))
+    .filter(b => !frame.contains(b))
     .map(b => b.getBoundingClientRect())
-    .filter(r => r.width > 0 && r.height > 0 && r.top >= 0 && r.bottom <= card.top + 1 && r.left < card.left + card.width / 2);
+    .filter(r => r.width > 0 && r.height > 0 && r.top >= 0 && r.top + r.height / 2 <= WINDOW_ROW_MAX_MID)
+    .filter(r => r.right > card.left + 2 && r.left < card.left + card.width / 2);
 }
 
 /**
@@ -158,7 +166,7 @@ export function useChromeRowPlacement(topBar: HTMLElement | null): void {
     };
     const place = () => {
       const card = frame.getBoundingClientRect();
-      const controls = windowRowControls(card, topBar);
+      const controls = windowRowControls(card, frame);
       const root = document.documentElement;
       const varEnd = cssPx(frame, "--bb-window-title-bar-controls-end") ?? cssPx(root, "--bb-window-title-bar-controls-end");
       const varMid = cssPx(frame, "--bb-macos-traffic-light-center-y") ?? cssPx(root, "--bb-macos-traffic-light-center-y");
@@ -166,8 +174,8 @@ export function useChromeRowPlacement(topBar: HTMLElement | null): void {
       const domMid = controls.length ? controls.reduce((sum, r) => sum + r.top + r.height / 2, 0) / controls.length : null;
       const mid = domMid ?? varMid;
       const end = Math.max(domEnd ?? 0, varEnd ?? 0) || null;
-      // A window row exists only when its middle runs above the card.
-      if (mid === null || end === null || mid >= card.top) {
+      // Follow the window row when its controls lie over the card (above it, or overlaying its top).
+      if (mid === null || end === null || !controls.length) {
         reset();
         return;
       }
