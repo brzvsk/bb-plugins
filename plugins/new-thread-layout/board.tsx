@@ -48,7 +48,8 @@ function Row({ row, preview, now, onOpen, actionKeys, project }: { row: BoardRow
   const rowStatus = useSidebarThreadRowStatus(t.id);
   const { hasUnsubmittedDraft } = useSidebarThreadDraft(t.id);
   const hasStatus = t.isArchived || t.indicator !== "none" || !!rowStatus || hasUnsubmittedDraft;
-  const nextRun = !t.isArchived ? formatNextRun(row.nextRunAt, now) : null;
+  // Left slot priority: bb's status, then a pinned row's pin, then the clock of an upcoming run.
+  const nextRun = !t.isArchived && !t.isPinned ? formatNextRun(row.nextRunAt, now) : null;
   // Like a messenger: an unsent draft takes the second line, "Draft:" in red.
   const draft = hasUnsubmittedDraft && !t.isArchived ? readDraft(t.projectId, t.id) : null;
   const second = previewText(preview);
@@ -219,6 +220,9 @@ function AutomationLine({ row, now, onOpen, actions, project }: { row: Scheduled
       <span className="ph-glyph">
         {unread ? (
           <StatusGlyph indicator={t!.indicator === "unread-error" ? "unread-error" : "unread-success"} />
+        ) : t?.isPinned ? (
+          // A pinned thread shows its pin here too, over the clock.
+          <Icon name="Pin" className="ph-clock ph-clock-pinned" aria-hidden />
         ) : (
           <Icon name={paused ? "Pause" : "Clock"} className="ph-clock" aria-hidden />
         )}

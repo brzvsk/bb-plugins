@@ -508,3 +508,5 @@ a.ph-row[data-ph-working] .ph-main .ph-agent-mark * { color: var(--foreground) !
   color: var(--muted-foreground);
 }
 .ph-day:first-child { padding-top: 0.125rem; }
+
+.ph-clock-pinned { color: var(--foreground); opacity: 0.9; }
