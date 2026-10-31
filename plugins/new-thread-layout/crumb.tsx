@@ -125,7 +125,9 @@ export function ThreadProjectCrumb() {
         // Back to where the thread was opened from: the home screen, or its project's home.
         const personal = projects.find(p => p.isPersonal);
         if (originOf(threadId) === "home" && personal) navigate.toCompose({ projectId: personal.id });
-        else navigate.toProject(projectId);
+        // Straight to the New thread screen with the project selected, like home: the project route
+        // redirects there through a full remount with bb's skeleton.
+        else navigate.toCompose({ projectId });
       },
       target: () => {
         const personal = projects.find(p => p.isPersonal);
@@ -167,7 +169,7 @@ export function ThreadProjectCrumb() {
                   onClick={e => {
                     if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
                     e.preventDefault();
-                    navigate.toProject(project.id);
+                    navigate.toCompose({ projectId: project.id });
                   }}
                 >
                   <span className="ph-crumb-name">{project.name}</span>
@@ -203,7 +205,7 @@ export function ThreadProjectCrumb() {
             onClick={e => {
               if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
               e.preventDefault();
-              navigate.toProject(project.id);
+              navigate.toCompose({ projectId: project.id });
             }}
           >
             <span className="ph-crumb-name">{project.name}</span>
