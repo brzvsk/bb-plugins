@@ -1,5 +1,6 @@
 import { createPortal } from "react-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { leadingEmoji, useEmojiFrame } from "./frame";
 import { attachSwipeBack } from "./swipe";
 import { originOf } from "./origin";
 import {
@@ -116,6 +117,9 @@ export function ThreadProjectCrumb() {
   const holders = useHolders(findThreadHeaderRows, placeThreadCrumb);
   const project = projectId ? projects.find(p => p.id === projectId) ?? null : null;
   const { threadId } = useBbContext();
+  // Inside a thread the prompt box keeps the project's emoji frame.
+  const frameScope = useMemo(() => (threadId ? () => document : null), [threadId]);
+  useEmojiFrame(leadingEmoji(project?.name), frameScope);
   // Swipe right on a thread's timeline to go back to its project's home.
   useEffect(() => {
     if (!threadId || !projectId) return;

@@ -68,11 +68,14 @@ const switched = await page.evaluate(async () => {
     pickerShown: picker ? getComputedStyle(picker).display !== "none" : false,
     chips: document.querySelectorAll(".ph-projects .ph-project-tab").length,
     rows: document.querySelectorAll("a.ph-row").length,
+    emoji: /^\p{Extended_Pictographic}/u.test(name),
+    trails: document.querySelectorAll('form[class*="group/promptbox"] > .ph-emoji-trail').length,
   };
 });
 check("project switch in place (composer.setSelection)", !switched.error && !switched.lostBoard, JSON.stringify(switched));
 check("project crumb in top bar", !!switched.crumb, switched.crumb);
 check("bb's own project row back in a project", switched.pickerShown && switched.chips === 0);
+check("emoji frame on the composer (form[class*=group/promptbox])", !switched.emoji || switched.trails === 2, `emoji=${switched.emoji} trails=${switched.trails}`);
 
 // A thread page: the overlay's header crumb (app-page-header-content-row) leads back without a skeleton.
 const threadHref = await page.evaluate(() => document.querySelector("a.ph-row")?.getAttribute("href") ?? null);
