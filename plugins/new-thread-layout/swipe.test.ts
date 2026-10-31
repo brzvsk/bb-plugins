@@ -22,9 +22,14 @@ describe("attachSwipeBack", () => {
   }
 
   it("goes back when a swipe right runs past the threshold into momentum", () => {
+    vi.useFakeTimers();
     const { area, onBack, dispose } = setup();
+    vi.advanceTimersByTime(500);
     wheel(area, -12, true);
-    for (let i = 0; i < 25; i++) wheel(area, -10, false);
+    for (let i = 0; i < 25; i++) {
+      vi.advanceTimersByTime(8);
+      wheel(area, -10, false);
+    }
     expect(onBack).toHaveBeenCalledTimes(1);
     expect(document.querySelector("[data-ph-swipe-indicator]")).not.toBeNull();
     dispose();
@@ -34,10 +39,35 @@ describe("attachSwipeBack", () => {
   it("goes back after the fingers rest with the arrow fully out", () => {
     vi.useFakeTimers();
     const { area, onBack } = setup();
+    vi.advanceTimersByTime(500);
     wheel(area, -40, true);
-    for (let i = 0; i < 5; i++) wheel(area, -40, false, 1);
+    for (let i = 0; i < 5; i++) {
+      vi.advanceTimersByTime(8);
+      wheel(area, -40, false, 1);
+    }
     expect(onBack).not.toHaveBeenCalled();
     vi.advanceTimersByTime(700);
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps one swipe when every streamed event is marked cancelable", () => {
+    vi.useFakeTimers();
+    const { area, onBack } = setup();
+    vi.advanceTimersByTime(500);
+    for (let i = 0; i < 26; i++) {
+      wheel(area, -10, true);
+      vi.advanceTimersByTime(10);
+    }
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it("starts a swipe after a pause even when no wheel event is cancelable", () => {
+    vi.useFakeTimers();
+    const { area, onBack } = setup();
+    for (let i = 0; i < 25; i++) {
+      wheel(area, -10, false);
+      vi.advanceTimersByTime(8);
+    }
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 

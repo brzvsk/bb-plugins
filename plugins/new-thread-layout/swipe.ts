@@ -14,6 +14,14 @@ export interface SwipeBackOptions {
 
 const THRESHOLD = 160;
 const GAP = 220;
+/** A pause this long between wheel events starts a new touch, whatever the events' flags say. */
+const NEW_TOUCH_GAP = 120;
+/**
+ * A cancelable event starts a new touch only after at least this pause. On a real trackpad only
+ * the first event of a touch is cancelable; some input paths mark every event cancelable, and a
+ * swipe streaming events every few milliseconds must not restart on each of them.
+ */
+const CANCELABLE_GAP = 45;
 const HOLD_GAP = 600;
 const DECIDE = 8;
 const GLIDE_MIN = 6;
@@ -95,8 +103,11 @@ export function attachSwipeBack(doc: Document, opts: SwipeBackOptions): () => vo
     hide(0);
   };
   const onWheel = (event: WheelEvent) => {
-    last = now();
-    if (event.cancelable) {
+    const t = now();
+    const gap = t - last;
+    const fresh = gap > NEW_TOUCH_GAP || (event.cancelable && gap > CANCELABLE_GAP);
+    last = t;
+    if (fresh) {
       if (mode === "gesture") release();
       x = 0;
       y = 0;
@@ -137,7 +148,9 @@ export function attachSwipeBack(doc: Document, opts: SwipeBackOptions): () => vo
   const timer = setInterval(() => {
     if (mode === "gesture" && now() - last > (-x / THRESHOLD >= 1 ? HOLD_GAP : GAP)) release();
   }, 50);
-  doc.addEventListener("wheel", onWheel, { passive: true, capture: true });
+  // Not passive, as in browser-gestures: with only passive listeners Chromium may mark no wheel
+  // event cancelable, and that flag is the main sign of a new touch. preventDefault is never called.
+  doc.addEventListener("wheel", onWheel, { passive: false, capture: true });
   return () => {
     doc.removeEventListener("wheel", onWheel, { capture: true });
     clearInterval(timer);
