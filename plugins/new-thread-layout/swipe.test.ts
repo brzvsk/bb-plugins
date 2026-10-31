@@ -41,11 +41,11 @@ describe("attachSwipeBack", () => {
     vi.useFakeTimers();
     const { area, onBack } = setup();
     vi.advanceTimersByTime(500);
-    wheel(area, -40, true);
-    for (let i = 0; i < 5; i++) {
-      vi.advanceTimersByTime(8);
-      wheel(area, -40, false, 1);
-    }
+    // Still accelerating (no momentum yet) and short of the "far" mark.
+    [30, 35, 40, 45, 50, 55].forEach((d, i) => {
+      if (i) vi.advanceTimersByTime(8);
+      wheel(area, -d, i === 0, 1);
+    });
     expect(onBack).not.toHaveBeenCalled();
     vi.advanceTimersByTime(700);
     expect(onBack).toHaveBeenCalledTimes(1);
@@ -103,6 +103,33 @@ describe("attachSwipeBack", () => {
       wheel(second, -10, false);
     }
     expect(backFromProject).toHaveBeenCalledTimes(1);
+  });
+
+  it("goes back as soon as momentum with a little vertical drift begins past the threshold", () => {
+    vi.useFakeTimers();
+    const { area, onBack } = setup();
+    vi.advanceTimersByTime(500);
+    [20, 30, 40, 50].forEach((d, i) => {
+      if (i) vi.advanceTimersByTime(8);
+      wheel(area, -d, i === 0, 2);
+    });
+    expect(onBack).not.toHaveBeenCalled();
+    [38, 30, 24].forEach(d => {
+      vi.advanceTimersByTime(8);
+      wheel(area, -d, false, 3);
+    });
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it("goes back at once when pulled far past the threshold", () => {
+    vi.useFakeTimers();
+    const { area, onBack } = setup();
+    vi.advanceTimersByTime(500);
+    [40, 60, 80, 90].forEach((d, i) => {
+      if (i) vi.advanceTimersByTime(8);
+      wheel(area, -d, i === 0);
+    });
+    expect(onBack).toHaveBeenCalledTimes(1);
   });
 
   it("cancels a short swipe and ignores vertical scrolls, swipes left and swipes outside the area", () => {

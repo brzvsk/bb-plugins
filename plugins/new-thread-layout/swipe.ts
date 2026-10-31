@@ -24,8 +24,11 @@ const NEW_TOUCH_GAP = 120;
 const CANCELABLE_GAP = 90;
 const HOLD_GAP = 600;
 const DECIDE = 8;
-const GLIDE_MIN = 6;
-const GLIDE_RUN = 5;
+const GLIDE_MIN = 4;
+/** Non-growing steps in a row that read as momentum, i.e. the fingers have lifted. */
+const GLIDE_RUN = 3;
+/** Pulled this far past the threshold, go back at once instead of waiting for the lift. */
+const FAR = 1.6;
 const SIZE = 150;
 
 function canScrollLeft(event: Event): boolean {
@@ -160,11 +163,14 @@ export function attachSwipeBack(doc: Document, opts: SwipeBackOptions): () => vo
       mode = "gesture";
     }
     const step = Math.abs(event.deltaX);
-    glide = event.deltaY === 0 && step >= GLIDE_MIN && step <= prev * 1.1 + 1 ? glide + 1 : 0;
+    // Momentum after the fingers lift: steps stop growing; real trackpads let a little vertical
+    // drift through, so only a clearly vertical step breaks the run.
+    const straight = Math.abs(event.deltaY) <= Math.max(2, step * 0.35);
+    glide = straight && step >= GLIDE_MIN && step <= prev + 1 ? glide + 1 : 0;
     prev = step;
     const progress = -x / THRESHOLD;
     show(progress);
-    if (progress >= 1 && glide >= GLIDE_RUN) release();
+    if (progress >= FAR || (progress >= 1 && glide >= GLIDE_RUN)) release();
   };
   const timer = setInterval(() => {
     if (mode === "gesture" && now() - last > (-x / THRESHOLD >= 1 ? HOLD_GAP : GAP)) release();
