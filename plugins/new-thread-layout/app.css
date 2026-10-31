@@ -393,25 +393,34 @@ a.ph-row[data-ph-pinned] .ph-title-text { font-weight: 500; }
 
 /* Home: the projects as tabs after the home icon, in the thread list's order. Quiet unless
    something unread or waiting is in them. */
-/* At home: a row of projects right above the composer. */
-.ph-projects-holder { padding: 0 0.25rem 0.5rem; }
+/* At home: Home and the projects in the row under the composer, in place of bb's "No project" picker. */
+:has(> .ph-projects-holder) > [data-promptbox-project-control] { display: none; }
+.ph-projects-holder { display: flex; min-width: 0; flex: 1; }
 .ph-projects {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 0.25rem;
   min-width: 0;
   -webkit-app-region: no-drag;
   app-region: no-drag;
 }
-.ph-projects::-webkit-scrollbar { display: none; }
+/* One line that scrolls sideways; "+" stays outside so its menu is not clipped. */
+.ph-projects-scroll {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.ph-projects-scroll::-webkit-scrollbar { display: none; }
 .ph-project-tab {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
   flex: none;
-  height: 28px;
-  padding: 0 0.7rem;
+  height: 24px;
+  padding: 0 0.6rem;
   border: 1px solid var(--border);
   border-radius: 999px;
   font-size: 13px;
@@ -421,6 +430,12 @@ a.ph-row[data-ph-pinned] .ph-title-text { font-weight: 500; }
   opacity: 0.55;
   transition: opacity 120ms;
 }
+.ph-project-tab[aria-current="page"] {
+  opacity: 1;
+  border-color: transparent;
+  background: var(--state-active, color-mix(in oklab, var(--foreground) 10%, transparent));
+}
+.ph-project-home { width: 13px; height: 13px; }
 .ph-project-tab:hover { opacity: 1; background: var(--state-hover, color-mix(in oklab, var(--foreground) 6%, transparent)); }
 .ph-project-tab[data-ph-unread],
 .ph-project-tab[data-ph-attention] { opacity: 1; }
@@ -454,7 +469,7 @@ a.ph-row[data-ph-pinned] .ph-glyph:not([data-ph-status]) .ph-pin { display: inli
 
 /* "+" with the projects hidden in the thread list; the row sits at the bottom, so it opens upward. */
 .ph-more { position: relative; display: inline-flex; }
-.ph-more-button { width: 28px; padding: 0; justify-content: center; cursor: pointer; background: none; }
+.ph-more-button { width: 24px; padding: 0; justify-content: center; cursor: pointer; background: none; }
 .ph-more-icon { width: 14px; height: 14px; }
 .ph-more-menu {
   position: absolute;

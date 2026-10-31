@@ -414,17 +414,27 @@ function MoreProjects({ projects, onOpen }: { projects: { id: string; name: stri
 }
 
 /** A holder at the top of the sticky composer block of the given New thread frame. */
-function useComposerTopHolder(frame: Element | null): HTMLElement | null {
+/**
+ * At home the projects take the place of bb's "No project" picker in the row under the composer:
+ * a holder right after that picker, which CSS hides while the holder is there. bb re-renders the
+ * row freely, so the holder is put back whenever it falls out.
+ */
+function useComposerFooterHolder(frame: Element | null): HTMLElement | null {
   const [holder, setHolder] = useState<HTMLElement | null>(null);
   useEffect(() => {
     if (!frame) return;
-    const block = frame.querySelector('[data-testid="root-compose-compact-composer"]');
-    if (!block) return;
     const el = document.createElement("div");
     el.className = "ph-projects-holder";
-    block.prepend(el);
+    const place = () => {
+      const picker = frame.querySelector('[data-testid="root-compose-compact-composer"] [data-promptbox-project-control]');
+      if (picker && picker.nextElementSibling !== el) picker.after(el);
+    };
+    place();
     setHolder(el);
+    const observer = new MutationObserver(place);
+    observer.observe(frame, { childList: true, subtree: true });
     return () => {
+      observer.disconnect();
       el.remove();
       setHolder(null);
     };
@@ -629,7 +639,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
   }, [topBar, atHome]);
 
   // At home the projects sit right above the composer, within thumb's reach of a new message.
-  const tabsHolder = useComposerTopHolder(atHome ? frameOf(topBar) : null);
+  const tabsHolder = useComposerFooterHolder(atHome ? frameOf(topBar) : null);
   const more = useMemo(
     () => (atHome ? hiddenProjects(sidebar.projects, arrangement.hidden) : []),
     [atHome, sidebar.projects, arrangement.hidden],
@@ -638,6 +648,11 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
     atHome && tabs.length && tabsHolder
       ? createPortal(
             <span className="ph-projects" role="navigation" aria-label="Projects">
+              <span className="ph-projects-scroll">
+              <a className="ph-project-tab" href={personal?.href ?? "/"} aria-current="page" title="Home: every project at once, threads without a project" onClick={e => plainClick(e) && e.preventDefault()}>
+                <Icon name="Home" className="ph-project-home" aria-hidden />
+                <span className="ph-project-name">Home</span>
+              </a>
               {tabs.map(tab => (
                 <a
                   key={tab.id}
@@ -665,6 +680,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
                   })()}
                 </a>
               ))}
+              </span>
               <MoreProjects projects={more} onOpen={goProject} />
             </span>,
           tabsHolder,
