@@ -542,7 +542,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
     () =>
       board
         ? [
-            ...(overview ? [...overview.needsYou, ...overview.running, ...overview.recent] : []),
+            ...(overview ? [...overview.pinned, ...overview.needsYou, ...overview.running, ...overview.recent] : []),
             ...board.pinned,
             ...board.running,
             ...board.inProgress,
@@ -631,7 +631,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
   if (!projectId || !board) return crumb;
   const empty =
     !board.pinned.length && !board.running.length && !board.inProgress.length && !board.scheduled.length && !board.done.length &&
-    !(overview && (overview.needsYou.length || overview.running.length || overview.recent.length || overview.scheduled.length));
+    !(overview && (overview.pinned.length || overview.needsYou.length || overview.running.length || overview.recent.length || overview.scheduled.length));
   return (
     <div className="ph-board" data-ph-board="">
       {crumb}
@@ -658,6 +658,9 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
       {sidebar.status === "ready" && empty ? <p className="ph-empty">Nothing in progress here yet.</p> : null}
       {overview ? (
         <>
+          <Group label="Pinned" count={overview.pinned.length}>
+            {overview.pinned.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} project={projectLabel(r.thread.projectId)} />)}
+          </Group>
           <Group label="Waiting for you" count={overview.needsYou.length}>
             {overview.needsYou.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} project={projectLabel(r.thread.projectId)} />)}
           </Group>
@@ -667,8 +670,8 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
           <Group label="Continue where you left off" count={overview.recent.length}>
             {overview.recent.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} project={projectLabel(r.thread.projectId)} />)}
           </Group>
-          <Group label="Without a project" count={board.pinned.length + board.running.length + board.inProgress.length}>
-            {[...board.pinned, ...board.running, ...board.inProgress].map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} />)}
+          <Group label="Without a project" count={board.running.length + board.inProgress.length}>
+            {[...board.running, ...board.inProgress].map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} />)}
           </Group>
         </>
       ) : (

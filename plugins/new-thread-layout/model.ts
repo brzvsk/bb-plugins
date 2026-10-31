@@ -13,6 +13,7 @@ export interface BoardThread {
   hasPendingInteraction: boolean;
   isUnread: boolean;
   isPinned: boolean;
+  pinnedAt?: number | null;
   isArchived: boolean;
   archivedAt: number | null;
   isHidden: boolean;
@@ -167,6 +168,8 @@ export function buildBoard(threads: readonly BoardThread[], automations: readonl
 }
 
 export interface Overview {
+  /** Pinned threads across the projects and home, in pin order: the author's own focus. */
+  pinned: BoardRow[];
   /** Threads from the projects that wait for the author: unread, or an agent asking. */
   needsYou: BoardRow[];
   /** Threads from the projects where an agent works (in the thread or below it). */
@@ -198,10 +201,15 @@ export function buildOverview(
   const running: BoardRow[] = [];
   const recentRows: BoardRow[] = [];
   const lastActive = (r: BoardRow) => r.thread.latestAttentionAt || r.thread.updatedAt;
-  for (const id of projectIds) {
+  const pinned: BoardRow[] = [];
+  for (const id of [...projectIds, ...(homeProjectId ? [homeProjectId] : [])]) {
     // With the project's automations, so rows know their next run (the clock in the left slot).
     const b = buildBoard(threads, automations.filter(a => a.projectId === id), id, now, options);
-    for (const r of [...b.pinned, ...b.running, ...b.inProgress]) {
+    pinned.push(...b.pinned);
+    // Pinned threads have their own group and show their state in their row; home's own threads
+    // have theirs below.
+    if (id === homeProjectId) continue;
+    for (const r of [...b.running, ...b.inProgress]) {
       if (r.working) running.push(r);
       else if (r.attention || r.thread.isUnread) needsYou.push(r);
       else if (lastActive(r) >= now - CONTINUE_WINDOW_MS) recentRows.push(r);
@@ -223,5 +231,6 @@ export function buildOverview(
   const done = [...projectIds, ...(homeProjectId ? [homeProjectId] : [])]
     .flatMap(id => buildBoard(threads, automations.filter(a => a.projectId === id), id, now, options).done)
     .sort((a, b) => (b.thread.archivedAt ?? 0) - (a.thread.archivedAt ?? 0));
-  return { needsYou, running, recent: recentRows, scheduled, done };
+  pinned.sort((a, b) => (a.thread.pinnedAt ?? 0) - (b.thread.pinnedAt ?? 0));
+  return { pinned, needsYou, running, recent: recentRows, scheduled, done };
 }

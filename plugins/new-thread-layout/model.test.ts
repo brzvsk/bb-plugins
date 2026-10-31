@@ -235,6 +235,13 @@ describe("buildOverview", () => {
     expect(o.recent.map(r => r.thread.id)).toEqual(["fresher", "fresh"]);
     expect(o.scheduled.map(r => r.automation.name)).toEqual(["Soon", "Later", "Paused at home"]);
     expect(o.done.map(r => r.thread.id)).toEqual(["gone"]);
+    const withPins = buildOverview([
+      thread({ id: "p2", projectId: "a", isPinned: true, pinnedAt: 2, runtimeStatus: "active" }),
+      thread({ id: "p1", projectId: "home", isPinned: true, pinnedAt: 1 }),
+      thread({ id: "p3", projectId: "c", isPinned: true, pinnedAt: 3 }),
+    ], [], ["a"], "home", NOW);
+    expect(withPins.pinned.map(r => r.thread.id)).toEqual(["p1", "p2"]);
+    expect(withPins.running).toEqual([]);
     expect(buildOverview([thread({ id: "bound", projectId: "a", isUnread: true })], [{ id: "q", projectId: "a", name: "Daily", enabled: true, nextRunAt: NOW + H, execution: { targetThreadId: "bound" } }], ["a"], null, NOW).needsYou[0].nextRunAt).toBe(NOW + H);
   });
 });
