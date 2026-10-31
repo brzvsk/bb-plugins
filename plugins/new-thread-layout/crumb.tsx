@@ -1,11 +1,20 @@
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import { attachSwipeBack } from "./swipe";
-import { experimental_useSidebarThreads, useBbContext, useBbNavigate } from "@get-bb/plugin-sdk/app";
+import {
+  ThreadTitle,
+  experimental_Icon as Icon,
+  experimental_ThreadActionsMenu as ThreadMenu,
+  experimental_useSidebarThreads,
+  useBbContext,
+  useBbNavigate,
+} from "@get-bb/plugin-sdk/app";
+import { actionTarget } from "./actions";
 
 const COMPOSE_PANEL = '[data-panel-id="root-compose-main-panel"]';
 const COMPOSE_FRAME = `${COMPOSE_PANEL} [data-split-pane-id] > .relative.flex.h-full`;
 const THREAD_TIMELINE = '[data-panel-id="thread-detail-timeline-panel"]';
+const PANEL_TABS = '[data-testid="thread-secondary-panel-top-chrome"] [role="toolbar"]';
 const THREAD_HEADER_ROW = '[data-panel-id="thread-detail-timeline-panel"] [data-testid="app-page-header-content-row"]';
 
 /**
@@ -78,10 +87,23 @@ const placeThreadCrumb = (host: Element) => {
   return holder;
 };
 
-/** The project name before the thread title in every thread header; a click opens the project. */
+const findPanelTabStrips = () => Array.from(document.querySelectorAll(PANEL_TABS));
+const placePanelNav = (host: Element) => {
+  const holder = document.createElement("span");
+  holder.className = "ph-maxnav-holder";
+  holder.hidden = true;
+  host.prepend(holder);
+  return holder;
+};
+
+/**
+ * The project name before the thread title in every thread header; a click opens the project.
+ * With the right panel maximized bb hides the thread header, so the same navigation (project /
+ * thread ⋯) leads the panel's tab strip there, followed by a separator.
+ */
 export function ThreadProjectCrumb() {
   const { projectId } = useBbContext();
-  const { projects } = experimental_useSidebarThreads();
+  const { projects, threads } = experimental_useSidebarThreads();
   const navigate = useBbNavigate();
   const holders = useHolders(findThreadHeaderRows, placeThreadCrumb);
   const project = projectId ? projects.find(p => p.id === projectId) ?? null : null;
@@ -94,9 +116,62 @@ export function ThreadProjectCrumb() {
       onBack: () => navigate.toProject(projectId),
     });
   }, [threadId, projectId, navigate]);
+  const maxHolders = useHolders(findPanelTabStrips, placePanelNav);
+  // The nav shows only while the panel is maximized, i.e. the thread's timeline is collapsed.
+  useEffect(() => {
+    if (!maxHolders.length) return;
+    const sync = () => {
+      for (const holder of maxHolders) {
+        const pane = holder.closest("[data-split-pane-id]") ?? document;
+        const timeline = pane.querySelector(THREAD_TIMELINE) ?? document.querySelector(THREAD_TIMELINE);
+        const collapsed = !timeline || timeline.getBoundingClientRect().width < 40;
+        if (holder.hidden === collapsed) holder.hidden = !collapsed;
+      }
+    };
+    sync();
+    const timer = setInterval(sync, 200);
+    return () => clearInterval(timer);
+  }, [maxHolders]);
+  const thread = threadId ? threads.find(t => t.id === threadId) ?? null : null;
   if (!project) return null;
   return (
     <>
+      {thread
+        ? maxHolders.map((holder, i) =>
+            createPortal(
+              <span className="ph-maxnav">
+                <a
+                  className="ph-crumb ph-crumb-link"
+                  href={project.href}
+                  title={`Open ${project.name}`}
+                  onClick={e => {
+                    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+                    e.preventDefault();
+                    navigate.toProject(project.id);
+                  }}
+                >
+                  <span className="ph-crumb-name">{project.name}</span>
+                  <span className="ph-crumb-sep" aria-hidden>/</span>
+                </a>
+                <span className="ph-maxnav-title">
+                  <ThreadTitle threadId={thread.id} />
+                </span>
+                <ThreadMenu
+                  thread={actionTarget(thread)}
+                  align="start"
+                  trigger={props => (
+                    <button {...props} type="button" className="ph-maxnav-menu" aria-label="Thread actions" title="Thread actions">
+                      <Icon name="MoreHorizontal" className="ph-action-icon" aria-hidden />
+                    </button>
+                  )}
+                />
+                <span className="ph-maxnav-sep" aria-hidden />
+              </span>,
+              holder,
+              `max-${i}`,
+            ),
+          )
+        : null}
       {holders.map((holder, i) =>
         createPortal(
           <a

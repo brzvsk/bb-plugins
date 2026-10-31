@@ -318,3 +318,33 @@ a.ph-row[data-ph-pinned][data-ph-working] .ph-main {
 
 /* Second line by kind: the author's turn ("You: …"), the agent's reply, its thinking in italics. */
 .ph-second[data-ph-kind="thinking"] { font-style: italic; }
+
+/* Project / thread ⋯ ahead of the panel tabs while the right panel is maximized. */
+.ph-maxnav-holder { display: inline-flex; flex: none; min-width: 0; max-width: 45%; }
+.ph-maxnav-holder[hidden] { display: none; }
+.ph-maxnav {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  font-size: 13px;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+.ph-maxnav-title { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--foreground); }
+.ph-maxnav-menu {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 0.375rem;
+  background: none;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.ph-maxnav-menu:hover,
+.ph-maxnav-menu[data-state="open"] { color: var(--foreground); background: var(--state-hover, color-mix(in oklab, var(--foreground) 6%, transparent)); }
+.ph-maxnav-sep { flex: none; width: 1px; height: 16px; margin: 0 0.5rem 0 0.25rem; background: var(--border); }
