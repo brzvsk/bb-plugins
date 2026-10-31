@@ -11,12 +11,13 @@ import {
   useBbNavigate,
   useComposer,
   useSdk,
+  useSidebarThreadDraft,
   useSidebarThreadRowStatus,
   type PluginHomepageSectionProps,
   type PluginSidebarThread,
 } from "@get-bb/plugin-sdk/app";
 import { automationActionsContract, automationsContract, type Automation } from "./contracts";
-import { formatAgo, formatNextRun } from "./format";
+import { formatAgo, formatNextRun, readDraft } from "./format";
 import { buildBoard, DONE_WINDOW_MS, type BoardRow, type ScheduledRow } from "./model";
 import { usePreviews, type Preview } from "./previews";
 import { useChromeRowPlacement, useComposeTopBar } from "./crumb";
@@ -39,6 +40,9 @@ function plainClick(e: React.MouseEvent): boolean {
 function Row({ row, preview, now, onOpen, actionKeys }: { row: BoardRow; preview: Preview | null | undefined; now: number; onOpen: Open; actionKeys: readonly string[] }) {
   const t = row.thread as PluginSidebarThread;
   const rowStatus = useSidebarThreadRowStatus(t.id);
+  const { hasUnsubmittedDraft } = useSidebarThreadDraft(t.id);
+  // Like a messenger: an unsent draft takes the second line, "Draft:" in red.
+  const draft = hasUnsubmittedDraft && !t.isArchived ? readDraft(t.projectId, t.id) : null;
   const second = t.isArchived
     ? [t.archivedAt ? `Done ${formatAgo(t.archivedAt, now)}` : "Done", previewText(preview)].filter(Boolean).join(" · ")
     : previewText(preview);
@@ -65,7 +69,13 @@ function Row({ row, preview, now, onOpen, actionKeys }: { row: BoardRow; preview
           <span className="ph-title-text"><ThreadTitle threadId={t.id} /></span>
           {meta ? <span className="ph-meta">{meta}</span> : null}
         </span>
-        {second ? <span className="ph-second" data-ph-kind={preview?.kind}>{second}</span> : null}
+        {draft ? (
+          <span className="ph-second ph-second-draft">
+            <span className="ph-draft-label">Draft:</span> {draft}
+          </span>
+        ) : second ? (
+          <span className="ph-second" data-ph-kind={preview?.kind}>{second}</span>
+        ) : null}
       </span>
     </a>
     </ThreadRowActions>

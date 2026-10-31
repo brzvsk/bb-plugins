@@ -35,3 +35,23 @@ export function firstLine(text: string): string {
     .replace(/\*\*|__|`/g, "")
     .replace(/\s+/g, " ");
 }
+
+/**
+ * The text of a thread's unsent composer draft, as bb keeps it in this window's localStorage
+ * (`bb.promptbox.contents-<project>-<thread>-<version>` → `{ text, attachments }`); null without one.
+ */
+export function readDraft(projectId: string, threadId: string, storage: Pick<Storage, "length" | "key" | "getItem"> = localStorage): string | null {
+  const prefix = `bb.promptbox.contents-${projectId}-${threadId}-`;
+  try {
+    for (let i = 0; i < storage.length; i++) {
+      const key = storage.key(i);
+      if (!key?.startsWith(prefix)) continue;
+      const parsed = JSON.parse(storage.getItem(key) ?? "null") as { text?: unknown } | null;
+      const text = typeof parsed?.text === "string" ? firstLine(parsed.text) : "";
+      if (text) return text;
+    }
+  } catch {
+    // Unreadable storage or an unexpected shape: no draft line.
+  }
+  return null;
+}

@@ -348,3 +348,7 @@ a.ph-row[data-ph-pinned][data-ph-working] .ph-main {
 .ph-maxnav-menu:hover,
 .ph-maxnav-menu[data-state="open"] { color: var(--foreground); background: var(--state-hover, color-mix(in oklab, var(--foreground) 6%, transparent)); }
 .ph-maxnav-sep { flex: none; width: 1px; height: 16px; margin: 0 0.5rem 0 0.25rem; background: var(--border); }
+
+/* An unsent draft on the second line, messenger style. */
+.ph-draft-label { color: var(--destructive, #e5484d); }
+a.ph-row[data-ph-working] .ph-main .ph-draft-label { color: var(--destructive, #e5484d) !important; }

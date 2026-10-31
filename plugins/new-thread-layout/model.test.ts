@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildBoard, statusOf, type BoardThread } from "./model";
-import { formatAgo, formatNextRun, firstLine } from "./format";
+import { formatAgo, formatNextRun, firstLine, readDraft } from "./format";
 import { latestActivity } from "./previews";
 
 const NOW = Date.parse("2026-10-30T12:00:00+03:00");
@@ -157,5 +157,18 @@ describe("latestActivity", () => {
   it("skips bb notices, non-author turns and empty items", () => {
     expect(latestActivity([turn("[bb system] @thread:thr_x completed"), turn("сам", { initiator: "agent" }), done({ type: "agentMessage", id: "e", text: "" }), turn("ок")])).toEqual({ kind: "user", text: "ок" });
     expect(latestActivity([])).toBeNull();
+  });
+});
+
+describe("readDraft", () => {
+  const store = (entries: Record<string, string>) => {
+    const keys = Object.keys(entries);
+    return { length: keys.length, key: (i: number) => keys[i] ?? null, getItem: (k: string) => entries[k] ?? null };
+  };
+  it("reads a thread's unsent draft from bb's promptbox storage", () => {
+    const s = store({ "bb.promptbox.contents-p1-thr_a-3": JSON.stringify({ text: "\n  дописать   тесты\nещё", attachments: [] }), "bb.promptbox.contents-p1-thr_b-3": JSON.stringify({ text: "другой" }) });
+    expect(readDraft("p1", "thr_a", s)).toBe("дописать тесты");
+    expect(readDraft("p1", "thr_c", s)).toBeNull();
+    expect(readDraft("p1", "thr_a", store({ "bb.promptbox.contents-p1-thr_a-3": "{oops" }))).toBeNull();
   });
 });
