@@ -21,6 +21,13 @@ export const automationsContract = {
     input: z.object({ projectId: z.string() }),
     output: z.array(automation),
   },
+  /** Every automation with its project, for the home screen's schedule. */
+  automations_overview: {
+    input: z.null(),
+    output: z.looseObject({
+      automations: z.array(z.looseObject({ automation, project: z.looseObject({ id: z.string(), name: z.string() }) })),
+    }),
+  },
 } as const;
 
 // The bundled thread list's preferences; only the quick actions its rows show.

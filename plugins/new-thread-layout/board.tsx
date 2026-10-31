@@ -18,7 +18,7 @@ import {
 } from "@get-bb/plugin-sdk/app";
 import { automationActionsContract, automationsContract, type Automation } from "./contracts";
 import { formatAgo, formatNextRun, formatStamp, readDraft } from "./format";
-import { buildBoard, DONE_WINDOW_MS, type BoardRow, type ScheduledRow } from "./model";
+import { buildBoard, buildOverview, DONE_WINDOW_MS, type BoardRow, type ScheduledRow } from "./model";
 import { usePreviews, type Preview } from "./previews";
 import { HomeLink, frameOf, useChromeRowPlacement, useComposeTopBar } from "./crumb";
 import { attachSwipeBack } from "./swipe";
@@ -39,7 +39,7 @@ function plainClick(e: React.MouseEvent): boolean {
   return !(e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0);
 }
 
-function Row({ row, preview, now, onOpen, actionKeys }: { row: BoardRow; preview: Preview | null | undefined; now: number; onOpen: Open; actionKeys: readonly string[] }) {
+function Row({ row, preview, now, onOpen, actionKeys, project }: { row: BoardRow; preview: Preview | null | undefined; now: number; onOpen: Open; actionKeys: readonly string[]; project?: string }) {
   const t = row.thread as PluginSidebarThread;
   const rowStatus = useSidebarThreadRowStatus(t.id);
   const { hasUnsubmittedDraft } = useSidebarThreadDraft(t.id);
@@ -68,7 +68,10 @@ function Row({ row, preview, now, onOpen, actionKeys }: { row: BoardRow; preview
       </span>
       <span className="ph-main">
         <span className="ph-title">
-          <span className="ph-title-text"><ThreadTitle threadId={t.id} /></span>
+          <span className="ph-title-text">
+            {project ? <span className="ph-row-project">{project} · </span> : null}
+            <ThreadTitle threadId={t.id} />
+          </span>
           {meta ? <span className="ph-meta">{meta}</span> : null}
           <span className="ph-stamp">{formatStamp(t.latestAttentionAt || t.updatedAt, now)}</span>
         </span>
@@ -154,7 +157,7 @@ function ScheduleThreadActions({ thread }: { thread: PluginSidebarThread }) {
 }
 
 /** One automation as a single line: name, the thread it runs in, and the next run; actions on hover. */
-function AutomationLine({ row, now, onOpen, actions }: { row: ScheduledRow; now: number; onOpen: Open; actions: AutomationActions }) {
+function AutomationLine({ row, now, onOpen, actions, project }: { row: ScheduledRow; now: number; onOpen: Open; actions: AutomationActions; project?: string }) {
   const a = row.automation;
   const paused = a.enabled === false;
   const running = a.lastRunStatus === "running";
@@ -175,7 +178,10 @@ function AutomationLine({ row, now, onOpen, actions }: { row: ScheduledRow; now:
         )}
       </span>
       <span className="ph-auto-text">
-        <span className="ph-auto-name">{a.name}</span>
+        <span className="ph-auto-name">
+          {project ? <span className="ph-row-project">{project} · </span> : null}
+          {a.name}
+        </span>
         {where !== a.name ? <span className="ph-auto-where">{where}</span> : null}
       </span>
       {when ? <span className="ph-status ph-status-time">{when}</span> : null}
@@ -349,11 +355,6 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
     () => (projectId ? buildBoard(sidebar.threads, automations.data ?? [], projectId, now) : null),
     [sidebar.threads, automations.data, projectId, now],
   );
-  const previewTargets = useMemo(
-    () => (board ? [...board.pinned, ...board.running, ...board.inProgress, ...(topTab === "done" || !board.scheduled.length ? board.done : [])].map(r => ({ id: r.thread.id, updatedAt: r.thread.updatedAt, live: r.working })) : []),
-    [board, topTab],
-  );
-  const previews = usePreviews(sdk.threads, previewTargets);
   const open: Open = t => navigate.toThread(t.id);
 
   // "No project" is bb's personal project: the home of all projects.
@@ -377,6 +378,46 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
     () => (atHome ? projectTabs(sidebar.projects, sidebar.threads, arrangement.order, arrangement.hidden) : []),
     [atHome, sidebar.projects, sidebar.threads, arrangement.order, arrangement.hidden],
   );
+  // Home overview: what is live across the visible projects, and every project's schedule.
+  const allAutomations = experimental_useRpcQuery({
+    pluginId: "automations",
+    contract: automationsContract,
+    method: "automations_overview",
+    input: null,
+    enabled: atHome,
+  });
+  const overview = useMemo(
+    () =>
+      atHome
+        ? buildOverview(
+            sidebar.threads,
+            (allAutomations.data?.automations ?? []).map(e => e.automation),
+            tabs.map(t => t.id),
+            personal?.id ?? null,
+            now,
+          )
+        : null,
+    [atHome, sidebar.threads, allAutomations.data, tabs, personal?.id, now],
+  );
+  const projectLabel = useMemo(() => {
+    const names = new Map(sidebar.projects.map(p => [p.id, p.name] as const));
+    return (projectId: string) => (projectId === personal?.id ? undefined : names.get(projectId));
+  }, [sidebar.projects, personal?.id]);
+  const previewTargets = useMemo(
+    () =>
+      board
+        ? [
+            ...(overview ? [...overview.needsYou, ...overview.running] : []),
+            ...board.pinned,
+            ...board.running,
+            ...board.inProgress,
+            ...(topTab === "done" || !board.scheduled.length ? board.done : []),
+          ].map(r => ({ id: r.thread.id, updatedAt: r.thread.updatedAt, live: r.working }))
+        : [],
+    [board, topTab, overview],
+  );
+  const previews = usePreviews(sdk.threads, previewTargets);
+
   useEffect(() => {
     const frame = frameOf(topBar);
     if (!frame) return;
@@ -441,7 +482,9 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
     : null;
 
   if (!projectId || !board) return crumb;
-  const empty = !board.pinned.length && !board.running.length && !board.inProgress.length && !board.scheduled.length && !board.done.length;
+  const empty =
+    !board.pinned.length && !board.running.length && !board.inProgress.length && !board.scheduled.length && !board.done.length &&
+    !(overview && (overview.needsYou.length || overview.running.length || overview.scheduled.length));
   return (
     <div className="ph-board" data-ph-board="">
       {crumb}
@@ -450,7 +493,9 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
             <TopPanel
               tab={topTab}
               onTab={setTopTab}
-              scheduled={board.scheduled.map(r => <AutomationLine key={r.automation.id} row={r} now={now} onOpen={open} actions={automationActions} />)}
+              scheduled={(overview ? overview.scheduled : board.scheduled).map(r => (
+                <AutomationLine key={r.automation.id} row={r} now={now} onOpen={open} actions={automationActions} project={overview ? projectLabel(r.automation.projectId) : undefined} />
+              ))}
               done={board.done.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} />)}
             />,
             stripHolder,
@@ -458,15 +503,31 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
         : null}
       {sidebar.status === "loading" ? <p className="ph-empty">Loading…</p> : null}
       {sidebar.status === "ready" && empty ? <p className="ph-empty">Nothing in progress here yet.</p> : null}
-      <Group label="Pinned" count={board.pinned.length}>
-        {board.pinned.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} />)}
-      </Group>
-      <Group label="Running" count={board.running.length}>
-        {board.running.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} />)}
-      </Group>
-      <Group label="Idle" count={board.inProgress.length}>
-        {board.inProgress.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} />)}
-      </Group>
+      {overview ? (
+        <>
+          <Group label="Needs you" count={overview.needsYou.length}>
+            {overview.needsYou.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} project={projectLabel(r.thread.projectId)} />)}
+          </Group>
+          <Group label="Running" count={overview.running.length}>
+            {overview.running.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} project={projectLabel(r.thread.projectId)} />)}
+          </Group>
+          <Group label="No project" count={board.pinned.length + board.running.length + board.inProgress.length}>
+            {[...board.pinned, ...board.running, ...board.inProgress].map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} />)}
+          </Group>
+        </>
+      ) : (
+        <>
+          <Group label="Pinned" count={board.pinned.length}>
+            {board.pinned.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} />)}
+          </Group>
+          <Group label="Running" count={board.running.length}>
+            {board.running.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} />)}
+          </Group>
+          <Group label="Idle" count={board.inProgress.length}>
+            {board.inProgress.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} />)}
+          </Group>
+        </>
+      )}
     </div>
   );
 }

@@ -155,3 +155,48 @@ export function buildBoard(threads: readonly BoardThread[], automations: readonl
 
   return { pinned, running, inProgress, scheduled, done };
 }
+
+export interface Overview {
+  /** Threads from the projects that wait for the author: unread, or an agent asking. */
+  needsYou: BoardRow[];
+  /** Threads from the projects where an agent works (in the thread or below it). */
+  running: BoardRow[];
+  /** Upcoming runs across every project, soonest first; paused ones only from home's own project. */
+  scheduled: ScheduledRow[];
+}
+
+/**
+ * The home screen's overview: what is going on across the given projects right now, plus every
+ * project's next runs. Quiet idle threads stay in their projects.
+ */
+export function buildOverview(
+  threads: readonly BoardThread[],
+  automations: readonly Automation[],
+  projectIds: readonly string[],
+  homeProjectId: string | null,
+  now: number,
+): Overview {
+  const needsYou: BoardRow[] = [];
+  const running: BoardRow[] = [];
+  for (const id of projectIds) {
+    const b = buildBoard(threads, [], id, now);
+    for (const r of [...b.pinned, ...b.running, ...b.inProgress]) {
+      if (r.working) running.push(r);
+      else if (r.attention || r.thread.isUnread) needsYou.push(r);
+    }
+  }
+  const recent = (a: BoardRow, b: BoardRow) =>
+    (b.thread.latestAttentionAt ?? b.thread.updatedAt) - (a.thread.latestAttentionAt ?? a.thread.updatedAt);
+  needsYou.sort((a, b) => Number(b.attention) - Number(a.attention) || recent(a, b));
+  running.sort(recent);
+  const byId = new Map(threads.map(t => [t.id, t] as const));
+  // Only projects the thread list shows, plus home's own: hidden projects stay out of sight here too.
+  const shown = new Set([...projectIds, ...(homeProjectId ? [homeProjectId] : [])]);
+  const upcoming = automations
+    .filter(a => shown.has(a.projectId))
+    .filter(a => a.enabled !== false && a.nextRunAt != null && a.nextRunAt >= now)
+    .sort((a, b) => (a.nextRunAt ?? 0) - (b.nextRunAt ?? 0));
+  const paused = automations.filter(a => a.enabled === false && a.projectId === homeProjectId);
+  const scheduled = [...upcoming, ...paused].map(a => ({ automation: a, thread: byId.get(boundThreadId(a) ?? "") ?? null }));
+  return { needsYou, running, scheduled };
+}

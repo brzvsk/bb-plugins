@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildBoard, statusOf, type BoardThread } from "./model";
+import { buildBoard, buildOverview, statusOf, type BoardThread } from "./model";
 import { formatAgo, formatNextRun, formatStamp, firstLine, readDraft } from "./format";
 import { latestActivity } from "./previews";
 
@@ -194,5 +194,31 @@ describe("projectTabs", () => {
     const tabs = projectTabs(projects, threads, ["pinned", "project:b", "project:a", "threads"], ["project:c"]);
     expect(tabs.map(t => t.id)).toEqual(["b", "a", "z"]);
     expect(tabs.map(t => [t.unread, t.running, t.attention])).toEqual([[true, false, false], [false, true, true], [false, false, false]]);
+  });
+});
+
+describe("buildOverview", () => {
+  it("collects live and waiting threads from the projects, and every project's next runs", () => {
+    const threads = [
+      thread({ id: "run", projectId: "a", runtimeStatus: "active" }),
+      thread({ id: "kidrun", projectId: "b" }),
+      thread({ id: "kid", projectId: "b", parentThreadId: "kidrun", runtimeStatus: "active" }),
+      thread({ id: "unread", projectId: "a", isUnread: true, latestAttentionAt: NOW - H }),
+      thread({ id: "asks", projectId: "b", hasPendingInteraction: true, latestAttentionAt: NOW - 5 * H }),
+      thread({ id: "quiet", projectId: "a" }),
+      thread({ id: "mine", projectId: "home", isUnread: true }),
+      thread({ id: "hiddenproj", projectId: "c", isUnread: true }),
+    ];
+    const automations = [
+      { id: "x", projectId: "a", name: "Later", enabled: true, nextRunAt: NOW + 5 * H },
+      { id: "y", projectId: "home", name: "Soon", enabled: true, nextRunAt: NOW + H },
+      { id: "z", projectId: "a", name: "Paused elsewhere", enabled: false },
+      { id: "w", projectId: "home", name: "Paused at home", enabled: false },
+      { id: "v", projectId: "c", name: "Hidden project", enabled: true, nextRunAt: NOW + 2 * H },
+    ];
+    const o = buildOverview(threads, automations, ["a", "b"], "home", NOW);
+    expect(o.needsYou.map(r => r.thread.id)).toEqual(["asks", "unread"]);
+    expect(o.running.map(r => r.thread.id).sort()).toEqual(["kidrun", "run"]);
+    expect(o.scheduled.map(r => r.automation.name)).toEqual(["Soon", "Later", "Paused at home"]);
   });
 });

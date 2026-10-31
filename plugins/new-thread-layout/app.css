@@ -443,3 +443,7 @@ a.ph-row[data-ph-working] .ph-main .ph-stamp { color: var(--muted-foreground) !i
 @media (prefers-reduced-motion: reduce) {
   .ph-project-tab[data-ph-running] .ph-project-name { animation: none; color: var(--foreground); background: none; }
 }
+
+/* Home overview: the thread's project, muted, before its title. */
+.ph-row-project { color: var(--muted-foreground); font-weight: 400; }
+a.ph-row[data-ph-working] .ph-main .ph-row-project { color: var(--muted-foreground) !important; }
