@@ -29,6 +29,7 @@
     "contracts.ts",
     "format.ts",
     "model.ts",
+    "origin.ts",
     "previews.ts",
     "projects.ts",
     "server.ts",

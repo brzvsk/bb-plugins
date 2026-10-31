@@ -1,6 +1,7 @@
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import { attachSwipeBack } from "./swipe";
+import { originOf } from "./origin";
 import {
   ThreadTitle,
   experimental_Icon as Icon,
@@ -120,9 +121,14 @@ export function ThreadProjectCrumb() {
     if (!threadId || !projectId) return;
     return attachSwipeBack(document, {
       area: () => document.querySelector(THREAD_TIMELINE),
-      onBack: () => navigate.toProject(projectId),
+      onBack: () => {
+        // Back to where the thread was opened from: the home screen, or its project's home.
+        const personal = projects.find(p => p.isPersonal);
+        if (originOf(threadId) === "home" && personal) navigate.toCompose({ projectId: personal.id });
+        else navigate.toProject(projectId);
+      },
     });
-  }, [threadId, projectId, navigate]);
+  }, [threadId, projectId, navigate, projects]);
   const maxHolders = useHolders(findPanelTabStrips, placePanelNav);
   // The nav shows only while the panel is maximized, i.e. the thread's timeline is collapsed.
   useEffect(() => {

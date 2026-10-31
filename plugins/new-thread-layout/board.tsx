@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ThreadTitle,
   experimental_Icon as Icon,
@@ -22,6 +22,7 @@ import { buildBoard, buildOverview, DONE_WINDOW_MS, type BoardRow, type Schedule
 import { usePreviews, type Preview } from "./previews";
 import { HomeLink, frameOf, useChromeRowPlacement, useComposeTopBar } from "./crumb";
 import { attachSwipeBack } from "./swipe";
+import { rememberOrigin } from "./origin";
 import { ThreadRowActions, actionTarget, useProjectArrangement, useRowActionKeys } from "./actions";
 import { projectTabs } from "./projects";
 
@@ -355,11 +356,17 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
     () => (projectId ? buildBoard(sidebar.threads, automations.data ?? [], projectId, now) : null),
     [sidebar.threads, automations.data, projectId, now],
   );
-  const open: Open = t => navigate.toThread(t.id);
+  // A swipe back from the thread returns to the screen it was opened from (see origin.ts).
+  const atHomeRef = useRef(false);
+  const open: Open = t => {
+    rememberOrigin(t.id, atHomeRef.current ? "home" : "project");
+    navigate.toThread(t.id);
+  };
 
   // "No project" is bb's personal project: the home of all projects.
   const personal = sidebar.projects.find(p => p.isPersonal) ?? null;
   const atHome = !project || project.isPersonal;
+  atHomeRef.current = atHome;
   const goHome = () => {
     if (personal) void composer.setSelection({ projectId: personal.id });
   };
