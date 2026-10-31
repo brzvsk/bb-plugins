@@ -407,7 +407,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
     () =>
       board
         ? [
-            ...(overview ? [...overview.needsYou, ...overview.running] : []),
+            ...(overview ? [...overview.needsYou, ...overview.running, ...overview.recent] : []),
             ...board.pinned,
             ...board.running,
             ...board.inProgress,
@@ -484,7 +484,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
   if (!projectId || !board) return crumb;
   const empty =
     !board.pinned.length && !board.running.length && !board.inProgress.length && !board.scheduled.length && !board.done.length &&
-    !(overview && (overview.needsYou.length || overview.running.length || overview.scheduled.length));
+    !(overview && (overview.needsYou.length || overview.running.length || overview.recent.length || overview.scheduled.length));
   return (
     <div className="ph-board" data-ph-board="">
       {crumb}
@@ -510,6 +510,9 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
           </Group>
           <Group label="Running" count={overview.running.length}>
             {overview.running.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} project={projectLabel(r.thread.projectId)} />)}
+          </Group>
+          <Group label="Continue" count={overview.recent.length}>
+            {overview.recent.map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} project={projectLabel(r.thread.projectId)} />)}
           </Group>
           <Group label="No project" count={board.pinned.length + board.running.length + board.inProgress.length}>
             {[...board.pinned, ...board.running, ...board.inProgress].map(r => <Row key={r.thread.id} row={r} preview={previews.get(r.thread.id)} now={now} onOpen={open} actionKeys={actionKeys} />)}

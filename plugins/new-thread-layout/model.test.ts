@@ -205,7 +205,10 @@ describe("buildOverview", () => {
       thread({ id: "kid", projectId: "b", parentThreadId: "kidrun", runtimeStatus: "active" }),
       thread({ id: "unread", projectId: "a", isUnread: true, latestAttentionAt: NOW - H }),
       thread({ id: "asks", projectId: "b", hasPendingInteraction: true, latestAttentionAt: NOW - 5 * H }),
-      thread({ id: "quiet", projectId: "a" }),
+      thread({ id: "quiet", projectId: "a", latestAttentionAt: NOW - 5 * H }),
+      thread({ id: "fresh", projectId: "b", latestAttentionAt: NOW - H / 2 }),
+      thread({ id: "fresher", projectId: "a", latestAttentionAt: NOW - 600_000 }),
+      thread({ id: "gone", projectId: "a", latestAttentionAt: NOW - 600_000, isArchived: true, archivedAt: NOW }),
       thread({ id: "mine", projectId: "home", isUnread: true }),
       thread({ id: "hiddenproj", projectId: "c", isUnread: true }),
     ];
@@ -219,6 +222,7 @@ describe("buildOverview", () => {
     const o = buildOverview(threads, automations, ["a", "b"], "home", NOW);
     expect(o.needsYou.map(r => r.thread.id)).toEqual(["asks", "unread"]);
     expect(o.running.map(r => r.thread.id).sort()).toEqual(["kidrun", "run"]);
+    expect(o.recent.map(r => r.thread.id)).toEqual(["fresher", "fresh"]);
     expect(o.scheduled.map(r => r.automation.name)).toEqual(["Soon", "Later", "Paused at home"]);
   });
 });
