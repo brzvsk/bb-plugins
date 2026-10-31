@@ -469,13 +469,13 @@ a.ph-row[data-ph-pinned] .ph-glyph:not([data-ph-status]) .ph-pin { display: inli
 .ph-count[data-ph-tone="warn"] { color: #f59e0b; opacity: 1; font-weight: 600; }
 .ph-count[data-ph-tone="bad"] { color: #ef4444; opacity: 1; font-weight: 600; }
 
-/* A pinned thread that is running: full-strength text with a dimming band sweeping across it.
-   Only pinned rows shimmer; other running rows stay quiet behind bb's spinner. */
+/* A pinned thread whose work is not finished — the agent's turn, or a background command left
+   after it: full-strength text with a dimming band sweeping across it. Only pinned rows shimmer. */
 @keyframes ph-shimmer {
   from { background-position: 100% 0; }
   to { background-position: -100% 0; }
 }
-a.ph-row[data-ph-pinned][data-ph-working] .ph-main {
+a.ph-row[data-ph-pinned]:is([data-ph-working], [data-ph-background]) .ph-main {
   background: linear-gradient(
     90deg,
     var(--foreground) 0%,
@@ -489,17 +489,17 @@ a.ph-row[data-ph-pinned][data-ph-working] .ph-main {
   background-clip: text;
   animation: ph-shimmer 2.4s linear infinite;
 }
-a.ph-row[data-ph-pinned][data-ph-working] .ph-main,
-a.ph-row[data-ph-pinned][data-ph-working] .ph-main * { color: transparent !important; }
+a.ph-row[data-ph-pinned]:is([data-ph-working], [data-ph-background]) .ph-main,
+a.ph-row[data-ph-pinned]:is([data-ph-working], [data-ph-background]) .ph-main * { color: transparent !important; }
 /* Marks that keep their own colour inside the shimmer. */
-a.ph-row[data-ph-pinned][data-ph-working] .ph-main .ph-agent-mark,
-a.ph-row[data-ph-pinned][data-ph-working] .ph-main .ph-agent-mark * { color: var(--foreground) !important; }
-a.ph-row[data-ph-pinned][data-ph-working] .ph-main .ph-draft-label { color: var(--destructive, #e5484d) !important; }
-a.ph-row[data-ph-pinned][data-ph-working] .ph-main .ph-stamp,
-a.ph-row[data-ph-pinned][data-ph-working] .ph-main .ph-row-project,
-a.ph-row[data-ph-pinned][data-ph-working] .ph-main .ph-meta { color: var(--muted-foreground) !important; }
+a.ph-row[data-ph-pinned]:is([data-ph-working], [data-ph-background]) .ph-main .ph-agent-mark,
+a.ph-row[data-ph-pinned]:is([data-ph-working], [data-ph-background]) .ph-main .ph-agent-mark * { color: var(--foreground) !important; }
+a.ph-row[data-ph-pinned]:is([data-ph-working], [data-ph-background]) .ph-main .ph-draft-label { color: var(--destructive, #e5484d) !important; }
+a.ph-row[data-ph-pinned]:is([data-ph-working], [data-ph-background]) .ph-main .ph-stamp,
+a.ph-row[data-ph-pinned]:is([data-ph-working], [data-ph-background]) .ph-main .ph-row-project,
+a.ph-row[data-ph-pinned]:is([data-ph-working], [data-ph-background]) .ph-main .ph-meta { color: var(--muted-foreground) !important; }
 @media (prefers-reduced-motion: reduce) {
-  a.ph-row[data-ph-pinned][data-ph-working] .ph-main { animation: none; background: none; }
-  a.ph-row[data-ph-pinned][data-ph-working] .ph-main,
-  a.ph-row[data-ph-pinned][data-ph-working] .ph-main * { color: inherit !important; }
+  a.ph-row[data-ph-pinned]:is([data-ph-working], [data-ph-background]) .ph-main { animation: none; background: none; }
+  a.ph-row[data-ph-pinned]:is([data-ph-working], [data-ph-background]) .ph-main,
+  a.ph-row[data-ph-pinned]:is([data-ph-working], [data-ph-background]) .ph-main * { color: inherit !important; }
 }

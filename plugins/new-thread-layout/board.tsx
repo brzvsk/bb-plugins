@@ -61,6 +61,7 @@ function Row({ row, preview, now, onOpen, actionKeys, project }: { row: BoardRow
       href={t.href}
       data-ph-working={(row.working && !t.isArchived) || undefined}
       data-ph-pinned={(t.isPinned && !t.isArchived) || undefined}
+      data-ph-background={row.background || undefined}
       data-ph-loud={(!t.isArchived && (t.isPinned || row.attention || (t.isUnread && !row.background))) || undefined}
       onClick={e => {
         if (!plainClick(e)) return;

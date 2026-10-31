@@ -57,3 +57,4 @@
 - Earlier 0.3.0 checks still apply to the heading: popover anchoring, native chip unchanged, selection sync; disable cleanup (heading, topbar row and crumb holders are removed by their disposers).
 
 Not checked live: compact (mobile) layout; split panes with threads from two projects (the crumb uses the route's project for every visible header row).
+- Pinned shimmer while a background command waits, same day (author: a pinned thread should keep shimmering while its work is unfinished): rows carry `data-ph-background`; the shimmer selectors match pinned rows that are working or waiting on a background command. Live on Cockpit with attributes set on a real row: pinned + background and pinned + working animate `ph-shimmer`, pinned idle and unpinned + background do not. 26 tests.
