@@ -50,6 +50,7 @@
 - Pin over clock, same day: left slot priority is now status, pin, clock; schedule lines of a pinned thread show the pin. Live with Sec audit pinned for the check (unpinned after): in Pinned its row showed the pin and no clock, and the Security watch line in Scheduled showed the pin icon while the others kept clocks.
 - Pinned at home, same day: `buildOverview` pins test (shown projects + home, pin order, hidden projects out, pinned not repeated in Running). Live at home: "Pinned 3: 🎬 CREATORS · Stories… | 🧪 NONA LAB · Архитектор Nona Lab | ☸️ COCKPIT · Project HQ (shimmering)", Running now without Project HQ.
 - Pinned focus hint, same day: at home the group reads "Pinned — focused on now" with the count orange at 3–4 and red above 4 (project screens keep "Pinned"). Live with one pin: "Pinned — focused on now 1" in the normal colour; the orange and red tones not seen live (would need pinning the author's threads).
+- No shimmer, same day (author: the spinner is enough): the running-row shimmer styles are gone; running rows stay at full strength with bb's spinner. Live: the running Project HQ row with no animation.
 - Earlier 0.3.0 checks still apply to the heading: popover anchoring, native chip unchanged, selection sync; disable cleanup (heading, topbar row and crumb holders are removed by their disposers).
 
 Not checked live: compact (mobile) layout; split panes with threads from two projects (the crumb uses the route's project for every visible header row).

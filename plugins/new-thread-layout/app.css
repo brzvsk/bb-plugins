@@ -272,49 +272,9 @@ a.ph-row[data-ph-loud],
 a.ph-row[data-ph-working],
 .ph-row-wrap:hover > a.ph-row,
 .ph-row-wrap[data-ph-menu-open] > a.ph-row { opacity: 1; }
-@keyframes ph-shimmer {
-  from { background-position: 100% 0; }
-  to { background-position: -100% 0; }
-}
-/* One wave across the whole row: title, child count and last-message line. */
-a.ph-row[data-ph-working] .ph-main {
-  /* Grey text with a full-strength band sweeping across it. */
-  background: linear-gradient(
-    90deg,
-    color-mix(in oklab, var(--foreground) 40%, transparent) 0%,
-    color-mix(in oklab, var(--foreground) 40%, transparent) 35%,
-    var(--foreground) 50%,
-    color-mix(in oklab, var(--foreground) 40%, transparent) 65%,
-    color-mix(in oklab, var(--foreground) 40%, transparent) 100%
-  );
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  animation: ph-shimmer 2.4s linear infinite;
-}
-a.ph-row[data-ph-working] .ph-main,
-a.ph-row[data-ph-working] .ph-main * { color: transparent !important; }
 /* Pinned rows are the accent: a denser title, and when running the opposite wave, full-strength
    text with a dimming band sweeping across it. */
 a.ph-row[data-ph-pinned] .ph-title-text { font-weight: 500; }
-a.ph-row[data-ph-pinned][data-ph-working] .ph-main {
-  background: linear-gradient(
-    90deg,
-    var(--foreground) 0%,
-    var(--foreground) 35%,
-    color-mix(in oklab, var(--foreground) 35%, transparent) 50%,
-    var(--foreground) 65%,
-    var(--foreground) 100%
-  );
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-}
-@media (prefers-reduced-motion: reduce) {
-  a.ph-row[data-ph-working] .ph-main { animation: none; background: none; }
-  a.ph-row[data-ph-working] .ph-main,
-  a.ph-row[data-ph-working] .ph-main * { color: inherit !important; }
-}
 
 /* Second line: the agent's words (reply or thought) follow its provider's mark, monochrome. */
 .ph-agent-mark {
@@ -366,7 +326,6 @@ a.ph-row[data-ph-pinned][data-ph-working] .ph-main {
 
 /* An unsent draft on the second line, messenger style. */
 .ph-draft-label { color: var(--destructive, #e5484d); }
-a.ph-row[data-ph-working] .ph-main .ph-draft-label { color: var(--destructive, #e5484d) !important; }
 
 /* The unread dot in blue, a touch larger, on Project Home only (bb's own glyph, matched by its label). */
 .ph-glyph [aria-label="Unread thread succeeded"] {
@@ -384,7 +343,6 @@ a.ph-row[data-ph-working] .ph-main .ph-draft-label { color: var(--destructive, #
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
 }
-a.ph-row[data-ph-working] .ph-main .ph-stamp { color: var(--muted-foreground) !important; }
 
 /* Home of all projects, left of the project name. */
 .ph-crumb-row { display: inline-flex; align-items: center; gap: 0.25rem; min-width: 0; }
@@ -442,7 +400,6 @@ a.ph-row[data-ph-working] .ph-main .ph-stamp { color: var(--muted-foreground) !i
 
 /* Home overview: the thread's project, muted, before its title. */
 .ph-row-project { color: var(--muted-foreground); font-weight: 400; }
-a.ph-row[data-ph-working] .ph-main .ph-row-project { color: var(--muted-foreground) !important; }
 
 /* Left slot: the status glyph first; the pin shows on hover, or stays when a pinned row has no status. */
 .ph-glyph { position: relative; }
@@ -496,9 +453,6 @@ a.ph-row[data-ph-pinned] .ph-glyph:not([data-ph-status]) .ph-pin { display: inli
   white-space: nowrap;
 }
 .ph-more-item:hover { background: var(--state-hover, color-mix(in oklab, var(--foreground) 6%, transparent)); }
-/* The provider mark stays visible in running rows, whose text is painted by the shimmer. */
-a.ph-row[data-ph-working] .ph-main .ph-agent-mark,
-a.ph-row[data-ph-working] .ph-main .ph-agent-mark * { color: var(--foreground) !important; }
 
 /* "Last week": day headings between archived rows. */
 .ph-day {
