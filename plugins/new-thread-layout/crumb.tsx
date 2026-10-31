@@ -119,3 +119,55 @@ export function ThreadProjectCrumb() {
     </>
   );
 }
+
+const CHROME_CONTROLS = 'button[data-sidebar][aria-label^="Toggle sidebar"], button[aria-label="Go back"], button[aria-label="Go forward"]';
+
+/**
+ * In the desktop app's framed layout the window's own row (traffic lights, back, forward, sidebar
+ * toggle) sits above the content card, and bb lifts a thread's header into that row. On the New
+ * thread screen there is no such header, so put the project name there ourselves: right of the
+ * last window control and centered on it. Wherever those controls are not above the card (the
+ * web app, an expanded sidebar beside the card), the name stays in the card's top row.
+ */
+export function useChromeRowPlacement(topBar: HTMLElement | null): void {
+  useEffect(() => {
+    const frame = topBar?.parentElement;
+    if (!topBar || !frame) return;
+    let placed = false;
+    const place = () => {
+      const card = frame.getBoundingClientRect();
+      const controls = Array.from(document.querySelectorAll<HTMLElement>(CHROME_CONTROLS))
+        .map(b => b.getBoundingClientRect())
+        .filter(r => r.width > 0 && r.bottom <= card.top + 1 && r.left < card.right);
+      if (!controls.length) {
+        if (placed) {
+          topBar.removeAttribute("style");
+          frame.removeAttribute("data-ph-chrome");
+          placed = false;
+        }
+        return;
+      }
+      const right = Math.max(...controls.map(r => r.right));
+      const mid = controls.reduce((sum, r) => sum + r.top + r.height / 2, 0) / controls.length;
+      const left = Math.max(right + 12, card.left + 12);
+      topBar.style.position = "fixed";
+      topBar.style.left = `${left}px`;
+      topBar.style.top = `${mid}px`;
+      topBar.style.height = "auto";
+      topBar.style.padding = "0";
+      topBar.style.transform = "translateY(-50%)";
+      topBar.style.zIndex = "60";
+      frame.setAttribute("data-ph-chrome", "");
+      placed = true;
+    };
+    place();
+    const timer = setInterval(place, 250);
+    window.addEventListener("resize", place);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("resize", place);
+      topBar.removeAttribute("style");
+      frame.removeAttribute("data-ph-chrome");
+    };
+  }, [topBar]);
+}

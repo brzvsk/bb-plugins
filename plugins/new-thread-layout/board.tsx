@@ -19,7 +19,7 @@ import { automationActionsContract, automationsContract, type Automation } from 
 import { formatAgo, formatNextRun } from "./format";
 import { buildBoard, DONE_WINDOW_MS, type BoardRow, type ScheduledRow } from "./model";
 import { usePreviews, type Preview } from "./previews";
-import { useComposeTopBar } from "./crumb";
+import { useChromeRowPlacement, useComposeTopBar } from "./crumb";
 import { ThreadRowActions, actionTarget, useRowActionKeys } from "./actions";
 
 const TOP_TAB_KEY = "new-thread-layout:top-tab";
@@ -309,6 +309,7 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
   });
   const project = sidebar.projects.find(p => p.id === projectId) ?? null;
   const topBar = useComposeTopBar();
+  useChromeRowPlacement(topBar);
   const stripHolder = useStripHolder(topBar);
   const actionKeys = useRowActionKeys();
   const automationActions = useAutomationActions(automations.refetch);
