@@ -69,7 +69,7 @@ function Row({ row, preview, now, onOpen, actionKeys, project }: { row: BoardRow
         onOpen(t);
       }}
     >
-      <span className="ph-glyph" data-ph-status={hasStatus || !!nextRun || undefined}>
+      <span className="ph-glyph" data-ph-status={hasStatus || !!nextRun || row.childOnly || row.background || undefined}>
         <span className="ph-glyph-status">
           {row.childOnly && !row.attention ? (
             // Only a child thread works, the thread itself is idle: bb's child-thread icon shining
