@@ -14,15 +14,14 @@ import {
   useComposer,
   useSdk,
   useSidebarThreadDraft,
-  useSidebarThreadDraftIds,
   useSidebarThreadRowStatus,
   type PluginHomepageSectionProps,
   type PluginSidebarThread,
 } from "@get-bb/plugin-sdk/app";
 import { automationActionsContract, automationsContract, type Automation } from "./contracts";
 import { formatArchivedDay, formatNextRun, formatStamp, formatTime, readDraft } from "./format";
-import { buildBoard, buildOverview, boundThreadId, CONTINUE_WINDOW_MS, DONE_WINDOW_MS, type BoardRow, type ScheduledRow } from "./model";
-import { useAuthorTouched, usePreviews, type Preview } from "./previews";
+import { buildBoard, buildOverview, DONE_WINDOW_MS, WORKING, type BoardRow, type ScheduledRow } from "./model";
+import { usePreviews, type Preview } from "./previews";
 import { HomeLink, frameOf, useChromeRowPlacement, useComposeTopBar } from "./crumb";
 import { attachSwipeBack } from "./swipe";
 import { rememberOrigin } from "./origin";
@@ -223,10 +222,15 @@ function AutomationLine({ row, now, onOpen, actions, project }: { row: Scheduled
   // Quiet unless its thread has something unread; then bb's own unread dot replaces the clock.
   const unread = !!t?.isUnread;
   const busy = actions.pending.has(a.id);
+  // The schedule line is where its thread's work shows: bb's loader while a run or the thread's
+  // agent works, ahead of the unread dot.
+  const working = running || (!!t && WORKING.has(t.runtimeStatus));
   const body = (
     <>
       <span className="ph-glyph">
-        {unread ? (
+        {working ? (
+          <StatusGlyph indicator="runtime" />
+        ) : unread ? (
           <StatusGlyph indicator={t!.indicator === "unread-error" ? "unread-error" : "unread-success"} />
         ) : t?.isPinned ? (
           // A pinned thread shows its pin here too, over the clock.
@@ -251,7 +255,7 @@ function AutomationLine({ row, now, onOpen, actions, project }: { row: Scheduled
       {t ? (
         <a
           className="ph-row ph-auto-row"
-          data-ph-unread={unread || undefined}
+          data-ph-unread={unread || working || undefined}
           href={t.href}
           title={title}
           onClick={e => {
@@ -543,18 +547,6 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
     method: "automations_overview",
     input: null,
   });
-  // Automation threads the author is involved in: a draft, or their own message in the last two hours.
-  const draftIds = useSidebarThreadDraftIds();
-  const allAutomationList = useMemo(
-    () => [...(automations.data ?? []), ...(allAutomations.data?.automations.map(e => e.automation) ?? [])],
-    [automations.data, allAutomations.data],
-  );
-  const boundThreads = useMemo(() => {
-    const ids = new Set(allAutomationList.map(a => boundThreadId(a)).filter((id): id is string => !!id));
-    return sidebar.threads.filter(t => ids.has(t.id) && !t.isArchived).map(t => ({ id: t.id, updatedAt: t.updatedAt }));
-  }, [allAutomationList, sidebar.threads]);
-  const touched = useAuthorTouched(sdk.threads, boundThreads, now, CONTINUE_WINDOW_MS);
-  const involved = useMemo(() => new Set([...draftIds, ...touched]), [draftIds, touched]);
   // Until this project's own list arrives, its automations from the overview fill in, so the schedule
   // does not blink empty when switching projects; a list still held from the previous project is filtered out.
   const projectAutomations = useMemo(
@@ -565,8 +557,8 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
     [automations.data, allAutomations.data, projectId],
   );
   const board = useMemo(
-    () => (projectId ? buildBoard(sidebar.threads, projectAutomations, projectId, now, { involved }) : null),
-    [sidebar.threads, projectAutomations, projectId, now, involved],
+    () => (projectId ? buildBoard(sidebar.threads, projectAutomations, projectId, now) : null),
+    [sidebar.threads, projectAutomations, projectId, now],
   );
   // A swipe back from the thread returns to the screen it was opened from (see origin.ts).
   const atHomeRef = useRef(false);
@@ -611,10 +603,9 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
             tabs.map(t => t.id),
             personal?.id ?? null,
             now,
-            { involved },
           )
         : null,
-    [atHome, sidebar.threads, allAutomations.data, tabs, personal?.id, now, involved],
+    [atHome, sidebar.threads, allAutomations.data, tabs, personal?.id, now],
   );
   const projectLabel = useMemo(() => {
     const names = new Map(sidebar.projects.map(p => [p.id, p.name] as const));

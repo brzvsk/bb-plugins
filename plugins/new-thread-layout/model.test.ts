@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildBoard, buildOverview, statusOf, type BoardThread } from "./model";
 import { formatAgo, formatArchivedDay, formatDay, formatNextRun, formatStamp, firstLine, readDraft } from "./format";
-import { lastAuthorTurnAt, latestActivity } from "./previews";
+import { latestActivity } from "./previews";
 
 const NOW = Date.parse("2026-10-30T12:00:00+03:00");
 const H = 60 * 60 * 1000;
@@ -47,11 +47,13 @@ describe("buildBoard", () => {
     expect(b.scheduled).toEqual([]);
   });
 
-  it("lists every upcoming automation under Scheduled; its thread joins the lists when active or the author is involved", () => {
+  it("lists every upcoming automation under Scheduled; a recurring one's own thread shows only there unless pinned", () => {
     const threads = [
       thread({ id: "daily", updatedAt: NOW - H }),
-      thread({ id: "loud", isUnread: true }),
+      thread({ id: "loud", isUnread: true, runtimeStatus: "active" }),
       thread({ id: "manager", isPinned: true }),
+      thread({ id: "later", updatedAt: NOW - H }),
+      thread({ id: "watched" }),
     ];
     const automations = [
       { id: "a1", projectId: "p1", name: "Daily", enabled: true, nextRunAt: NOW + 2 * H, execution: { targetThreadId: "daily" } },
@@ -59,13 +61,16 @@ describe("buildBoard", () => {
       { id: "a3", projectId: "p1", name: "Manager", enabled: true, nextRunAt: NOW + H, execution: { targetThreadId: "manager" } },
       { id: "a4", projectId: "p1", name: "Fresh", enabled: true, nextRunAt: NOW + 4 * H },
       { id: "a5", projectId: "p1", name: "Paused", enabled: false, nextRunAt: NOW + 4 * H },
+      // A one-off run into an existing thread: that thread stays an ordinary thread.
+      { id: "a6", projectId: "p1", name: "Later", enabled: true, nextRunAt: NOW + 5 * H, execution: { targetThreadId: "later" }, trigger: { triggerType: "once" } },
+      // A script automation works through the thread it last ran in.
+      { id: "a7", projectId: "p1", name: "Watch", enabled: true, nextRunAt: NOW + 6 * H, execution: { mode: "script" }, lastRunThreadId: "watched", trigger: { triggerType: "schedule" } },
     ];
     const b = buildBoard(threads, automations, "p1", NOW);
-    // Quiet automation threads live under Scheduled; unread ones show, and so do ones the author is involved in.
-    expect(b.inProgress.map(r => r.thread.id)).toEqual(["loud"]);
-    const involved = buildBoard(threads, automations, "p1", NOW, { involved: new Set(["daily"]) });
-    expect(involved.inProgress.map(r => r.thread.id).sort()).toEqual(["daily", "loud"]);
-    expect(involved.inProgress.find(r => r.thread.id === "daily")?.nextRunAt).toBe(NOW + 2 * H);
+    // Even running or unread, a recurring automation's thread stays out of the lists.
+    expect(b.running.map(r => r.thread.id)).toEqual([]);
+    expect(b.inProgress.map(r => r.thread.id)).toEqual(["later"]);
+    expect(b.inProgress[0].nextRunAt).toBe(NOW + 5 * H);
     expect(b.pinned[0].nextRunAt).toBe(NOW + H);
     expect(b.pinned[0].automationNames).toEqual(["Manager"]);
     expect(b.scheduled.map(r => [r.automation.name, r.thread?.id ?? null])).toEqual([
@@ -73,6 +78,8 @@ describe("buildBoard", () => {
       ["Daily", "daily"],
       ["Loud", "loud"],
       ["Fresh", null],
+      ["Later", "later"],
+      ["Watch", "watched"],
       ["Paused", null],
     ]);
   });
@@ -264,15 +271,15 @@ describe("buildOverview", () => {
     ], [], ["a"], "home", NOW);
     expect(withPins.pinned.map(r => r.thread.id)).toEqual(["p1", "p2"]);
     expect(withPins.running).toEqual([]);
-    expect(buildOverview([thread({ id: "bound", projectId: "a", isUnread: true })], [{ id: "q", projectId: "a", name: "Daily", enabled: true, nextRunAt: NOW + H, execution: { targetThreadId: "bound" } }], ["a"], null, NOW).needsYou[0].nextRunAt).toBe(NOW + H);
-  });
-});
-
-describe("lastAuthorTurnAt", () => {
-  const turn = (text: string, at: number, extra: Record<string, unknown> = {}) => ({ type: "client/turn/requested", createdAt: at, data: { initiator: "user", systemMessageKind: "unlabeled", input: [{ type: "text", text }], ...extra } });
-  it("skips automation prompts and bb notices", () => {
-    expect(lastAuthorTurnAt([turn("[bb automation due:auto_1] Проверка почты", 3), turn("глянь ответ", 2), turn("старое", 1)])).toBe(2);
-    expect(lastAuthorTurnAt([turn("[bb system] done", 3), turn("x", 2, { systemMessageKind: "child-completed" })])).toBeNull();
+    // A recurring automation's unread thread is reported on its schedule line, not in Waiting for you;
+    // a one-off run's thread is an ordinary thread that shows its next run.
+    const bound = [thread({ id: "bound", projectId: "a", isUnread: true }), thread({ id: "once", projectId: "a", isUnread: true })];
+    const runs = [
+      { id: "q", projectId: "a", name: "Daily", enabled: true, nextRunAt: NOW + H, execution: { targetThreadId: "bound" } },
+      { id: "r", projectId: "a", name: "Once", enabled: true, nextRunAt: NOW + 2 * H, execution: { targetThreadId: "once" }, trigger: { triggerType: "once" } },
+    ];
+    const ov = buildOverview(bound, runs, ["a"], null, NOW);
+    expect(ov.needsYou.map(r => [r.thread.id, r.nextRunAt])).toEqual([["once", NOW + 2 * H]]);
   });
 });
 

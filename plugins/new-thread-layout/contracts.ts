@@ -8,8 +8,10 @@ const automation = z.looseObject({
   name: z.string(),
   enabled: z.boolean().optional(),
   nextRunAt: z.number().nullable().optional(),
-  /** The thread an agent automation re-prompts; per-run automations have none. */
-  execution: z.looseObject({ targetThreadId: z.string().nullable().optional() }).optional(),
+  /** The thread an agent automation re-prompts; per-run automations have none. "script" runs a script. */
+  execution: z.looseObject({ targetThreadId: z.string().nullable().optional(), mode: z.string().optional() }).optional(),
+  /** "once" for a one-off run, "schedule" for a recurring one. */
+  trigger: z.looseObject({ triggerType: z.string().optional() }).optional(),
   lastRunThreadId: z.string().nullable().optional(),
   lastRunStatus: z.string().nullable().optional(),
   problem: z.string().optional(),

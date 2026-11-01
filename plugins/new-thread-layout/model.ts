@@ -67,7 +67,8 @@ export interface Board {
 /** How far back "Last week" reaches. */
 export const DONE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
-const WORKING = new Set(["active", "starting", "stopping", "provisioning", "waiting-for-host"]);
+/** Runtime states in which the thread's agent is at work. */
+export const WORKING = new Set(["active", "starting", "stopping", "provisioning", "waiting-for-host"]);
 
 export function statusOf(t: BoardThread): Pick<BoardRow, "status" | "attention" | "working"> {
   const working = WORKING.has(t.runtimeStatus);
@@ -87,6 +88,17 @@ export function boundThreadId(a: Automation): string | null {
   return a.execution?.targetThreadId ?? a.lastRunThreadId ?? null;
 }
 
+/**
+ * The existing thread a recurring automation keeps running in: its target thread, or the thread a
+ * script automation works through. Such a thread belongs to the schedule: it shows only there
+ * (unless pinned). A one-off automation's thread, and the fresh thread of a per-run agent
+ * automation, are threads like any other.
+ */
+export function residentThreadId(a: Automation): string | null {
+  if (a.trigger?.triggerType === "once") return null;
+  return a.execution?.targetThreadId ?? (a.execution?.mode === "script" ? a.lastRunThreadId ?? null : null);
+}
+
 /** An agent works: its turn is in progress, or a background agent or workflow (delegated work). */
 function selfWorking(t: BoardThread): boolean {
   if (t.isArchived) return false;
@@ -99,15 +111,7 @@ function backgroundOnly(t: BoardThread): boolean {
   return !t.isArchived && !WORKING.has(t.runtimeStatus) && !!t.activity?.backgroundCommands;
 }
 
-export interface BoardOptions {
-  /**
-   * Automation threads the author is involved in (a draft, or their own message lately): they show
-   * in the lists like any thread. Other quiet automation threads live under Scheduled only.
-   */
-  involved?: ReadonlySet<string>;
-}
-
-export function buildBoard(threads: readonly BoardThread[], automations: readonly Automation[], projectId: string, now: number, options: BoardOptions = {}): Board {
+export function buildBoard(threads: readonly BoardThread[], automations: readonly Automation[], projectId: string, now: number): Board {
   const mine = threads.filter(t => t.projectId === projectId && !t.isHidden);
   const children = new Map<string, number>();
   const kids = new Map<string, BoardThread[]>();
@@ -165,13 +169,13 @@ export function buildBoard(threads: readonly BoardThread[], automations: readonl
 
   const pinned = roots.filter(t => t.isPinned && !t.isArchived).map(row);
 
-  // An automation thread shows in the lists only when something happens there (working, unread,
-  // waiting) or the author is involved (pinned, a draft, their own message lately); quiet runs on
-  // schedule live under Scheduled. When it shows, its next run is the clock in the left slot.
+  // A recurring automation's own thread lives under Scheduled only, its running and unread state
+  // shown on that line; pinning it brings it into Pinned. Other bound threads (a one-off run) are
+  // listed like any thread, with the next run as the clock in the left slot.
+  const resident = new Set(automations.map(residentThreadId).filter((id): id is string => !!id));
   const open = roots
-    .filter(t => !t.isArchived && !t.isPinned)
+    .filter(t => !t.isArchived && !t.isPinned && !resident.has(t.id))
     .map(row)
-    .filter(r => !bound.has(r.thread.id) || r.working || r.background || r.attention || r.thread.isUnread || !!options.involved?.has(r.thread.id))
     .sort((a, b) => Number(b.attention) - Number(a.attention) || b.thread.updatedAt - a.thread.updatedAt);
   const running = open.filter(r => r.working);
   const inProgress = open.filter(r => !r.working);
@@ -219,7 +223,6 @@ export function buildOverview(
   projectIds: readonly string[],
   homeProjectId: string | null,
   now: number,
-  options: BoardOptions = {},
 ): Overview {
   const needsYou: BoardRow[] = [];
   const running: BoardRow[] = [];
@@ -228,7 +231,7 @@ export function buildOverview(
   const pinned: BoardRow[] = [];
   for (const id of [...projectIds, ...(homeProjectId ? [homeProjectId] : [])]) {
     // With the project's automations, so rows know their next run (the clock in the left slot).
-    const b = buildBoard(threads, automations.filter(a => a.projectId === id), id, now, options);
+    const b = buildBoard(threads, automations.filter(a => a.projectId === id), id, now);
     pinned.push(...b.pinned);
     // Pinned threads have their own group and show their state in their row; home's own threads
     // have theirs below.
@@ -255,7 +258,7 @@ export function buildOverview(
   const paused = automations.filter(a => a.enabled === false && a.projectId === homeProjectId);
   const scheduled = [...upcoming, ...paused].map(a => ({ automation: a, thread: byId.get(boundThreadId(a) ?? "") ?? null }));
   const done = [...projectIds, ...(homeProjectId ? [homeProjectId] : [])]
-    .flatMap(id => buildBoard(threads, automations.filter(a => a.projectId === id), id, now, options).done)
+    .flatMap(id => buildBoard(threads, automations.filter(a => a.projectId === id), id, now).done)
     .sort((a, b) => (b.thread.archivedAt ?? 0) - (a.thread.archivedAt ?? 0));
   pinned.sort((a, b) => (a.thread.pinnedAt ?? 0) - (b.thread.pinnedAt ?? 0));
   return { pinned, needsYou, running, recent: recentRows, scheduled, done };
