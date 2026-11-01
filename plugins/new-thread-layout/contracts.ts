@@ -13,6 +13,7 @@ const automation = z.looseObject({
   /** "once" for a one-off run, "schedule" for a recurring one. */
   trigger: z.looseObject({ triggerType: z.string().optional() }).optional(),
   lastRunThreadId: z.string().nullable().optional(),
+  lastRunAt: z.number().nullable().optional(),
   lastRunStatus: z.string().nullable().optional(),
   problem: z.string().optional(),
 });

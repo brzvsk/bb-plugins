@@ -54,6 +54,7 @@ describe("buildBoard", () => {
       thread({ id: "manager", isPinned: true }),
       thread({ id: "later", updatedAt: NOW - H }),
       thread({ id: "watched" }),
+      thread({ id: "ran", updatedAt: NOW - H }),
     ];
     const automations = [
       { id: "a1", projectId: "p1", name: "Daily", enabled: true, nextRunAt: NOW + 2 * H, execution: { targetThreadId: "daily" } },
@@ -61,16 +62,17 @@ describe("buildBoard", () => {
       { id: "a3", projectId: "p1", name: "Manager", enabled: true, nextRunAt: NOW + H, execution: { targetThreadId: "manager" } },
       { id: "a4", projectId: "p1", name: "Fresh", enabled: true, nextRunAt: NOW + 4 * H },
       { id: "a5", projectId: "p1", name: "Paused", enabled: false, nextRunAt: NOW + 4 * H },
-      // A one-off run into an existing thread: that thread stays an ordinary thread.
+      // A one-off run into an existing thread: the thread waits under Scheduled until the run…
       { id: "a6", projectId: "p1", name: "Later", enabled: true, nextRunAt: NOW + 5 * H, execution: { targetThreadId: "later" }, trigger: { triggerType: "once" } },
+      // …and once it has run, the thread is an ordinary thread again.
+      { id: "a8", projectId: "p1", name: "Done once", enabled: false, nextRunAt: null, lastRunAt: NOW - H, execution: { targetThreadId: "ran" }, trigger: { triggerType: "once" } },
       // A script automation works through the thread it last ran in.
       { id: "a7", projectId: "p1", name: "Watch", enabled: true, nextRunAt: NOW + 6 * H, execution: { mode: "script" }, lastRunThreadId: "watched", trigger: { triggerType: "schedule" } },
     ];
     const b = buildBoard(threads, automations, "p1", NOW);
     // Even running or unread, a recurring automation's thread stays out of the lists.
     expect(b.running.map(r => r.thread.id)).toEqual([]);
-    expect(b.inProgress.map(r => r.thread.id)).toEqual(["later"]);
-    expect(b.inProgress[0].nextRunAt).toBe(NOW + 5 * H);
+    expect(b.inProgress.map(r => r.thread.id)).toEqual(["ran"]);
     expect(b.pinned[0].nextRunAt).toBe(NOW + H);
     expect(b.pinned[0].automationNames).toEqual(["Manager"]);
     expect(b.scheduled.map(r => [r.automation.name, r.thread?.id ?? null])).toEqual([
@@ -271,15 +273,20 @@ describe("buildOverview", () => {
     ], [], ["a"], "home", NOW);
     expect(withPins.pinned.map(r => r.thread.id)).toEqual(["p1", "p2"]);
     expect(withPins.running).toEqual([]);
-    // A recurring automation's unread thread is reported on its schedule line, not in Waiting for you;
-    // a one-off run's thread is an ordinary thread that shows its next run.
-    const bound = [thread({ id: "bound", projectId: "a", isUnread: true }), thread({ id: "once", projectId: "a", isUnread: true })];
+    // An automation thread's unread reply is reported on its schedule line, not in Waiting for you,
+    // pending one-off runs included; after a one-off run the thread is back in the lists.
+    const bound = [
+      thread({ id: "bound", projectId: "a", isUnread: true }),
+      thread({ id: "once", projectId: "a", isUnread: true }),
+      thread({ id: "ran", projectId: "a", isUnread: true }),
+    ];
     const runs = [
       { id: "q", projectId: "a", name: "Daily", enabled: true, nextRunAt: NOW + H, execution: { targetThreadId: "bound" } },
       { id: "r", projectId: "a", name: "Once", enabled: true, nextRunAt: NOW + 2 * H, execution: { targetThreadId: "once" }, trigger: { triggerType: "once" } },
+      { id: "s", projectId: "a", name: "Ran", enabled: false, nextRunAt: null, lastRunAt: NOW - H, execution: { targetThreadId: "ran" }, trigger: { triggerType: "once" } },
     ];
     const ov = buildOverview(bound, runs, ["a"], null, NOW);
-    expect(ov.needsYou.map(r => [r.thread.id, r.nextRunAt])).toEqual([["once", NOW + 2 * H]]);
+    expect(ov.needsYou.map(r => r.thread.id)).toEqual(["ran"]);
   });
 });
 

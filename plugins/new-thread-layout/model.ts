@@ -89,14 +89,20 @@ export function boundThreadId(a: Automation): string | null {
 }
 
 /**
- * The existing thread a recurring automation keeps running in: its target thread, or the thread a
- * script automation works through. Such a thread belongs to the schedule: it shows only there
- * (unless pinned). A one-off automation's thread, and the fresh thread of a per-run agent
- * automation, are threads like any other.
+ * The existing thread an automation writes into: its target thread, or the thread a script
+ * automation works through. Such a thread belongs to the schedule: it shows only there (unless
+ * pinned). A one-off automation holds it only until its run (still pending: enabled, a next run,
+ * not run yet); after that it is an ordinary thread again. The fresh thread of a per-run agent
+ * automation is a thread like any other.
  */
 export function residentThreadId(a: Automation): string | null {
-  if (a.trigger?.triggerType === "once") return null;
+  if (a.trigger?.triggerType === "once" && (a.enabled === false || a.nextRunAt == null || a.lastRunAt != null)) return null;
   return a.execution?.targetThreadId ?? (a.execution?.mode === "script" ? a.lastRunThreadId ?? null : null);
+}
+
+/** Switched off by the author (not a one-off that has already run, which bb also leaves disabled). */
+function paused(a: Automation): boolean {
+  return a.enabled === false && !(a.trigger?.triggerType === "once" && a.lastRunAt != null);
 }
 
 /** An agent works: its turn is in progress, or a background agent or workflow (delegated work). */
@@ -184,8 +190,8 @@ export function buildBoard(threads: readonly BoardThread[], automations: readonl
   const upcoming = automations
     .filter(a => a.enabled !== false && a.nextRunAt != null && a.nextRunAt >= now)
     .sort((a, b) => (a.nextRunAt ?? 0) - (b.nextRunAt ?? 0));
-  const paused = automations.filter(a => a.enabled === false).sort((a, b) => a.name.localeCompare(b.name));
-  const scheduled: ScheduledRow[] = [...upcoming, ...paused].map(a => ({ automation: a, thread: byId.get(boundThreadId(a) ?? "") ?? null }));
+  const off = automations.filter(paused).sort((a, b) => a.name.localeCompare(b.name));
+  const scheduled: ScheduledRow[] = [...upcoming, ...off].map(a => ({ automation: a, thread: byId.get(boundThreadId(a) ?? "") ?? null }));
 
   const done = roots
     .filter(t => t.isArchived && t.archivedAt !== null && t.archivedAt >= now - DONE_WINDOW_MS)
@@ -255,8 +261,8 @@ export function buildOverview(
     .filter(a => shown.has(a.projectId))
     .filter(a => a.enabled !== false && a.nextRunAt != null && a.nextRunAt >= now)
     .sort((a, b) => (a.nextRunAt ?? 0) - (b.nextRunAt ?? 0));
-  const paused = automations.filter(a => a.enabled === false && a.projectId === homeProjectId);
-  const scheduled = [...upcoming, ...paused].map(a => ({ automation: a, thread: byId.get(boundThreadId(a) ?? "") ?? null }));
+  const off = automations.filter(a => paused(a) && a.projectId === homeProjectId);
+  const scheduled = [...upcoming, ...off].map(a => ({ automation: a, thread: byId.get(boundThreadId(a) ?? "") ?? null }));
   const done = [...projectIds, ...(homeProjectId ? [homeProjectId] : [])]
     .flatMap(id => buildBoard(threads, automations.filter(a => a.projectId === id), id, now).done)
     .sort((a, b) => (b.thread.archivedAt ?? 0) - (a.thread.archivedAt ?? 0));
