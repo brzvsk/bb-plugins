@@ -39,6 +39,10 @@ export interface BoardRow {
   background: boolean;
   /** Child threads under this root. */
   children: number;
+  /** Descendant threads where an agent is working right now. */
+  childrenRunning: number;
+  /** Working only through descendants: the thread's own agent is idle. */
+  childOnly: boolean;
   /** Next run of an automation bound to this thread, epoch ms. */
   nextRunAt: number | null;
   automationNames: string[];
@@ -135,6 +139,11 @@ export function buildBoard(threads: readonly BoardThread[], automations: readonl
     if (next !== null && (entry.nextRunAt === null || next < entry.nextRunAt)) entry.nextRunAt = next;
     bound.set(id, entry);
   }
+  const runningBelow = (t: BoardThread, seen: Set<string> = new Set()): number => {
+    if (seen.has(t.id)) return 0;
+    seen.add(t.id);
+    return (kids.get(t.id) ?? []).reduce((n, k) => n + (selfWorking(k) ? 1 : 0) + runningBelow(k, seen), 0);
+  };
   const row = (thread: BoardThread): BoardRow => {
     const b = bound.get(thread.id);
     const status = statusOf(thread);
@@ -145,6 +154,8 @@ export function buildBoard(threads: readonly BoardThread[], automations: readonl
       working,
       background: !working && backgroundOnly(thread),
       children: children.get(thread.id) ?? 0,
+      childrenRunning: thread.isArchived ? 0 : runningBelow(thread),
+      childOnly: working && !status.working && !selfWorking(thread),
       nextRunAt: b?.nextRunAt ?? null,
       automationNames: b?.names ?? [],
     };

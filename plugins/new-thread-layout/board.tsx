@@ -52,7 +52,8 @@ function Row({ row, preview, now, onOpen, actionKeys, project }: { row: BoardRow
   // Like a messenger: an unsent draft takes the second line, "Draft:" in red.
   const draft = hasUnsubmittedDraft && !t.isArchived ? readDraft(t.projectId, t.id) : null;
   const second = previewText(preview);
-  const meta = row.children ? `${row.children} child` : "";
+  // Only live children are worth a word; idle ones are a click away in the thread.
+  const meta = row.childrenRunning ? `${row.childrenRunning} child thread${row.childrenRunning === 1 ? "" : "s"} running` : "";
   return (
     <ThreadRowActions thread={t} keys={actionKeys}>
     <a
@@ -70,7 +71,11 @@ function Row({ row, preview, now, onOpen, actionKeys, project }: { row: BoardRow
     >
       <span className="ph-glyph" data-ph-status={hasStatus || !!nextRun || undefined}>
         <span className="ph-glyph-status">
-          {row.background ? (
+          {row.childOnly && !row.attention ? (
+            // Only a child thread works, the thread itself is idle: bb's child-thread icon shining
+            // in place of its loader, as in the sidebar.
+            <Icon name="ChildThread" className="ph-child-icon animate-shine-icon" aria-label="Child thread working; this thread is idle" />
+          ) : row.background ? (
             // bb's own glyph for a background command: the reply is in, something external still runs.
             <StatusGlyph indicator="background-command" rowStatus={rowStatus} hideIdleDraftLabel />
           ) : hasStatus || !nextRun ? (

@@ -103,6 +103,22 @@ describe("buildBoard", () => {
     // A background command after the turn is not work in progress: the thread waits, quietly.
     expect(b.inProgress.map(r => [r.thread.id, r.background]).sort()).toEqual([["ci", true], ["quiet", false]]);
   });
+
+  it("counts running children and marks a thread working only through them", () => {
+    const threads = [
+      thread({ id: "lead" }),
+      thread({ id: "a", parentThreadId: "lead", runtimeStatus: "active" }),
+      thread({ id: "b", parentThreadId: "lead" }),
+      thread({ id: "b1", parentThreadId: "b", runtimeStatus: "active" }),
+      thread({ id: "idle-kid", parentThreadId: "lead" }),
+      thread({ id: "busy", runtimeStatus: "active" }),
+      thread({ id: "busy-kid", parentThreadId: "busy", runtimeStatus: "active" }),
+    ];
+    const rows = new Map(buildBoard(threads, [], "p1", NOW).running.map(r => [r.thread.id, r]));
+    expect(rows.get("lead")).toMatchObject({ children: 3, childrenRunning: 2, childOnly: true });
+    // Its own turn running too: bb's loader stays, the label still counts the child.
+    expect(rows.get("busy")).toMatchObject({ childrenRunning: 1, childOnly: false });
+  });
 });
 
 describe("statusOf", () => {
