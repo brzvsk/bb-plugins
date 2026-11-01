@@ -356,6 +356,8 @@ describe("POST /usage", () => {
     const s = await setup();
     const entries = await s.harness.behavior.resolveProviderEnv("pi", { threadId: null as unknown as string, projectId: "proj_1", hostId: "host_1" });
     expect(entries).toEqual([]);
+    // The harness turns a throwing contribution into [] plus a warning; there must be no warning.
+    expect(s.harness.inspection.logEntries.some((e) => e.message.includes("provider environment contribution failed"))).toBe(false);
   });
 
   it("forgets a deleted thread's report, budget, log copy and stop", async () => {
