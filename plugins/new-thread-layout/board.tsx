@@ -173,7 +173,8 @@ function ActionButton({ icon, label, disabled, onClick }: { icon: string; label:
 }
 
 /** The bound thread's read/unread and pin/unpin, as on thread rows: pinning brings it into attention. */
-const SCHEDULE_THREAD_ACTIONS = ["bb--core/read", "bb--core/pin"] as const;
+// Pin lives in the left slot, as on thread rows.
+const SCHEDULE_THREAD_ACTIONS = ["bb--core/read"] as const;
 function ScheduleThreadActions({ thread }: { thread: PluginSidebarThread }) {
   const entries = experimental_useThreadActions(actionTarget(thread), { keys: SCHEDULE_THREAD_ACTIONS });
   return (
@@ -228,6 +229,7 @@ function AutomationLine({ row, now, onOpen, actions, project }: { row: Scheduled
   const body = (
     <>
       <span className="ph-glyph">
+        <span className="ph-glyph-status">
         {working ? (
           <StatusGlyph indicator="runtime" />
         ) : unread ? (
@@ -238,6 +240,9 @@ function AutomationLine({ row, now, onOpen, actions, project }: { row: Scheduled
         ) : (
           <Icon name={paused ? "Pause" : "Clock"} className="ph-clock" aria-hidden />
         )}
+        </span>
+        {/* Like thread rows: the pin takes the left slot on hover. */}
+        {t ? <PinToggle thread={t} /> : null}
       </span>
       <span className="ph-auto-text">
         <span className="ph-auto-name">
