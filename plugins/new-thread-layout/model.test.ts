@@ -274,6 +274,11 @@ describe("buildOverview", () => {
       thread({ id: "p3", projectId: "c", isPinned: true, pinnedAt: 3 }),
     ], [], ["a"], "home", NOW);
     expect(withPins.pinned.map(r => r.thread.id)).toEqual(["p1", "p2"]);
+    const childPin = buildOverview([
+      thread({ id: "lead", projectId: "a" }),
+      thread({ id: "kid", projectId: "a", parentThreadId: "lead", isPinned: true, pinnedAt: 1 }),
+    ], [], ["a"], null, NOW);
+    expect(childPin.pinned.map(r => r.thread.id)).toEqual(["kid"]);
     expect(withPins.running).toEqual([]);
     // An automation thread's unread reply is reported on its schedule line, not in Waiting for you,
     // pending one-off runs included; after a one-off run the thread is back in the lists.

@@ -186,7 +186,8 @@ export function buildBoard(threads: readonly BoardThread[], automations: readonl
   const roots = mine.filter(t => t.parentThreadId === null);
   const byId = new Map(mine.map(t => [t.id, t] as const));
 
-  const pinned = roots.filter(t => t.isPinned && !t.isArchived).map(row);
+  // A pinned child thread is pinned too: the author chose to keep an eye on it themselves.
+  const pinned = mine.filter(t => t.isPinned && !t.isArchived).map(row);
 
   // A recurring automation's own thread lives under Scheduled only, its running and unread state
   // shown on that line; pinning it brings it into Pinned. Other bound threads (a one-off run) are
