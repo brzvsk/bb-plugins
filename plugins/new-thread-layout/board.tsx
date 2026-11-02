@@ -673,7 +673,6 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
                       </>
                     );
                   })()}
-                  {tab.unread ? <span className="ph-project-dot" aria-hidden /> : null}
                 </a>
               ))}
               </span>

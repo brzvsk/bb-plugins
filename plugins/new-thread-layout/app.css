@@ -440,7 +440,6 @@ a.ph-row[data-ph-pinned] .ph-title-text { font-weight: 500; }
   background: var(--state-active, color-mix(in oklab, var(--foreground) 10%, transparent));
 }
 .ph-project-home { width: 16px; height: 16px; }
-.ph-project-dot { width: 6px; height: 6px; flex: none; border-radius: 999px; background: #3b82f6; }
 
 /* Home overview: the thread's project, muted, before its title. */
 .ph-row-project { color: var(--muted-foreground); font-weight: 400; }
