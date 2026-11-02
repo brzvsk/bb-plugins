@@ -5,10 +5,12 @@ import {
   experimental_ThreadContextCardRow as CardRow,
   experimental_useRpcKeyedQuery,
   experimental_useRpcQuery,
+  useSdk,
   type ExperimentalThreadContextCardProps,
 } from "@get-bb/plugin-sdk/app";
+import { useCallback, useEffect, useState } from "react";
 import { automationsContract, gitContract } from "./contracts";
-import { automationStatus, branchView } from "./format";
+import { automationStatus, branchView, NOTIFY_OPTIONS, type ParentNotifications } from "./format";
 
 /**
  * Open an automation in the bundled Automations plugin. BbNavigate only reaches
@@ -67,7 +69,59 @@ export function AutomationsSection({ threadId }: ExperimentalThreadContextCardPr
   );
 }
 
+/** The Info tab's "Notify parent" choice, for child threads only. */
+export function NotifyParentRow({ threadId }: ExperimentalThreadContextCardProps) {
+  const sdk = useSdk();
+  const [state, setState] = useState<{ parent: string | null; value: ParentNotifications } | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    sdk.threads.get({ threadId }).then(
+      r => {
+        const t = "thread" in r ? (r as { thread: typeof r }).thread : r;
+        if (live) setState({ parent: t.parentThreadId ?? null, value: t.parentNotifications ?? "auto" });
+      },
+      () => { if (live) setState(null); },
+    );
+    return () => { live = false; };
+  }, [sdk, threadId]);
+
+  const change = useCallback((value: ParentNotifications) => {
+    setSaving(true);
+    setState(s => (s ? { ...s, value } : s));
+    sdk.threads.update({ threadId, parentNotifications: value }).catch(() => {}).finally(() => setSaving(false));
+  }, [sdk, threadId]);
+
+  if (!state?.parent) return null;
+  return (
+    <CardRow
+      icon="Bell"
+      label="Notify parent"
+      title="Which turn outcomes wake the parent thread"
+      trailing={
+        <select
+          aria-label="Notify parent"
+          value={state.value}
+          disabled={saving}
+          onChange={e => change(e.currentTarget.value as ParentNotifications)}
+          onClick={e => e.stopPropagation()}
+          className="cursor-pointer appearance-none bg-transparent text-right text-xs text-muted-foreground outline-none hover:text-foreground"
+        >
+          {NOTIFY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      }
+    />
+  );
+}
+
 export default definePluginApp(app => {
+  app.slots.experimental_threadContextCardRow({
+    id: "notify-parent",
+    group: experimental_THREAD_INFO_ROW_GROUPS.thread,
+    order: 50,
+    component: NotifyParentRow,
+  });
   app.slots.experimental_threadContextCardRow({
     id: "branch",
     group: experimental_THREAD_INFO_ROW_GROUPS.git,

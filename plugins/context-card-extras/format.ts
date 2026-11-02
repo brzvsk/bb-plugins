@@ -29,3 +29,12 @@ export function automationStatus(a: Automation, now = Date.now()): string {
   if (a.nextRunAt == null) return "Not scheduled";
   return a.nextRunAt < now ? "Due" : `Next ${nextRun.format(new Date(a.nextRunAt))}`;
 }
+
+export type ParentNotifications = "auto" | "stuck" | "off";
+
+/** Labels follow bb's own CLI help for --parent-notifications. */
+export const NOTIFY_OPTIONS: readonly { value: ParentNotifications; label: string }[] = [
+  { value: "auto", label: "Every outcome" },
+  { value: "stuck", label: "Only when stuck" },
+  { value: "off", label: "Off" },
+];
