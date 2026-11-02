@@ -102,13 +102,15 @@ export function residentThreadId(a: Automation): string | null {
 
 /**
  * Schedule lines whose thread has news (unread) or is at work go first, newest activity first, so a
- * finished run's report waits on top until it is read instead of sinking to its next run date. The
- * rest keep their order: upcoming runs by time, then paused ones.
+ * finished run's report waits on top until it is read instead of sinking to its next run date.
+ * Pinned ones follow (the author's focus), then the rest in their order: upcoming runs by time,
+ * then paused ones.
  */
 function newsFirst(rows: ScheduledRow[]): ScheduledRow[] {
   const live = (r: ScheduledRow) => !!r.thread && !r.thread.isArchived && (r.thread.isUnread || selfWorking(r.thread));
+  const pinned = (r: ScheduledRow) => !live(r) && !!r.thread?.isPinned && !r.thread.isArchived;
   const at = (r: ScheduledRow) => (r.thread ? r.thread.latestAttentionAt || r.thread.updatedAt : 0);
-  return [...rows.filter(live).sort((a, b) => at(b) - at(a)), ...rows.filter(r => !live(r))];
+  return [...rows.filter(live).sort((a, b) => at(b) - at(a)), ...rows.filter(pinned), ...rows.filter(r => !live(r) && !pinned(r))];
 }
 
 /** Switched off by the author (not a one-off that has already run, which bb also leaves disabled). */

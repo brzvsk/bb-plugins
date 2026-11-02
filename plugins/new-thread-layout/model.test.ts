@@ -59,7 +59,7 @@ describe("buildBoard", () => {
     const automations = [
       { id: "a1", projectId: "p1", name: "Daily", enabled: true, nextRunAt: NOW + 2 * H, execution: { targetThreadId: "daily" } },
       { id: "a2", projectId: "p1", name: "Loud", enabled: true, nextRunAt: NOW + 3 * H, execution: { targetThreadId: "loud" } },
-      { id: "a3", projectId: "p1", name: "Manager", enabled: true, nextRunAt: NOW + H, execution: { targetThreadId: "manager" } },
+      { id: "a3", projectId: "p1", name: "Manager", enabled: true, nextRunAt: NOW + 7 * H, execution: { targetThreadId: "manager" } },
       { id: "a4", projectId: "p1", name: "Fresh", enabled: true, nextRunAt: NOW + 4 * H },
       { id: "a5", projectId: "p1", name: "Paused", enabled: false, nextRunAt: NOW + 4 * H },
       // A one-off run into an existing thread: the thread waits under Scheduled until the run…
@@ -73,9 +73,10 @@ describe("buildBoard", () => {
     // Even running or unread, a recurring automation's thread stays out of the lists.
     expect(b.running.map(r => r.thread.id)).toEqual([]);
     expect(b.inProgress.map(r => r.thread.id)).toEqual(["ran"]);
-    expect(b.pinned[0].nextRunAt).toBe(NOW + H);
+    expect(b.pinned[0].nextRunAt).toBe(NOW + 7 * H);
     expect(b.pinned[0].automationNames).toEqual(["Manager"]);
-    // A line whose thread has news (unread, or at work) stays on top until read.
+    // A line whose thread has news (unread, or at work) stays on top until read; pinned ones next,
+    // even with a later run.
     expect(b.scheduled.map(r => [r.automation.name, r.thread?.id ?? null])).toEqual([
       ["Loud", "loud"],
       ["Manager", "manager"],
