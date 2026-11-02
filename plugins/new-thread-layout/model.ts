@@ -100,6 +100,17 @@ export function residentThreadId(a: Automation): string | null {
   return a.execution?.targetThreadId ?? (a.execution?.mode === "script" ? a.lastRunThreadId ?? null : null);
 }
 
+/**
+ * Schedule lines whose thread has news (unread) or is at work go first, newest activity first, so a
+ * finished run's report waits on top until it is read instead of sinking to its next run date. The
+ * rest keep their order: upcoming runs by time, then paused ones.
+ */
+function newsFirst(rows: ScheduledRow[]): ScheduledRow[] {
+  const live = (r: ScheduledRow) => !!r.thread && !r.thread.isArchived && (r.thread.isUnread || selfWorking(r.thread));
+  const at = (r: ScheduledRow) => (r.thread ? r.thread.latestAttentionAt || r.thread.updatedAt : 0);
+  return [...rows.filter(live).sort((a, b) => at(b) - at(a)), ...rows.filter(r => !live(r))];
+}
+
 /** Switched off by the author (not a one-off that has already run, which bb also leaves disabled). */
 function paused(a: Automation): boolean {
   return a.enabled === false && !(a.trigger?.triggerType === "once" && a.lastRunAt != null);
@@ -191,7 +202,7 @@ export function buildBoard(threads: readonly BoardThread[], automations: readonl
     .filter(a => a.enabled !== false && a.nextRunAt != null && a.nextRunAt >= now)
     .sort((a, b) => (a.nextRunAt ?? 0) - (b.nextRunAt ?? 0));
   const off = automations.filter(paused).sort((a, b) => a.name.localeCompare(b.name));
-  const scheduled: ScheduledRow[] = [...upcoming, ...off].map(a => ({ automation: a, thread: byId.get(boundThreadId(a) ?? "") ?? null }));
+  const scheduled = newsFirst([...upcoming, ...off].map(a => ({ automation: a, thread: byId.get(boundThreadId(a) ?? "") ?? null })));
 
   const done = roots
     .filter(t => t.isArchived && t.archivedAt !== null && t.archivedAt >= now - DONE_WINDOW_MS)
@@ -262,7 +273,7 @@ export function buildOverview(
     .filter(a => a.enabled !== false && a.nextRunAt != null && a.nextRunAt >= now)
     .sort((a, b) => (a.nextRunAt ?? 0) - (b.nextRunAt ?? 0));
   const off = automations.filter(a => paused(a) && a.projectId === homeProjectId);
-  const scheduled = [...upcoming, ...off].map(a => ({ automation: a, thread: byId.get(boundThreadId(a) ?? "") ?? null }));
+  const scheduled = newsFirst([...upcoming, ...off].map(a => ({ automation: a, thread: byId.get(boundThreadId(a) ?? "") ?? null })));
   const done = [...projectIds, ...(homeProjectId ? [homeProjectId] : [])]
     .flatMap(id => buildBoard(threads, automations.filter(a => a.projectId === id), id, now).done)
     .sort((a, b) => (b.thread.archivedAt ?? 0) - (a.thread.archivedAt ?? 0));

@@ -75,10 +75,11 @@ describe("buildBoard", () => {
     expect(b.inProgress.map(r => r.thread.id)).toEqual(["ran"]);
     expect(b.pinned[0].nextRunAt).toBe(NOW + H);
     expect(b.pinned[0].automationNames).toEqual(["Manager"]);
+    // A line whose thread has news (unread, or at work) stays on top until read.
     expect(b.scheduled.map(r => [r.automation.name, r.thread?.id ?? null])).toEqual([
+      ["Loud", "loud"],
       ["Manager", "manager"],
       ["Daily", "daily"],
-      ["Loud", "loud"],
       ["Fresh", null],
       ["Later", "later"],
       ["Watch", "watched"],
