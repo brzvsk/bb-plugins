@@ -598,19 +598,20 @@ export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectio
     () => (atHome ? projectTabs(sidebar.projects, sidebar.threads, arrangement.order, arrangement.hidden) : []),
     [atHome, sidebar.projects, sidebar.threads, arrangement.order, arrangement.hidden],
   );
-  // Home overview: what is live across the visible projects, and every project's schedule.
+  // Home overview: what is live across every project, those hidden in the thread list included
+  // (hiding a project there only takes it off the chips), and every project's schedule.
   const overview = useMemo(
     () =>
       atHome
         ? buildOverview(
             sidebar.threads,
             (allAutomations.data?.automations ?? []).map(e => e.automation),
-            tabs.map(t => t.id),
+            sidebar.projects.filter(p => !p.isPersonal).map(p => p.id),
             personal?.id ?? null,
             now,
           )
         : null,
-    [atHome, sidebar.threads, allAutomations.data, tabs, personal?.id, now],
+    [atHome, sidebar.threads, allAutomations.data, sidebar.projects, personal?.id, now],
   );
   const projectLabel = useMemo(() => {
     const names = new Map(sidebar.projects.map(p => [p.id, p.name] as const));

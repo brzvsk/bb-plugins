@@ -268,7 +268,7 @@ export function buildOverview(
   running.sort(recent);
   recentRows.sort(recent);
   const byId = new Map(threads.map(t => [t.id, t] as const));
-  // Only projects the thread list shows, plus home's own: hidden projects stay out of sight here too.
+  // The given projects plus home's own.
   const shown = new Set([...projectIds, ...(homeProjectId ? [homeProjectId] : [])]);
   const upcoming = automations
     .filter(a => shown.has(a.projectId))
