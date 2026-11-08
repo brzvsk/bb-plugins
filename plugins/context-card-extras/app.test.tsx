@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { automationStatus, branchView } from "./format";
+import { automationStatus, branchView, sortAutomations } from "./format";
 
 describe("branchView", () => {
   it("shows the branch and how far it is from its merge base", () => {
@@ -26,5 +26,20 @@ describe("automationStatus", () => {
     expect(automationStatus({ ...base, enabled: true, lastRunStatus: "running", nextRunAt: 5 })).toBe("Running");
     expect(automationStatus({ ...base, problem: "missing-agent-prompt" })).toBe("Needs attention");
     expect(automationStatus({ ...base, enabled: true, nextRunAt: 2_000 }, 1_000)).toMatch(/^Next /);
+  });
+});
+
+describe("sortAutomations", () => {
+  it("lists the soonest run first and keeps paused ones at the bottom in order", () => {
+    const a = (id: string, rest: object) => ({ id, projectId: "p", name: id, ...rest });
+    const sorted = sortAutomations([
+      a("tue", { enabled: true, nextRunAt: 300 }),
+      a("paused1", { enabled: false, nextRunAt: 50 }),
+      a("unscheduled", { enabled: true, nextRunAt: null }),
+      a("sun", { enabled: true, nextRunAt: 100 }),
+      a("paused2", { enabled: false, nextRunAt: 10 }),
+      a("running", { enabled: true, lastRunStatus: "running", nextRunAt: 900 }),
+    ]);
+    expect(sorted.map(x => x.id)).toEqual(["running", "sun", "tue", "unscheduled", "paused1", "paused2"]);
   });
 });

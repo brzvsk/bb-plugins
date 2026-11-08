@@ -30,6 +30,18 @@ export function automationStatus(a: Automation, now = Date.now()): string {
   return a.nextRunAt < now ? "Due" : `Next ${nextRun.format(new Date(a.nextRunAt))}`;
 }
 
+/**
+ * Soonest first: what needs attention or is running, then upcoming runs by time,
+ * then unscheduled; paused ones stay at the bottom in their original order.
+ */
+export function sortAutomations<T extends Automation>(items: readonly T[]): T[] {
+  const rank = (a: Automation) =>
+    a.problem || a.lastRunStatus === "running" ? -Infinity
+    : a.enabled === false ? Infinity
+    : a.nextRunAt ?? Number.MAX_SAFE_INTEGER;
+  return [...items].sort((a, b) => rank(a) - rank(b));
+}
+
 export type ParentNotifications = "auto" | "stuck" | "off";
 
 /** Labels follow bb's own CLI help for --parent-notifications. */

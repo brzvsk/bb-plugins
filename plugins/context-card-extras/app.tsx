@@ -10,7 +10,7 @@ import {
 } from "@get-bb/plugin-sdk/app";
 import { useCallback, useEffect, useState } from "react";
 import { automationsContract, gitContract } from "./contracts";
-import { automationStatus, branchView, NOTIFY_OPTIONS, type ParentNotifications } from "./format";
+import { automationStatus, branchView, sortAutomations, NOTIFY_OPTIONS, type ParentNotifications } from "./format";
 
 /**
  * Open an automation in the bundled Automations plugin. BbNavigate only reaches
@@ -51,7 +51,7 @@ export function AutomationsSection({ threadId }: ExperimentalThreadContextCardPr
     method: "automations_list",
     input: { targetThreadId: threadId },
   });
-  const items = list.data ?? [];
+  const items = sortAutomations(list.data ?? []);
   if (!items.length) return null;
   return (
     <>
