@@ -221,11 +221,12 @@ function AutomationLine({ row, now, onOpen, actions, project }: { row: Scheduled
   const t = row.thread as PluginSidebarThread | null;
   const where = t ? t.displayTitle : "new thread";
   // Quiet unless its thread has something unread; then bb's own unread dot replaces the clock.
-  const unread = !!t?.isUnread;
+  // Several automations can share a thread; only the line that carries its news lights up.
+  const unread = !!row.news && !!t?.isUnread;
   const busy = actions.pending.has(a.id);
   // The schedule line is where its thread's work shows: bb's loader while a run or the thread's
   // agent works, ahead of the unread dot.
-  const working = running || (!!t && WORKING.has(t.runtimeStatus));
+  const working = running || (!!row.news && !!t && WORKING.has(t.runtimeStatus));
   const body = (
     <>
       <span className="ph-glyph">

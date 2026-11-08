@@ -240,6 +240,15 @@ describe("projectTabs", () => {
   });
 });
 
+describe("schedule news", () => {
+  it("lights only one line per shared thread: the automation that ran last", () => {
+    const threads = [thread({ id: "shared", isUnread: true })];
+    const at = (id: string, lastRunAt: number | null, nextRunAt: number) => ({ id, projectId: "p1", name: id, enabled: true, nextRunAt, lastRunAt, execution: { targetThreadId: "shared" } });
+    const b = buildBoard(threads, [at("first", NOW - 3 * H, NOW + H), at("latest", NOW - H, NOW + 5 * H), at("never", null, NOW + 2 * H)], "p1", NOW);
+    expect(b.scheduled.map(r => [r.automation.id, r.news])).toEqual([["latest", true], ["first", false], ["never", false]]);
+  });
+});
+
 describe("buildOverview", () => {
   it("collects live and waiting threads from the projects, and every project's next runs", () => {
     const threads = [

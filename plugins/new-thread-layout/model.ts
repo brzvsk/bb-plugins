@@ -52,6 +52,11 @@ export interface ScheduledRow {
   automation: Automation;
   /** The bound thread when it is listed in the project, for navigation. */
   thread: BoardThread | null;
+  /**
+   * This line carries its thread's news (unread, or at work). When several automations share a
+   * thread, only one line does: the one that ran last, whose report it most likely is.
+   */
+  news?: boolean;
 }
 
 export interface Board {
@@ -106,8 +111,21 @@ export function residentThreadId(a: Automation): string | null {
  * Pinned ones follow (the author's focus), then the rest in their order: upcoming runs by time,
  * then paused ones.
  */
-function newsFirst(rows: ScheduledRow[]): ScheduledRow[] {
-  const live = (r: ScheduledRow) => !!r.thread && !r.thread.isArchived && (r.thread.isUnread || selfWorking(r.thread));
+function newsFirst(input: ScheduledRow[]): ScheduledRow[] {
+  const hasNews = (r: ScheduledRow) => !!r.thread && !r.thread.isArchived && (r.thread.isUnread || selfWorking(r.thread));
+  // One line per thread carries the news: a running run first, else the latest run, else the soonest next run.
+  const carrier = new Map<string, ScheduledRow>();
+  const better = (a: Automation, b: Automation) =>
+    Number(a.lastRunStatus === "running") - Number(b.lastRunStatus === "running") ||
+    (a.lastRunAt ?? -Infinity) - (b.lastRunAt ?? -Infinity) ||
+    (b.nextRunAt ?? Infinity) - (a.nextRunAt ?? Infinity);
+  for (const r of input) {
+    if (!hasNews(r)) continue;
+    const best = carrier.get(r.thread!.id);
+    if (!best || better(r.automation, best.automation) > 0) carrier.set(r.thread!.id, r);
+  }
+  const rows = input.map(r => ({ ...r, news: carrier.get(r.thread?.id ?? "") === r }));
+  const live = (r: ScheduledRow) => !!r.news;
   const pinned = (r: ScheduledRow) => !live(r) && !!r.thread?.isPinned && !r.thread.isArchived;
   const at = (r: ScheduledRow) => (r.thread ? r.thread.latestAttentionAt || r.thread.updatedAt : 0);
   return [...rows.filter(live).sort((a, b) => at(b) - at(a)), ...rows.filter(pinned), ...rows.filter(r => !live(r) && !pinned(r))];
