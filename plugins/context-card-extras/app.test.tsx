@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { automationStatus, branchView, sortAutomations } from "./format";
+import { automationStatus, branchView, runTime, sortAutomations } from "./format";
 
 describe("branchView", () => {
   it("shows the branch and how far it is from its merge base", () => {
@@ -25,7 +25,7 @@ describe("automationStatus", () => {
     expect(automationStatus({ ...base, enabled: true, nextRunAt: null })).toBe("Not scheduled");
     expect(automationStatus({ ...base, enabled: true, lastRunStatus: "running", nextRunAt: 5 })).toBe("Running");
     expect(automationStatus({ ...base, problem: "missing-agent-prompt" })).toBe("Needs attention");
-    expect(automationStatus({ ...base, enabled: true, nextRunAt: 2_000 }, 1_000)).toMatch(/^Next /);
+    expect(automationStatus({ ...base, enabled: true, nextRunAt: 2_000 }, 1_000)).not.toMatch(/Next/);
   });
 });
 
@@ -41,5 +41,14 @@ describe("sortAutomations", () => {
       a("running", { enabled: true, lastRunStatus: "running", nextRunAt: 900 }),
     ]);
     expect(sorted.map(x => x.id)).toEqual(["running", "sun", "tue", "unscheduled", "paused1", "paused2"]);
+  });
+});
+
+describe("runTime", () => {
+  it("names today and tomorrow, and dates further runs", () => {
+    const now = new Date(2026, 10, 8, 12, 0).getTime();
+    expect(runTime(new Date(2026, 10, 8, 16, 45).getTime(), now)).toMatch(/^Today, /);
+    expect(runTime(new Date(2026, 10, 9, 8, 15).getTime(), now)).toMatch(/^Tomorrow, /);
+    expect(runTime(new Date(2026, 10, 10, 19, 30).getTime(), now)).not.toMatch(/^(Today|Tomorrow)/);
   });
 });

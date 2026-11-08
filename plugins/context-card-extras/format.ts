@@ -19,7 +19,18 @@ export function branchView(row: GitStatusRow | undefined): BranchView | null {
   return { name, detail };
 }
 
-const nextRun = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+const time = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
+const day = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
+
+/** "Today, 7:30 PM", "Tomorrow, 8:15 AM", otherwise "Nov 10, 7:30 PM". */
+export function runTime(at: number, now = Date.now()): string {
+  const d = new Date(at);
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const days = Math.round((new Date(d).setHours(0, 0, 0, 0) - today.getTime()) / 86_400_000);
+  const label = days === 0 ? "Today" : days === 1 ? "Tomorrow" : day.format(d);
+  return `${label}, ${time.format(d)}`;
+}
 
 /** The trailing status bb's own Automations list shows, in short form. */
 export function automationStatus(a: Automation, now = Date.now()): string {
@@ -27,7 +38,7 @@ export function automationStatus(a: Automation, now = Date.now()): string {
   if (a.lastRunStatus === "running") return "Running";
   if (a.enabled === false) return "Paused";
   if (a.nextRunAt == null) return "Not scheduled";
-  return a.nextRunAt < now ? "Due" : `Next ${nextRun.format(new Date(a.nextRunAt))}`;
+  return a.nextRunAt < now ? "Due" : runTime(a.nextRunAt, now);
 }
 
 /**
