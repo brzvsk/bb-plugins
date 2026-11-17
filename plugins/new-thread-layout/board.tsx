@@ -530,7 +530,52 @@ function useCompact(): boolean {
  * (the layout CSS keys on the board being present).
  */
 export function ProjectBoard(props: PluginHomepageSectionProps) {
-  return useCompact() ? null : <WideProjectBoard {...props} />;
+  return useCompact() ? <CompactRecentFilter /> : <WideProjectBoard {...props} />;
+}
+
+/** bb's phone Recent list: the section headed by this id, rows as list items with a thread link. */
+const RECENTS_HEADING = "root-compose-mobile-recents";
+const THREAD_HREF = /^\/projects\/([^/]+)\/threads\//;
+
+/**
+ * On the phone the native Recent list follows the composer's project: with a project selected only
+ * its threads stay; with No project (home) every thread shows. Rows are hidden, not removed, so bb
+ * keeps owning the list.
+ */
+function CompactRecentFilter() {
+  const composer = useComposer();
+  const { projects } = experimental_useSidebarThreads();
+  const selected = composer.selection?.projectId ?? null;
+  const personal = projects.find(p => p.isPersonal)?.id ?? null;
+  const filter = selected && selected !== personal ? selected : null;
+  useEffect(() => {
+    const apply = () => {
+      const section = document.getElementById(RECENTS_HEADING)?.closest("section");
+      if (!section) return;
+      let shown = 0;
+      for (const row of Array.from(section.querySelectorAll<HTMLElement>("li"))) {
+        const href = row.querySelector("a[href]")?.getAttribute("href") ?? "";
+        const project = THREAD_HREF.exec(href)?.[1] ?? null;
+        const hide = !!filter && project !== filter;
+        if (hide) row.dataset.phOtherProject = "";
+        else {
+          delete row.dataset.phOtherProject;
+          shown++;
+        }
+      }
+      if (filter && !shown) section.dataset.phRecentEmpty = "";
+      else delete section.dataset.phRecentEmpty;
+    };
+    apply();
+    const observer = new MutationObserver(apply);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => {
+      observer.disconnect();
+      document.querySelectorAll("[data-ph-other-project]").forEach(e => e.removeAttribute("data-ph-other-project"));
+      document.querySelectorAll("[data-ph-recent-empty]").forEach(e => e.removeAttribute("data-ph-recent-empty"));
+    };
+  }, [filter]);
+  return null;
 }
 
 function WideProjectBoard({ projectId: routeProjectId }: PluginHomepageSectionProps) {

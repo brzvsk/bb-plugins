@@ -557,3 +557,12 @@ a.ph-row[data-ph-pinned]:is([data-ph-working], [data-ph-background]) .ph-main .p
   .ph-crumb-row .ph-home .ph-crumb-sep { display: none; }
   .ph-crumb-row .ph-crumb-name { max-width: 7rem; }
 }
+/* Phone Recent filtered to the selected project. */
+li[data-ph-other-project] { display: none !important; }
+section[data-ph-recent-empty] ul::after {
+  content: "No recent threads in this project";
+  display: block;
+  padding: 0.75rem 0.5rem;
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
