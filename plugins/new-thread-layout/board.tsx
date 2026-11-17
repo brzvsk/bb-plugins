@@ -510,7 +510,30 @@ function useNow(): number {
   return now;
 }
 
-export function ProjectBoard({ projectId: routeProjectId }: PluginHomepageSectionProps) {
+/** bb's compact (phone) layout: below its md breakpoint the New thread screen is a different page. */
+const COMPACT = "(max-width: 767px)";
+
+function useCompact(): boolean {
+  const [compact, setCompact] = useState(() => window.matchMedia(COMPACT).matches);
+  useEffect(() => {
+    const query = window.matchMedia(COMPACT);
+    const update = () => setCompact(query.matches);
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  return compact;
+}
+
+/**
+ * The project home is built for the wide New thread screen. bb's phone layout stacks the composer
+ * over its own Recent list, so there the plugin steps aside and bb's native screen stays as is
+ * (the layout CSS keys on the board being present).
+ */
+export function ProjectBoard(props: PluginHomepageSectionProps) {
+  return useCompact() ? null : <WideProjectBoard {...props} />;
+}
+
+function WideProjectBoard({ projectId: routeProjectId }: PluginHomepageSectionProps) {
   // The slot's projectId is null on the plain compose route; the composer's selected project is the one in view.
   const composer = useComposer();
   const projectId = routeProjectId ?? composer.selection?.projectId ?? null;

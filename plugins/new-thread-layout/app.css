@@ -549,3 +549,11 @@ a.ph-row[data-ph-pinned]:is([data-ph-working], [data-ph-background]) .ph-main .p
 }
 /* bb's child-thread icon in place of the loader while only a child works; bb's own shine animates it. */
 .ph-child-icon { width: 14px; height: 14px; }
+
+/* bb's phone layout: the thread header is narrow, so the crumb leaves room for the thread title:
+   the home link is its icon alone and the project name is capped. */
+@media (max-width: 767px) {
+  .ph-crumb-row .ph-home-label,
+  .ph-crumb-row .ph-home .ph-crumb-sep { display: none; }
+  .ph-crumb-row .ph-crumb-name { max-width: 7rem; }
+}
