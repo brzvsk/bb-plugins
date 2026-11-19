@@ -141,7 +141,7 @@ export const SETTINGS = {
   },
 } satisfies PluginSettingDescriptors;
 
-const ownBudgetSchema = z.object({ budget: z.number().finite().positive().nullable() });
+const ownBudgetSchema = z.object({ budget: z.number().finite().positive().nullable(), includeChildren: z.boolean().optional() });
 const stoppedSchema = z.object({ at: z.number() });
 
 const message = (err: unknown): string => (err instanceof Error ? err.message : String(err));
@@ -204,6 +204,7 @@ const EMPTY = buildReport([], null);
 
 /** A report a POST just stored, used in place of the latest when looking at that POST. */
 type Pinned = { threadId: string; stored: Stored };
+type BudgetRecord = { budget: OwnBudget; includeChildren: boolean };
 
 export default async function plugin(bb: BbPluginApi): Promise<void> {
   const settings = bb.settings.define(SETTINGS);
@@ -234,7 +235,8 @@ export default async function plugin(bb: BbPluginApi): Promise<void> {
   const directory = createThreadDirectory(bb);
   // null: the thread has no stored report, so it is not read from KV again.
   const reports = new Map<string, Stored | null>();
-  const budgets = new Map<string, OwnBudget>();
+  const budgets = new Map<string, BudgetRecord>();
+  const observedFamilies = new Map<string, UsageReport>();
   const titles = new Map<string, { title: string | null; at: number }>();
   const observed = new Map<string, UsageReport>();
   const stops = new Map<string, number | null>();
@@ -298,9 +300,9 @@ export default async function plugin(bb: BbPluginApi): Promise<void> {
    * what a log cannot know: pi's own budget, when pi stopped a run, and the
    * context window. Whether it is working comes from bb.
    */
-  async function resolveMany(threadIds: readonly string[], pinned?: Pinned, prices: "settings" | "list" = "settings"): Promise<Map<string, Resolved>> {
+  async function resolveMany(threadIds: readonly string[], pinned?: Pinned, prices: "settings" | "list" = "settings", waitForReports = false): Promise<Map<string, Resolved>> {
     const ids = [...new Set(threadIds)];
-    const [logs, values] = await Promise.all([source.reportsOf(ids, { deadlineMs: HOST_WAIT_MS }), settings.get()]);
+    const [logs, values] = await Promise.all([source.reportsOf(ids, waitForReports ? {} : { deadlineMs: HOST_WAIT_MS }), settings.get()]);
     const discounts = prices === "list" ? NO_DISCOUNTS : discountsOf(values);
     const out = new Map<string, Resolved>();
     await eachLimit(ids, 32, async (threadId) => {
@@ -365,28 +367,35 @@ export default async function plugin(bb: BbPluginApi): Promise<void> {
     return { entries: reportsIn(resolved, ids).map(({ id, report }) => ({ threadId: id, report })), reading: source.reading(ids) };
   }
 
-  async function ownBudget(threadId: string): Promise<OwnBudget> {
-    if (budgets.has(threadId)) return budgets.get(threadId);
+  async function ownBudget(threadId: string): Promise<BudgetRecord> {
+    const cached = budgets.get(threadId);
+    if (cached) return cached;
     const raw = await bb.storage.kv.get<unknown>(budgetKey(threadId));
     let own: OwnBudget;
+    let includeChildren = false;
     if (raw !== undefined) {
       const parsed = ownBudgetSchema.safeParse(raw);
-      if (parsed.success) own = parsed.data.budget;
-      else await bb.storage.kv.delete(budgetKey(threadId));
+      if (parsed.success) {
+        own = parsed.data.budget;
+        includeChildren = own !== null && parsed.data.includeChildren === true;
+      } else await bb.storage.kv.delete(budgetKey(threadId));
     }
-    remember(budgets, threadId, own);
-    return own;
+    const record = { budget: own, includeChildren };
+    remember(budgets, threadId, record);
+    return record;
   }
 
   type Values = Awaited<ReturnType<typeof settings.get>>;
 
   async function budgetOf(threadId: string, report: UsageReport | null, values?: Values) {
     const { threadBudget } = values ?? (await settings.get());
-    return effectiveBudget(await ownBudget(threadId), threadBudget, report?.budget ?? null);
+    const own = await ownBudget(threadId);
+    return effectiveBudget(own.budget, threadBudget, report?.budget ?? null, own.includeChildren);
   }
 
   async function policyOf(threadId: string) {
-    return policyFor(await ownBudget(threadId), await settings.get());
+    const own = await ownBudget(threadId);
+    return policyFor(own.budget, await settings.get(), own.includeChildren);
   }
 
   /** The thread's title, cached briefly; null when bb cannot say (the failure is logged once per TTL). */
@@ -407,9 +416,13 @@ export default async function plugin(bb: BbPluginApi): Promise<void> {
   async function descendantsOf(threadIds: readonly string[], strict = false): Promise<Map<string, string[]>> {
     try {
       // Archived and hidden children still cost money, and thread-spend counts them too.
-      const { threads } = await bb.sdk.threads.experimental_listDescendants({ threadIds, includeArchived: true, includeHidden: true });
       const rows = await directory.all();
-      return new Map(threads.map((t) => [t.threadId, withOwnedThreads(t.threadId, t.descendantIds, rows)]));
+      const descendants = new Map<string, string[]>();
+      for (let start = 0; start < threadIds.length; start += 200) {
+        const { threads } = await bb.sdk.threads.experimental_listDescendants({ threadIds: threadIds.slice(start, start + 200), includeArchived: true, includeHidden: true });
+        for (const thread of threads) descendants.set(thread.threadId, withOwnedThreads(thread.threadId, thread.descendantIds, rows));
+      }
+      return descendants;
     } catch (err) {
       bb.log.warn(`listing the child threads of ${threadIds.length} thread(s) failed: ${message(err)}`);
       if (strict) throw err;
@@ -453,7 +466,7 @@ export default async function plugin(bb: BbPluginApi): Promise<void> {
       label: report ? usageLabel(report) : null,
       familyCost: children.length > 0 ? children.reduce((sum, c) => sum + c.report.cost.total, cost) : null,
       budget,
-      state: budgetState(cost, budget?.amount),
+      state: budgetState(budget?.includeChildren ? children.reduce((sum, c) => sum + c.report.cost.total, cost) : cost, budget?.amount),
       estimated: (report?.estimated ?? false) || children.some((c) => c.report.estimated),
     };
   }
@@ -461,6 +474,15 @@ export default async function plugin(bb: BbPluginApi): Promise<void> {
   const spendDeps: SpendDeps = {
     bb,
     budgetOf: async (threadId, report) => (await budgetOf(threadId, report))?.amount ?? null,
+    budgetCosts: async (entries) => {
+      const shared = (await Promise.all(entries.map(async ({ threadId, report }) => (await budgetOf(threadId, report))?.includeChildren ? threadId : null))).filter(id => id !== null);
+      const costs = new Map<string, number>();
+      if (shared.length === 0) return costs;
+      const descendants = await descendantsOf(shared, true);
+      const resolved = await resolveMany([...shared, ...[...descendants.values()].flat()]);
+      for (const id of shared) costs.set(id, budgetReport(resolved, [id, ...(descendants.get(id) ?? [])]).cost.total);
+      return costs;
+    },
     dailyBudget: async () => positiveOrNull((await settings.get()).dailyBudget),
     reports: threadReports,
     descendantsOf: ids => descendantsOf(ids, true),
@@ -477,12 +499,13 @@ export default async function plugin(bb: BbPluginApi): Promise<void> {
   };
 
   /** Publishes the toasts a change in a thread's figures earns. */
-  async function announce(threadId: string, prev: UsageReport, next: UsageReport, values: Values): Promise<void> {
-    const budget = (await budgetOf(threadId, next, values))?.amount ?? null;
-    const events = alertEvents(prev, next, { budget, budgetAlerts: values.budgetAlerts, notifyExpensiveTurn: values.notifyExpensiveTurn });
+  async function announce(threadId: string, prev: UsageReport, next: UsageReport, values: Values, family = false): Promise<void> {
+    const effective = await budgetOf(threadId, next, values);
+    const budget = !family && effective?.includeChildren ? null : effective?.amount ?? null;
+    const events = alertEvents(prev, next, { budget, budgetAlerts: values.budgetAlerts, notifyExpensiveTurn: !family && values.notifyExpensiveTurn });
     if (events.length === 0) return;
     const title = (await titleOf(threadId)) ?? UNTITLED;
-    for (const event of events) bb.realtime.publish(ALERT_CHANNEL, alertFor(event, threadId, title, Date.now()));
+    for (const event of events) bb.realtime.publish(ALERT_CHANNEL, alertFor(event, threadId, title, Date.now(), family));
   }
 
   /**
@@ -492,21 +515,27 @@ export default async function plugin(bb: BbPluginApi): Promise<void> {
    * extension stops its own run from the policy in each reply, and bb's stop,
    * which also releases the thread's runtime, must not race it.
    */
-  async function stopAtBudget(threadId: string, prev: UsageReport, next: UsageReport, values: Values): Promise<void> {
-    if (!values.stopAtBudget || !next.running) return;
+  async function stopAtBudget(threadId: string, prev: UsageReport, next: UsageReport, values: Values, stopped: Set<string>): Promise<void> {
+    if (!values.stopAtBudget || !next.running || (await budgetOf(threadId, next, values))?.includeChildren) return;
     // A harness that reports a turn as it ends has nothing left to stop.
     if (!(await source.harnessOf(threadId))?.perCall) return;
-    const policy = policyFor(await ownBudget(threadId), values);
+    const policy = policyFor((await ownBudget(threadId)).budget, values);
     if (!shouldStop(policy, prev.cost.total, next.cost.total)) return;
     // A stored report older than PI_FRESH_MS means no extension is reporting now, so bb's stop owns the thread again.
     const reportedByPi = await load(threadId);
     if (reportedByPi !== null && Date.now() - reportedByPi.at < PI_FRESH_MS) return;
+    await stopThread(threadId, policy.budget, stopped);
+  }
+
+  async function stopThread(threadId: string, budget: number | null, stopped: Set<string>): Promise<void> {
+    if (stopped.has(threadId)) return;
     try {
       await bb.sdk.threads.stop({ threadId });
     } catch (err) {
       bb.log.warn(`stopping ${threadId} at its budget failed: ${message(err)}`);
       return;
     }
+    stopped.add(threadId);
     const at = Date.now();
     remember(stops, threadId, at);
     const held = observed.get(threadId);
@@ -518,13 +547,17 @@ export default async function plugin(bb: BbPluginApi): Promise<void> {
     }
     const title = (await titleOf(threadId)) ?? UNTITLED;
     readsChanged([threadId]);
-    bb.realtime.publish(ALERT_CHANNEL, alertFor({ kind: "stopped", stoppedAt: at, budget: policy.budget }, threadId, title, at));
+    bb.realtime.publish(ALERT_CHANNEL, alertFor({ kind: "stopped", stoppedAt: at, budget }, threadId, title, at));
   }
 
   async function look(threadIds: readonly string[], pinned?: Pinned): Promise<void> {
     // observed keeps list prices, so both figures get the same discounts and a changed setting is never spend.
-    const [resolved, values] = await Promise.all([resolveMany(threadIds, pinned, "list"), settings.get()]);
+    const [affected, values] = await Promise.all([ancestorsOf(threadIds), settings.get()]);
+    const shared = (await Promise.all(affected.map(async id => (await budgetOf(id, null, values))?.includeChildren ? id : null))).filter(id => id !== null);
+    const descendants = shared.length ? await descendantsOf(shared, true) : new Map<string, string[]>();
+    const resolved = await resolveMany([...threadIds, ...shared, ...[...descendants.values()].flat()], pinned, "list", shared.length > 0);
     const discounts = discountsOf(values);
+    const stopped = new Set<string>();
     for (const threadId of threadIds) {
       const atList = resolved.get(threadId)?.report;
       if (!atList) continue;
@@ -535,10 +568,50 @@ export default async function plugin(bb: BbPluginApi): Promise<void> {
       if (seen !== null && prev !== null && (atList.cost.total < seen.cost.total || next.cost.total < prev.cost.total)) continue;
       remember(observed, threadId, atList);
       if (prev === null) continue;
-      await stopAtBudget(threadId, prev, next, values);
+      await stopAtBudget(threadId, prev, next, values, stopped);
       await announce(threadId, prev, next, values);
     }
+    for (const threadId of shared) {
+      const ids = [threadId, ...(descendants.get(threadId) ?? [])];
+      const atList = budgetReport(resolved, ids);
+      const seen = observedFamilies.get(threadId) ?? (atList.startedAt >= loadedAt ? EMPTY : null);
+      const next = applyDiscounts(atList, discounts);
+      const prev = seen === null ? null : applyDiscounts(seen, discounts);
+      if (seen !== null && prev !== null && (atList.cost.total < seen.cost.total || next.cost.total < prev.cost.total)) continue;
+      remember(observedFamilies, threadId, atList);
+      if (prev === null) continue;
+      const budget = (await budgetOf(threadId, null, values))?.amount ?? null;
+      if (shouldStop({ budget, stopAtBudget: values.stopAtBudget, notifyExpensiveTurn: false }, prev.cost.total, next.cost.total)) {
+        for (const id of ids) {
+          if (await source.running(id) && (await source.harnessOf(id))?.perCall) await stopThread(id, budget, stopped);
+        }
+      }
+      await announce(threadId, prev, next, values, true);
+    }
     checkDailySoon();
+  }
+
+  function budgetReport(resolved: Map<string, Resolved>, ids: readonly string[]): UsageReport {
+    const reports = reportsIn(resolved, ids).map(r => r.report);
+    const cost = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 };
+    for (const report of reports) for (const key of Object.keys(cost) as (keyof typeof cost)[]) cost[key] += report.cost[key];
+    return { ...EMPTY, cost, startedAt: Math.min(...reports.map(r => r.startedAt)), estimated: reports.some(r => r.estimated) };
+  }
+
+  async function ancestorsOf(threadIds: readonly string[]): Promise<string[]> {
+    const about = new Set(threadIds);
+    const rows = await directory.all();
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const row of rows) if (about.has(row.id)) {
+        for (const parent of [row.parentThreadId, row.lifecycleOwnerThreadId]) if (parent && !about.has(parent)) {
+          about.add(parent);
+          grew = true;
+        }
+      }
+    }
+    return [...about];
   }
 
   /** Checks the daily budget now, or DAILY_CHECK_MS after the last check, so a burst of changes checks it once. */
@@ -583,8 +656,8 @@ export default async function plugin(bb: BbPluginApi): Promise<void> {
   });
 
   /** The source's news: a host saw these threads' logs change, or bb says they started or stopped working. */
-  function changed(threadIds: string[]): void {
-    observe(threadIds)
+  function changed(threadIds: string[], pinned?: Pinned): void {
+    observe(threadIds, pinned)
       .catch((err: unknown) => {
         if (!disposed) bb.log.warn(`looking at the new figures of ${threadIds.length} thread(s) failed: ${message(err)}`);
       })
@@ -605,7 +678,7 @@ export default async function plugin(bb: BbPluginApi): Promise<void> {
         } catch { readsChanged(); bb.realtime.publish("usage", {}); }
         if (!disposed) {
           readsChanged([...about]);
-          for (const threadId of about) bb.realtime.publish("usage", { threadId });
+          for (const threadId of about) if (threadId !== pinned?.threadId) bb.realtime.publish("usage", { threadId });
         }
       });
   }
@@ -646,14 +719,19 @@ export default async function plugin(bb: BbPluginApi): Promise<void> {
     () => "all",
     async () => {
       // The sidebar shows no archived thread, so none is read for its flag.
-      const ids = await threadsWhere((t) => t.archivedAt === null);
-      const [resolved, values] = await Promise.all([resolveMany(ids), settings.get()]);
+      const ids = [...new Set(await threadsWhere((t) => t.archivedAt === null))];
+      const values = await settings.get();
+      const shared = (await Promise.all(ids.map(async id => (await budgetOf(id, null, values))?.includeChildren ? id : null))).filter(id => id !== null);
+      const descendants = shared.length ? await descendantsOf(shared, true) : new Map<string, string[]>();
+      const resolved = await resolveMany([...ids, ...[...descendants.values()].flat()]);
       const rows = await Promise.all(
-        reportsIn(resolved, ids).map(async ({ id: threadId, report }) => {
+        ids.map(async (threadId) => {
+          const report = resolved.get(threadId)?.report ?? null;
           const budget = await budgetOf(threadId, report, values);
-          const cost = report.cost.total;
+          const spending = budget?.includeChildren ? budgetReport(resolved, [threadId, ...(descendants.get(threadId) ?? [])]) : report;
+          const cost = spending?.cost.total ?? 0;
           return budget !== null && budgetState(cost, budget.amount) === "over"
-            ? { threadId, cost, budget: budget.amount, estimated: report.estimated }
+            ? { threadId, cost, budget: budget.amount, estimated: spending?.estimated ?? false }
             : null;
         }),
       );
@@ -681,10 +759,17 @@ export default async function plugin(bb: BbPluginApi): Promise<void> {
   bb.rpc.register(rpcContract, {
     // A burst of usage signals for one thread (or its children) must not start a family read per signal.
     usage: usageRead,
-    setBudget: async ({ threadId, budget }) => {
+    setBudget: async ({ threadId, budget, includeChildren }) => {
+      await observing;
+      const own = await ownBudget(threadId);
+      const shared = typeof budget === "number" && (includeChildren ?? own.includeChildren);
+      if (shared) {
+        const descendants = (await descendantsOf([threadId], true)).get(threadId) ?? [];
+        remember(observedFamilies, threadId, budgetReport(await resolveMany([threadId, ...descendants], undefined, "list", true), [threadId, ...descendants]));
+      } else observedFamilies.delete(threadId);
       if (budget === "default") await bb.storage.kv.delete(budgetKey(threadId));
-      else await bb.storage.kv.set(budgetKey(threadId), { budget });
-      remember(budgets, threadId, budget === "default" ? undefined : budget);
+      else await bb.storage.kv.set(budgetKey(threadId), { budget, ...(shared ? { includeChildren: true } : {}) });
+      remember(budgets, threadId, { budget: budget === "default" ? undefined : budget, includeChildren: shared });
       readsChanged([threadId]);
       bb.realtime.publish("usage", { threadId });
       const report = (await resolve(threadId))?.report ?? null;
@@ -735,9 +820,7 @@ export default async function plugin(bb: BbPluginApi): Promise<void> {
     readsChanged([threadId]);
     bb.realtime.publish("usage", { threadId });
     // After the reply, so a slow look at the thread never delays pi.
-    observe([threadId], { threadId, stored }).catch((err: unknown) => {
-      if (!disposed) bb.log.warn(`publishing the alerts of ${threadId} failed: ${message(err)}`);
-    });
+    changed([threadId], { threadId, stored });
     return c.json({ ok: true, policy } satisfies UsageReply);
   });
 
@@ -756,7 +839,7 @@ export default async function plugin(bb: BbPluginApi): Promise<void> {
   ] : []);
 
   // A thread moving in or out of the archive moves in or out of the sidebar's flags.
-  for (const name of ["thread.archived", "thread.unarchived"] as const) {
+  for (const name of ["thread.created", "thread.archived", "thread.unarchived"] as const) {
     bb.events.on(name, () => {
       directory.refresh();
       readsChanged();
@@ -769,6 +852,7 @@ export default async function plugin(bb: BbPluginApi): Promise<void> {
     budgets.delete(thread.id);
     titles.delete(thread.id);
     observed.delete(thread.id);
+    observedFamilies.delete(thread.id);
     stops.delete(thread.id);
     try {
       await Promise.all([source.forget(thread.id), ...[reportKey, budgetKey, logKey, stoppedKey].map((key) => bb.storage.kv.delete(key(thread.id)))]);

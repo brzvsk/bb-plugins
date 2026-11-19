@@ -49,7 +49,7 @@ function Kpis({ answer, report, atList }: { answer: UsageAnswer; report: UsageRe
   const fromKids = family.total - own;
   const speed = reportOutputPerSec(report);
   const tokens = report.tokens.input + report.tokens.output + report.tokens.cacheRead + report.tokens.cacheWrite;
-  const share = budget !== null && !tokenOnly ? `${Math.round((own / budget.amount) * 100)}% of ${formatBudget(budget.amount)} budget` : "No budget";
+  const share = budget !== null && !tokenOnly ? `${Math.round(((budget.includeChildren ? family.total : own) / budget.amount) * 100)}% of ${formatBudget(budget.amount)} budget${budget.includeChildren ? " including children" : ""}` : "No budget";
   return (
     <div className="grid grid-cols-[repeat(auto-fit,minmax(8.5rem,1fr))] gap-2" data-testid="kpis">
       <Kpi label="This thread" value={usageLabel(report)} sub={atList ? "At list price" : share} />
@@ -323,10 +323,10 @@ export function BurnPanel({ threadId, params }: PluginThreadPanelProps): ReactNo
       {report !== null ? <FamilyList answer={answer} report={report} onOpen={(id) => navigate.toThread(id)} /> : null}
       <section data-testid="panel-budget">
         <Label>Budget</Label>
-        {report !== null && !isTokenOnly(report) && !atList ? <BudgetStatus cost={report.cost.total} budget={budget} /> : null}
+        {report !== null && !isTokenOnly(report) && !atList ? <BudgetStatus cost={budget?.includeChildren ? answer.family.total : report.cost.total} budget={budget} /> : null}
         <div className="mt-2">
           <BudgetEditor
-            key={`${budget?.source ?? "none"}:${budget?.amount ?? ""}`}
+            key={`${threadId}:${budget?.source ?? "none"}:${budget?.amount ?? ""}:${budget?.includeChildren ?? false}`}
             threadId={threadId}
             budget={budget}
             defaultBudget={prefs.threadBudget}

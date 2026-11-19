@@ -68,6 +68,16 @@ An over-budget or stopped-thread notification stays on screen until you close it
 
 Set a thread's own budget from the chip, the thread menu or the Burn tab. The **Thread budget** setting applies to every thread without its own.
 
+### Share a budget with child threads
+
+In the budget editor, check **Include child threads** and save. This is off by default and applies only to that budget. It counts the thread and all descendants, including nested children, archived or hidden children, and workflow-owned workers. Native subagent usage already included in a thread's cost is not added again. Children's own budgets still apply independently.
+
+The budget meter, chip colour, sidebar flag and alerts use the combined cost. The chip's main amount remains the thread's own cost; its tooltip and the card show the combined budget spending. The Burn page uses combined spending for budget status without adding children to its spend totals twice.
+
+With **Stop a thread at its budget** enabled, crossing the combined limit stops the family's running threads through bb, even when the parent is idle or has the Burn pi extension. Claude Code threads retain the existing exception: Burn does not stop them because their cost arrives only as each turn ends. Turning on child tracking alone does not enable stopping.
+
+This is a stop on a threshold crossing, not a hard spending cap. Usage arrives after a model call, so concurrent calls can overshoot. Saving a budget already below the current total does not stop work immediately, and sending another prompt after a stop still continues. **Use default** and **Clear** also turn child tracking off for this budget.
+
 ## Discounts
 
 Burn's dollar figures are list prices, the published price per token. If you pay less, for example at a contract rate, set **Discount (%)** in Burn's settings. 16 means you pay 84% of list price. A negative number raises prices instead: -10 adds 10%. Four more settings each replace the discount for one line item: uncached input, output, cache reads or cache writes. Leave them empty to use **Discount (%)**.
@@ -86,7 +96,7 @@ These are in Burn's plugin settings.
 | Thread budget | none | A budget for every thread. A thread's own budget, set from the chip or the thread menu, overrides it. |
 | Daily budget | none | One notification a day when all threads together pass it. |
 | Budget alerts | on | Notifications at 80% and 100% of a thread's budget. |
-| Stop a thread at its budget | off | Stops the run whose cost crosses the budget. In a pi thread with the pi extension, the extension stops the run itself; otherwise Burn stops the thread's current work through bb. Claude Code threads are not stopped, because their cost arrives only as each turn ends. Sending another prompt continues. |
+| Stop a thread at its budget | off | Stops the run whose cost crosses the budget. For a thread-only budget in a pi thread with the pi extension, the extension stops the run itself; otherwise Burn stops the current work through bb. A budget that includes children stops the running family through bb. Claude Code threads are not stopped, because their cost arrives only as each turn ends. Sending another prompt continues. |
 | Flag threads over budget | on | The red flame in the sidebar. |
 | Notify after an expensive prompt | off | A notification after a prompt that costs at least 3 times the thread's median and at least $0.50. |
 | Price overrides (JSON) | empty | Rates in dollars per million tokens for models the built-in list does not price, such as router aliases or contract rates: `{"model-id": {"input": 3, "output": 15, "cacheRead": 0.3, "cacheWrite": 3.75}}`. Input and output are required; cache rates default to 0. An override replaces that model's whole built-in row, including any long-context price tier. Burn uses these rates for Claude Code and Codex threads, whose tokens it prices itself. pi and OpenCode threads keep the cost their harness recorded. |

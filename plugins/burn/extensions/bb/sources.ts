@@ -657,7 +657,7 @@ export function createReportSource(
         }
         const under = reading.get(threadId);
         if (under) {
-          joined.set(under.run, Math.min(until, under.until));
+          joined.set(under.run, deadlineMs === undefined ? until : Math.min(until, under.until));
           continue;
         }
         if (hostId === null || !hosts.connected(hostId) || hostDown(hostId)) continue;

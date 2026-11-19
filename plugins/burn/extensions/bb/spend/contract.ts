@@ -69,6 +69,7 @@ export const spendOutputSchema = z.object({
       tokens: amount,
       rangeCost: amount,
       total: amount,
+      budgetCost: amount.optional(),
       budget: amount.nullable(),
       running: z.boolean(),
       estimated: z.boolean(),

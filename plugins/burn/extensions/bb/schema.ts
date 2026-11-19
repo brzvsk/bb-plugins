@@ -167,5 +167,6 @@ export type Stored = z.infer<typeof storedSchema>;
 export const policySchema = z.object({
   budget: z.number().finite().positive().nullable(),
   stopAtBudget: z.boolean(),
+  includeChildren: z.boolean().optional(),
   notifyExpensiveTurn: z.boolean(),
 });

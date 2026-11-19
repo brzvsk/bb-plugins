@@ -17,6 +17,8 @@ export const EXPENSIVE_MIN_USD = 0.5;
 export interface BudgetPolicy {
   /** Dollars, or null for no budget. */
   budget: number | null;
+  /** bb owns enforcement when the budget includes child threads. */
+  includeChildren?: boolean;
   /** Abort the pi run whose cost crosses the budget. */
   stopAtBudget: boolean;
   /** Notify after a turn that costs EXPENSIVE_MULTIPLE times the median turn. */

@@ -529,7 +529,7 @@ function ThreadTable({ data, hide }: { data: SpendOutput; hide: ReactNode }) {
             </tr>
           ) : null}
           {data.threads.map((t) => {
-            const over = budgetState(t.total, t.budget) === "over";
+            const over = budgetState(t.budgetCost ?? t.total, t.budget) === "over";
             const detail = [
               t.projectName,
               t.model,

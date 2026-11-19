@@ -20,8 +20,9 @@ const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "obj
 /** The policy in a reply, or null when it carries none or a malformed one. Never throws. */
 export function readPolicy(body: unknown): BudgetPolicy | null {
   if (!isRecord(body) || body.ok !== true || !isRecord(body.policy)) return null;
-  const { budget, stopAtBudget, notifyExpensiveTurn } = body.policy;
+  const { budget, stopAtBudget, notifyExpensiveTurn, includeChildren } = body.policy;
   const validBudget = budget === null || (typeof budget === "number" && Number.isFinite(budget) && budget > 0);
   if (!validBudget || typeof stopAtBudget !== "boolean" || typeof notifyExpensiveTurn !== "boolean") return null;
-  return { budget: budget as number | null, stopAtBudget, notifyExpensiveTurn };
+  if (includeChildren !== undefined && typeof includeChildren !== "boolean") return null;
+  return { budget: budget as number | null, stopAtBudget, notifyExpensiveTurn, ...(includeChildren ? { includeChildren: true } : {}) };
 }

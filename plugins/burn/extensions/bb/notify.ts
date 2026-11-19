@@ -48,8 +48,9 @@ export function alertEvents(prev: UsageReport | null, next: UsageReport, opts: A
 }
 
 /** The toast for an event. `id` is the same for the same event, so every window can drop a repeat. */
-export function alertFor(event: AlertEvent, threadId: string, threadTitle: string, at: number): BurnAlert {
+export function alertFor(event: AlertEvent, threadId: string, threadTitle: string, at: number, includeChildren = false): BurnAlert {
   const name = `“${threadTitle}”`;
+  const scope = includeChildren ? "budget including children" : "thread budget";
   switch (event.kind) {
     case "near": {
       const share = Math.round((event.cost / event.budget) * 100);
@@ -58,7 +59,7 @@ export function alertFor(event: AlertEvent, threadId: string, threadTitle: strin
         kind: "near",
         threadId,
         title: `${name} is near its budget`,
-        body: `${formatAmount(event.cost, event.estimated)} of the ${formatBudget(event.budget)} thread budget (${share}%).`,
+        body: `${formatAmount(event.cost, event.estimated)} of the ${formatBudget(event.budget)} ${scope} (${share}%).`,
         at,
       };
     }
@@ -68,7 +69,7 @@ export function alertFor(event: AlertEvent, threadId: string, threadTitle: strin
         kind: "over",
         threadId,
         title: `${name} is over its budget`,
-        body: `${formatAmount(event.cost, event.estimated)} spent, over the ${formatBudget(event.budget)} thread budget.`,
+        body: `${formatAmount(event.cost, event.estimated)} spent, over the ${formatBudget(event.budget)} ${scope}.`,
         at,
       };
     case "stopped":

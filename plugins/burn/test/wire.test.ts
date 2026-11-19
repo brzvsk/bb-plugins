@@ -9,6 +9,11 @@ describe("readPolicy", () => {
     expect(readPolicy({ ok: true, policy: { ...policy, budget: null } })).toEqual({ ...policy, budget: null });
   });
 
+  it("keeps the opt-in family budget scope and rejects malformed scope", () => {
+    expect(readPolicy({ ok: true, policy: { ...policy, includeChildren: true } })).toEqual({ ...policy, includeChildren: true });
+    expect(readPolicy({ ok: true, policy: { ...policy, includeChildren: "yes" } })).toBeNull();
+  });
+
   it("returns null for anything else", () => {
     expect(readPolicy({ ok: true })).toBeNull();
     expect(readPolicy({ ok: false, error: "x", policy })).toBeNull();

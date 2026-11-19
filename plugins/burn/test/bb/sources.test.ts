@@ -374,6 +374,24 @@ describe("createReportSource", () => {
     expect(s.calls).toHaveLength(2);
   });
 
+  it("lets a caller without a deadline await the full read after another caller timed out", async () => {
+    const s = setup({ [id(1)]: { host: A } });
+    s.costs[id(1)] = 2;
+    const release = s.hold();
+    let completed = false;
+    try {
+      await s.source.reportsOf([id(1)], { deadlineMs: 20 });
+      const joined = s.source.reportsOf([id(1)]).then(result => { completed = true; return result; });
+      await new Promise(resolve => setTimeout(resolve, 30));
+      expect(completed).toBe(false);
+      release();
+      expect((await joined).get(id(1))?.report.cost.total).toBe(2);
+      expect(s.calls).toHaveLength(1);
+    } finally {
+      release();
+    }
+  });
+
   it("waits for a read already under way no longer than the caller that started it waited", async () => {
     const s = setup({ [id(1)]: { host: A } });
     s.costs[id(1)] = 2;

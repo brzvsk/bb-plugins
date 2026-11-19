@@ -37,6 +37,23 @@ async function renderPanel(server: ReturnType<typeof backend>, params: JsonValue
 const turnRows = (slot: RenderedSlot) => [...within(slot.getByTestId("turns")).getAllByRole("button")].map((b) => b.dataset.turn);
 
 describe("the Burn panel", () => {
+  it("lets an inherited budget opt into child spending, and shows the combined budget share", async () => {
+    const server = backend(() => answer({ budget: { amount: 10, source: "setting" }, family: FAMILY }));
+    const slot = await renderPanel(server);
+    const checkbox = slot.getByRole("checkbox", { name: "Include child threads" }) as HTMLInputElement;
+    expect(checkbox.checked).toBe(false);
+    fireEvent.click(checkbox);
+    fireEvent.click(slot.getByRole("button", { name: /^Save$/ }));
+    await vi.waitFor(() => expect(server.callsTo("setBudget").at(-1)?.input).toEqual({ threadId: THREAD, budget: 10, includeChildren: true }));
+  });
+
+  it("displays combined spending against an opted-in budget", async () => {
+    const slot = await renderPanel(backend(() => answer({ budget: { amount: 7, source: "thread", includeChildren: true }, family: FAMILY })));
+    expect(slot.getByRole("checkbox", { name: "Include child threads" })).toHaveProperty("checked", true);
+    expect(slot.getByTestId("panel-budget").textContent).toContain("95%");
+    expect(slot.getByTestId("panel-budget").textContent).toContain("including children");
+  });
+
   it("shows the thread, its children's share, cost per call and the cache hit rate", async () => {
     const slot = await renderPanel(backend(() => answer({ budget: { amount: 10, source: "setting" }, family: FAMILY })));
     const kpis = slot.getByTestId("kpis").textContent ?? "";

@@ -299,7 +299,7 @@ export function BurnCard({ answer, threadId, defaultBudget, discounted, onOpenDe
                 Subagents · {agentLabel(report.agents)} · part of this total
               </div>
             ) : null}
-            {isTokenOnly(report) ? null : <BudgetStatus cost={report.cost.total} budget={budget} onSet={() => setEditing(true)} />}
+            {isTokenOnly(report) ? null : <BudgetStatus cost={budget?.includeChildren ? answer!.family.total : report.cost.total} budget={budget} onSet={() => setEditing(true)} />}
             {report.stoppedAt !== null ? (
               <div className="mt-2">
                 <StoppedNotice stoppedAt={report.stoppedAt} budget={budget} />

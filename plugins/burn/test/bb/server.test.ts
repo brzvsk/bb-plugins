@@ -23,6 +23,8 @@ afterEach(() => {
 type Options = {
   settings?: Record<string, number | boolean | string>;
   descendants?: Record<string, string[]>;
+  parents?: Record<string, string>;
+  owners?: Record<string, string>;
   titles?: Record<string, string>;
   /** Session log entries per thread, as the Burn host entry on the thread's machine reads them. */
   logs?: Record<string, unknown[]>;
@@ -38,6 +40,7 @@ type Options = {
   settingsCopy?: Record<string, unknown>;
   /** Stored pi reports, as a previous plugin load left them. */
   reports?: Record<string, unknown>;
+  budgets?: Record<string, { budget: number; includeChildren?: boolean }>;
 };
 
 const LOG_MTIME = 1_700_000_000_000;
@@ -71,9 +74,11 @@ async function setup(opts: Options = {}) {
           });
           const all = (
             opts.listed ??
-            [THREAD, CHILD, GRANDCHILD, ...Object.keys(logs), ...Object.keys(opts.providers ?? {}), ...Object.keys(opts.statuses ?? {})].map((id) => ({
+            [...new Set([THREAD, CHILD, GRANDCHILD, ...Object.keys(logs), ...Object.keys(opts.providers ?? {}), ...Object.keys(opts.statuses ?? {})])].map((id) => ({
               id,
               providerId: opts.providers?.[id] ?? "pi",
+              parentThreadId: opts.parents?.[id],
+              lifecycleOwnerThreadId: opts.owners?.[id],
               updatedAt: Date.now(),
               deletedAt: null,
               status: statuses[id] ?? "idle",
@@ -120,6 +125,7 @@ async function setup(opts: Options = {}) {
   // Seeded before the plugin loads, so it reads them the way a fresh install after a removal does.
   if (opts.settingsCopy !== undefined) await bb.storage.kv.set(SETTINGS_COPY_KEY, opts.settingsCopy);
   for (const [threadId, stored] of Object.entries(opts.reports ?? {})) await bb.storage.kv.set(`report:${threadId}`, stored);
+  for (const [threadId, budget] of Object.entries(opts.budgets ?? {})) await bb.storage.kv.set(`budget:${threadId}`, budget);
   await plugin(bb);
   disposers.push(() => harness.lifecycle.dispose());
   const post = async (body: unknown) => {
@@ -805,6 +811,201 @@ describe("what each call reads", () => {
     await vi.waitFor(() => expect(check).toHaveBeenCalled());
     await settle();
     expect(check).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("budgets including child threads", () => {
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 30));
+  const family = () => ({
+    settings: { stopAtBudget: true },
+    parents: { [CHILD]: THREAD, [GRANDCHILD]: CHILD },
+    descendants: { [THREAD]: [CHILD, GRANDCHILD], [CHILD]: [GRANDCHILD] },
+    statuses: { [THREAD]: "active" as const, [CHILD]: "active" as const, [GRANDCHILD]: "idle" as const },
+    logs: { [THREAD]: [user(), assistant(2)], [CHILD]: [user(), assistant(3)], [GRANDCHILD]: [user(), assistant(1)] },
+  });
+
+  it("does not treat a delayed initial family read as new spending", async () => {
+    const s = await setup(family());
+    const release = s.hold();
+    const reading = s.usage();
+    await vi.waitFor(() => expect(s.hostAsked()).toContain(CHILD));
+    const saved = s.rpc("setBudget", { threadId: THREAD, budget: 5, includeChildren: true });
+    await new Promise(resolve => setTimeout(resolve, 1100));
+    release();
+    await Promise.all([saved, reading]);
+    await settle();
+    expect(s.stops()).toEqual([]);
+    expect(s.alerts()).toEqual([]);
+    expect((await s.usage()).family.total).toBe(6);
+  });
+
+  it("does not stop a restored family when an uncached historical child report arrives late", async () => {
+    const s = await setup({
+      ...family(),
+      budgets: { [THREAD]: { budget: 5, includeChildren: true } },
+      reports: { [THREAD]: { report: sampleReport(costOf(2)), sentAt: 1, at: Date.now() } },
+    });
+    const release = s.hold();
+    await s.harness.behavior.emitThreadEvent("thread.active", { thread: makeThreadResponse({ id: THREAD, providerId: "pi", status: "active" }) });
+    await vi.waitFor(() => expect(s.hostAsked()).toContain(CHILD));
+    await new Promise(resolve => setTimeout(resolve, 1100));
+    const beforeRelease = s.signals().length;
+    release();
+    await vi.waitFor(() => expect(s.signals().length).toBeGreaterThan(beforeRelease));
+    expect(s.stops()).toEqual([]);
+    expect(s.alerts()).toEqual([]);
+    expect((await s.usage()).family.total).toBe(6);
+  });
+
+  it("retains child tracking during a cold sidebar read beyond the budget cache capacity", async () => {
+    const listed = [THREAD, CHILD, ...Array.from({ length: 500 }, (_, n) => `thr_extra${String(n).padStart(4, "0")}`)]
+      .map(id => ({ id, providerId: "pi", updatedAt: Date.now(), deletedAt: null }));
+    const stored = (total: number) => ({ report: sampleReport(costOf(total)), sentAt: 1, at: Date.now() });
+    const s = await setup({
+      listed, descendants: { [THREAD]: [CHILD] },
+      budgets: { [THREAD]: { budget: 5, includeChildren: true } },
+      reports: { [THREAD]: stored(1), [CHILD]: stored(5) },
+    });
+    expect(await s.rpc("overBudget", {})).toEqual({ threads: [{ threadId: THREAD, cost: 6, budget: 5, estimated: false }] });
+  });
+
+  it("batches descendant reads when more than 200 shared budgets are listed", async () => {
+    const ids = Array.from({ length: 201 }, (_, n) => `thr_budget${String(n).padStart(4, "0")}`);
+    const s = await setup({
+      listed: ids.map(id => ({ id, providerId: "pi", updatedAt: Date.now(), deletedAt: null })),
+      budgets: Object.fromEntries(ids.map(id => [id, { budget: 5, includeChildren: true }])),
+    });
+    s.harness.sdk.stub("threads.experimental_listDescendants", async ({ threadIds }: { threadIds: readonly string[] }) => {
+      if (threadIds.length > 200) throw new Error("At most 200 thread IDs per request");
+      return { threads: threadIds.map(threadId => ({ threadId, descendantIds: [] })) };
+    });
+    expect(await s.rpc("overBudget", {})).toEqual({ threads: [] });
+    expect(s.harness.inspection.sdk.callsTo("threads.experimental_listDescendants").map(([args]) => (args as { threadIds: string[] }).threadIds.length)).toEqual([200, 1]);
+  });
+
+  it("persists the opt-in, preserves it when only the amount changes, and clears it with default", async () => {
+    const s = await setup(family());
+    const saved = await s.rpc("setBudget", { threadId: THREAD, budget: 10, includeChildren: true });
+    expect(saved).toMatchObject({ budget: { amount: 10, includeChildren: true }, policy: { includeChildren: true } });
+    expect(await s.bb.storage.kv.get(`budget:${THREAD}`)).toEqual({ budget: 10, includeChildren: true });
+    await s.rpc("setBudget", { threadId: THREAD, budget: 12 });
+    expect((await s.usage()).budget).toMatchObject({ amount: 12, includeChildren: true });
+    await s.rpc("setBudget", { threadId: THREAD, budget: "default" });
+    expect((await s.usage()).budget).toBeNull();
+  });
+
+  it("restores the opt-in after a plugin reload and leaves legacy budgets thread-only", async () => {
+    const s = await setup(family());
+    await s.rpc("setBudget", { threadId: THREAD, budget: 10, includeChildren: true });
+    await s.rpc("setBudget", { threadId: CHILD, budget: 4 });
+    const reloaded = await s.harness.lifecycle.reload(plugin);
+    disposers.push(() => reloaded.harness.lifecycle.dispose());
+    const usage = (threadId: string) => reloaded.harness.behavior.callRpc("usage", { threadId }) as Promise<{ budget: unknown }>;
+    expect((await usage(THREAD)).budget).toMatchObject({ amount: 10, includeChildren: true });
+    expect((await usage(CHILD)).budget).toEqual({ amount: 4, source: "thread" });
+  });
+
+  it("does not count overlapping descendant and workflow-owner paths twice", async () => {
+    const opts = family();
+    const s = await setup({ ...opts, owners: { [CHILD]: THREAD, [GRANDCHILD]: THREAD } });
+    await s.rpc("setBudget", { threadId: THREAD, budget: 5, includeChildren: true });
+    expect((await s.usage()).family.total).toBe(6);
+    expect(await s.rpc("overBudget", {})).toMatchObject({ threads: [{ threadId: THREAD, cost: 6 }] });
+  });
+
+  it("reports a shared budget on the Burn page without double-counting spend", async () => {
+    const stamped = <T extends { timestamp: string }>(entry: T): T => ({ ...entry, timestamp: new Date().toISOString() });
+    const s = await setup({ ...family(), logs: { [THREAD]: [stamped(user()), stamped(assistant(2))], [CHILD]: [stamped(user()), stamped(assistant(4))] } });
+    s.harness.sdk.stub("projects.list", async () => []);
+    await s.rpc("setBudget", { threadId: THREAD, budget: 5, includeChildren: true });
+    expect(await s.rpc("spend", { range: "today", projectId: null })).toMatchObject({ total: 6, overBudgetCount: 1, threads: expect.arrayContaining([expect.objectContaining({ threadId: THREAD, budgetCost: 6 })]) });
+  });
+
+  it("uses family spending in cost rows and sidebar flags only after opting in", async () => {
+    const s = await setup(family());
+    await s.rpc("setBudget", { threadId: THREAD, budget: 5 });
+    expect(await s.rpc("costs", { threadIds: [THREAD] })).toMatchObject({ threads: [{ cost: 2, familyCost: 6, state: "ok" }] });
+    await s.rpc("setBudget", { threadId: THREAD, budget: 5, includeChildren: true });
+    expect(await s.rpc("costs", { threadIds: [THREAD] })).toMatchObject({ threads: [{ cost: 2, familyCost: 6, state: "over" }] });
+    expect(await s.rpc("overBudget", {})).toEqual({ threads: [{ threadId: THREAD, cost: 6, budget: 5, estimated: false }] });
+    expect(s.stops()).toEqual([]);
+  });
+
+  it("stops the running family once when a grandchild crosses the shared budget, even with fresh pi reports", async () => {
+    const s = await setup(family());
+    await s.post(envelope(1, costOf(2)));
+    await s.post(envelope(1, costOf(3), CHILD));
+    await settle();
+    await s.rpc("setBudget", { threadId: THREAD, budget: 10, includeChildren: true });
+    await s.spend(GRANDCHILD, assistant(3));
+    await vi.waitFor(() => expect(s.alerts().some(a => a.kind === "near" && a.threadId === THREAD)).toBe(true));
+    await s.spend(GRANDCHILD, assistant(2));
+    await vi.waitFor(() => expect(s.stops()).toHaveLength(2));
+    expect(s.stops()).toEqual([[{ threadId: THREAD }], [{ threadId: CHILD }]]);
+    await s.spend(GRANDCHILD, assistant(2));
+    await settle();
+    expect(s.stops()).toHaveLength(2);
+    expect(s.alerts().filter(a => a.kind === "over" && a.threadId === THREAD)).toHaveLength(1);
+  });
+
+  it("checks workflow-owned workers and stops them even when the parent is idle", async () => {
+    const opts = family();
+    const s = await setup({ ...opts, parents: {}, owners: { [CHILD]: THREAD }, descendants: {}, statuses: { [THREAD]: "idle", [CHILD]: "active" } });
+    await s.rpc("setBudget", { threadId: THREAD, budget: 6, includeChildren: true });
+    await s.spend(CHILD, assistant(2));
+    await vi.waitFor(() => expect(s.stops()).toEqual([[{ threadId: CHILD }]]));
+    expect(s.alerts().some(a => a.kind === "over" && a.threadId === THREAD)).toBe(true);
+  });
+
+  it("warns without stopping when stopping is disabled, and does not share by default", async () => {
+    for (const includeChildren of [false, true]) {
+      const s = await setup({ ...family(), settings: { stopAtBudget: false } });
+      await s.rpc("setBudget", { threadId: THREAD, budget: 7, includeChildren });
+      await s.spend(CHILD, assistant(3));
+      await settle();
+      expect(s.stops()).toEqual([]);
+      expect(s.alerts().some(a => a.kind === "over" && a.threadId === THREAD)).toBe(includeChildren);
+    }
+  });
+
+  it("observes child-only pi reports and notifies the parent even without host logs", async () => {
+    const s = await setup({ ...family(), logs: {} });
+    await s.post(envelope(1, costOf(2)));
+    await s.post(envelope(1, costOf(3), CHILD));
+    await settle();
+    await s.rpc("setBudget", { threadId: THREAD, budget: 6, includeChildren: true });
+    const before = s.signals().filter(sig => (sig.payload as { threadId: string }).threadId === THREAD).length;
+    await s.post(envelope(2, costOf(4), CHILD));
+    await vi.waitFor(() => expect(s.stops()).toHaveLength(2));
+    expect(s.signals().filter(sig => (sig.payload as { threadId: string }).threadId === THREAD).length).toBeGreaterThan(before);
+    expect((await s.usage()).family.total).toBe(6);
+  });
+
+  it("does not stop the same member twice when nested budgets cross together", async () => {
+    const s = await setup(family());
+    await s.rpc("setBudget", { threadId: CHILD, budget: 6, includeChildren: true });
+    await s.rpc("setBudget", { threadId: THREAD, budget: 8, includeChildren: true });
+    await s.spend(GRANDCHILD, assistant(3));
+    await vi.waitFor(() => expect(s.alerts().filter(a => a.kind === "over")).toHaveLength(2));
+    expect(s.stops()).toHaveLength(2);
+  });
+
+  it("does not treat changing discounts as new family spending", async () => {
+    const s = await setup({ ...family(), settings: { stopAtBudget: true, discount: 50 } });
+    await s.rpc("setBudget", { threadId: THREAD, budget: 5, includeChildren: true });
+    await s.harness.behavior.setSettings({ discount: 0 });
+    await s.spend(CHILD);
+    await settle();
+    expect(s.stops()).toEqual([]);
+    expect(s.alerts().filter(a => a.threadId === THREAD)).toEqual([]);
+  });
+
+  it("accounts for children even before the parent has made a model call", async () => {
+    const s = await setup({ ...family(), logs: { [CHILD]: [user(), assistant(3)] } });
+    await s.rpc("setBudget", { threadId: THREAD, budget: 5, includeChildren: true });
+    await s.spend(CHILD, assistant(3));
+    await vi.waitFor(() => expect(s.stops()).toHaveLength(2));
+    expect(await s.rpc("overBudget", {})).toMatchObject({ threads: [{ threadId: THREAD, cost: 6 }] });
   });
 });
 

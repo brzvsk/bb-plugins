@@ -7,6 +7,7 @@ export type BudgetSource = "thread" | "setting" | "pi";
 export interface EffectiveBudget {
   amount: number;
   source: BudgetSource;
+  includeChildren?: boolean;
 }
 
 /**
@@ -24,9 +25,9 @@ export const bbBudget = (own: OwnBudget, setting: unknown): number | null =>
   own === undefined ? positiveOrNull(setting) : own;
 
 /** bb's budget for the thread, else the one pi reported (`/burn budget`), as pi itself applies them. */
-export function effectiveBudget(own: OwnBudget, setting: unknown, pi: number | null): EffectiveBudget | null {
+export function effectiveBudget(own: OwnBudget, setting: unknown, pi: number | null, includeChildren = false): EffectiveBudget | null {
   const fromBb = bbBudget(own, setting);
-  if (fromBb !== null) return { amount: fromBb, source: own === undefined ? "setting" : "thread" };
+  if (fromBb !== null) return { amount: fromBb, source: own === undefined ? "setting" : "thread", ...(includeChildren ? { includeChildren: true } : {}) };
   const fromPi = positiveOrNull(pi);
   return fromPi === null ? null : { amount: fromPi, source: "pi" };
 }
@@ -34,9 +35,11 @@ export function effectiveBudget(own: OwnBudget, setting: unknown, pi: number | n
 export function policyFor(
   own: OwnBudget,
   settings: { threadBudget?: unknown; stopAtBudget: boolean; notifyExpensiveTurn: boolean },
+  includeChildren = false,
 ): BudgetPolicy {
   return {
     budget: bbBudget(own, settings.threadBudget),
+    ...(includeChildren ? { includeChildren: true } : {}),
     stopAtBudget: settings.stopAtBudget,
     notifyExpensiveTurn: settings.notifyExpensiveTurn,
   };
@@ -44,7 +47,7 @@ export function policyFor(
 
 /** "48% of the $10 thread budget" and "$5.18 left" (or "$2.40 over"). */
 export function budgetWords(cost: number, budget: EffectiveBudget): { share: string; left: string } {
-  const noun = budget.source === "pi" ? "budget set in pi" : "thread budget";
+  const noun = budget.includeChildren ? "budget including children" : budget.source === "pi" ? "budget set in pi" : "thread budget";
   const rest = budget.amount - cost;
   return {
     share: `${Math.round((cost / budget.amount) * 100)}% of the ${formatBudget(budget.amount)} ${noun}`,

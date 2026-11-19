@@ -14,6 +14,8 @@ export interface SpendDeps {
   bb: BbPluginApi;
   /** The budget that applies to a thread: its own, else the setting, else the one pi reported. */
   budgetOf(threadId: string, report: UsageReport): Promise<number | null>;
+  /** Lifetime spending for budgets that include descendants; other threads use their own total. */
+  budgetCosts?(entries: readonly Entry[]): Promise<ReadonlyMap<string, number>>;
   /** The Daily budget setting, or null when unset. */
   dailyBudget(): Promise<number | null>;
   /**
@@ -401,7 +403,8 @@ export function createSpendHandlers(deps: SpendDeps): {
       const { days, models } = chartOf(sums, dayList, metric);
 
       const budgets = listPrice ? counted.map(() => null) : await Promise.all(counted.map((row) => deps.budgetOf(row.threadId, row.report)));
-      const overBudgetCount = counted.filter((row, i) => budgetState(row.report.cost.total, budgets[i]) === "over").length;
+      const budgetCosts = !listPrice && deps.budgetCosts ? await deps.budgetCosts(counted) : new Map<string, number>();
+      const overBudgetCount = counted.filter((row, i) => budgetState(budgetCosts.get(row.threadId) ?? row.report.cost.total, budgets[i]) === "over").length;
 
       const byProject = new Map<string, Usage>();
       const byHarness = new Map<string, { used: Usage; estimated: boolean }>();
@@ -440,6 +443,7 @@ export function createSpendHandlers(deps: SpendDeps): {
         tokens: row.used.tokens,
         rangeCost: row.used.cost,
         total: row.report.cost.total,
+        ...(budgetCosts.has(row.threadId) ? { budgetCost: budgetCosts.get(row.threadId) } : {}),
         budget,
         running: row.report.running,
         estimated: row.report.estimated,

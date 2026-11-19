@@ -11,6 +11,7 @@ export const BUDGET_MAX = 1_000_000;
 export const effectiveBudgetSchema = z.object({
   amount: z.number().finite().positive(),
   source: z.enum(["thread", "setting", "pi"]),
+  includeChildren: z.boolean().optional(),
 });
 
 const familySchema = z.object({
@@ -73,6 +74,7 @@ export const rpcContract = defineRpcContract({
       threadId,
       // null: no budget for this thread even when the setting has one; "default": follow the setting again.
       budget: z.union([z.number().finite().positive().max(BUDGET_MAX), z.null(), z.literal("default")]),
+      includeChildren: z.boolean().optional(),
     }),
     output: z.object({ budget: effectiveBudgetSchema.nullable(), policy: policySchema }),
   },

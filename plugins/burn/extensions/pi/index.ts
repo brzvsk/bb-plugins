@@ -117,7 +117,7 @@ export function createBurn(deps: BurnDeps = {}): (pi: ExtensionAPI) => void {
       if (before === null) return;
       const { policy, report } = snap;
       const budget = policy.budget;
-      if (budget === null) return;
+      if (budget === null || policy.includeChildren) return;
       if (running && shouldStop(policy, before, cost)) {
         stoppedAt = now();
         report.stoppedAt = stoppedAt;

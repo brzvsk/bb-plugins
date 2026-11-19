@@ -21,7 +21,7 @@ The bb plugin has a host entry: code that bb runs on every connected machine. It
 
 The host entry watches the log folder, so the chip updates about a second after pi finishes a model call. It reads only the bytes pi appended since the last read. The plugin keeps the last figures each machine gave, so a thread on a machine that is offline still shows its cost. Whether a thread is working comes from bb's own thread status.
 
-For OpenCode threads, the host entry opens `opencode.db` read-only. It is in `$XDG_DATA_HOME/opencode` when that is set, and in `~/.local/share/opencode` otherwise. Burn has no watch on the database, so it reads the database again each time bb records new events for the thread, about once a second while the thread works, and again when the thread stops. A user message that opencode writes itself, such as "Continue if you have next steps" or a compaction, does not count as a prompt; its calls count within the prompt before it.
+For OpenCode threads, the host entry opens `opencode.db` read-only. It is in `$XDG_DATA_HOME/opencode` when that is set, and in `~/.local/share/opencode` otherwise. Burn has no watch on the database, so it reads the database again each time bb records new events for the thread, about once a second while the thread works, and again when the thread stops. In the older OpenCode database, a user message that opencode writes itself, such as "Continue if you have next steps" or a compaction, does not count as a prompt; its calls count within the prompt before it. In the OpenCode 2 layout, Burn reads user rows and skips the separate row types used for internal messages. OpenCode 2 can also store internal text, including BB system instructions, as unmarked user rows; these may appear as prompts.
 
 ## Reading the usage bb records
 
@@ -37,7 +37,7 @@ The plugin gives pi an address through the `BURN_BB_URL` environment variable. p
 
 The figures still come from the session log. The report adds only what the log cannot know: the budget set with `/burn budget`, when pi stopped a run, and the context window.
 
-The plugin's reply carries the thread's budget policy, so pi in a bb thread follows bb's budget settings. A thread budget set in bb takes precedence over one set with `/burn budget`. With the pi extension installed, pi stops a run at its budget from inside pi, which is faster than stopping it through bb.
+The plugin's reply carries the thread's budget policy, so pi in a bb thread follows bb's budget settings. A thread budget set in bb takes precedence over one set with `/burn budget`. For a thread-only budget with the pi extension installed, pi stops a run at its budget from inside pi, which is faster than stopping it through bb. An opt-in budget that includes children is enforced by bb instead: the plugin combines the reports for the whole family and stops its running threads when that total crosses the budget. The policy tells pi to leave shared-budget enforcement to bb, because pi cannot see sibling spending.
 
 bb gives pi the address to report to only when it starts a pi session. So after you install the pi extension, a thread that was already running starts reporting only after it restarts. Its cost shows in bb either way, from the session log.
 

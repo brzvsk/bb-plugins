@@ -446,6 +446,12 @@ describe("stopping at the budget", () => {
     expect(t.abort).not.toHaveBeenCalled();
   });
 
+  it("leaves shared-budget stops to bb, which can see child spending", () => {
+    const t = crossing({ mode: "rpc", bbPolicy: { budget: 10, stopAtBudget: true, notifyExpensiveTurn: false, includeChildren: true } });
+    expect(t.abort).not.toHaveBeenCalled();
+    expect(t.sent.at(-1)?.stoppedAt).toBeNull();
+  });
+
   it("follows bb's policy in a bb thread, stopping without a notification", () => {
     const off = crossing({ settings: { stopAtBudget: true }, mode: "rpc", bbPolicy: { budget: null, stopAtBudget: false, notifyExpensiveTurn: false } });
     expect(off.abort).not.toHaveBeenCalled();

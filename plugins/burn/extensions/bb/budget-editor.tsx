@@ -26,13 +26,14 @@ export function BudgetEditor({
   onDone?: () => void;
 }): ReactNode {
   const rpc = useRpc<typeof rpcContract>();
-  const [text, setText] = useState(budget?.source === "thread" ? String(budget.amount) : "");
+  const [text, setText] = useState(budget ? String(budget.amount) : "");
+  const [includeChildren, setIncludeChildren] = useState(budget?.includeChildren === true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const save = (value: number | null | "default"): void => {
     setBusy(true);
-    rpc.call("setBudget", { threadId, budget: value }).then(
+    rpc.call("setBudget", { threadId, budget: value, ...(typeof value === "number" ? { includeChildren } : {}) }).then(
       () => {
         setBusy(false);
         setError(null);
@@ -77,6 +78,13 @@ export function BudgetEditor({
           Clear
         </Button>
       </div>
+      <label className="flex min-h-7 cursor-pointer items-center gap-2 self-start">
+        <input type="checkbox" checked={includeChildren} disabled={busy} onChange={event => setIncludeChildren(event.target.checked)} />
+        Include child threads
+      </label>
+      <p className="text-muted-foreground">
+        Counts this thread and all descendants, including workflow workers. With Stop at budget on, Burn stops their running work together.
+      </p>
       <p className="text-muted-foreground">
         Use default follows the Thread budget setting ({defaultBudget === null ? "none set" : formatBudget(defaultBudget)}). Clear sets no
         budget for this thread.

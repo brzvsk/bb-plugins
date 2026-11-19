@@ -2,7 +2,7 @@ import { type PluginThreadHeaderActionProps, useBbNavigate, useSettings } from "
 import { type ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { budgetFraction, budgetState } from "../../src/budget.js";
-import { formatAgo, formatBudget, formatCost, formatTokens, isTokenOnly } from "../../src/format.js";
+import { formatAgo, formatAmount, formatBudget, formatCost, formatTokens, isTokenOnly } from "../../src/format.js";
 import { BurnCard } from "./card.js";
 import { Popover, PopoverContent, PopoverTrigger } from "./components/ui/popover.js";
 import type { UsageAnswer } from "./contract.js";
@@ -64,13 +64,16 @@ export function chipView(answer: UsageAnswer | null, opts: { now: number }): Chi
   // A Claude Code turn can run for minutes before bb records its usage, so silence there is not a stall.
   const stale = answer?.source !== "events" && report.running && opts.now - reportedAt >= STALE_MS;
   const budget = answer?.budget?.amount ?? null;
-  const state = tokenOnly ? "none" : budgetState(report.cost.total, budget);
+  const budgetCost = answer?.budget?.includeChildren ? answer.family.total : report.cost.total;
+  const state = tokenOnly ? "none" : budgetState(budgetCost, budget);
   const tone: ChipTone = state === "near" || state === "over" ? state : "default";
   const running = report.running;
   let suffix: ChipView["suffix"] = null;
   if (tone !== "default" && budget !== null) suffix = { kind: "budget", text: `/ ${formatBudget(budget)}` };
   const total = `${value}${tokenOnly ? " tok" : ""}`;
-  const budgetNote = budget !== null && !tokenOnly ? ` of ${formatBudget(budget)}` : "";
+  const budgetNote = budget !== null && !tokenOnly
+    ? answer?.budget?.includeChildren ? `; ${formatAmount(budgetCost, answer.family.estimated)} of ${formatBudget(budget)} including children` : ` of ${formatBudget(budget)}`
+    : "";
   const estimate = report.estimated ? " Estimated from list prices." : "";
   const quiet = stale ? ` Burn has seen no new usage for ${formatAgo(reportedAt, opts.now)}.` : "";
   return {
@@ -78,7 +81,7 @@ export function chipView(answer: UsageAnswer | null, opts: { now: number }): Chi
     value,
     unit: tokenOnly ? "tok" : null,
     suffix,
-    progress: tone === "default" ? null : Math.min(1, budgetFraction(report.cost.total, budget) ?? 0),
+    progress: tone === "default" ? null : Math.min(1, budgetFraction(budgetCost, budget) ?? 0),
     running,
     stale,
     tokenOnly,

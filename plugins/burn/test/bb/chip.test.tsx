@@ -97,6 +97,12 @@ describe("chipView", () => {
     expect(view(answer({ source: "log" })).title).not.toMatch(/restart|session log/i);
   });
 
+  it("uses combined spending for a shared budget's tone, progress and tooltip", () => {
+    const got = view(answer({ budget: { amount: 6, source: "thread", includeChildren: true }, family: { total: 6.64, calls: 46, estimated: false, children: [] } }));
+    expect(got).toMatchObject({ tone: "over", progress: 1 });
+    expect(got.title).toContain("$6.64 of $6 including children");
+  });
+
   it("follows the budget: a progress line and the budget near and over", () => {
     const near = view(answer({ budget: { amount: 6, source: "setting" } }));
     expect(near).toMatchObject({ tone: "near", suffix: { kind: "budget", text: "/ $6" } });
