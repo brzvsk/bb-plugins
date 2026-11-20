@@ -37,6 +37,14 @@ export function modelLabel(model: MenuModel, brandPrefix?: string): string {
   return model.routeProviderId ? `${base} · ${model.routeProviderId}` : base;
 }
 
+/**
+ * The picker recases some catalog names (MiniMax-M3 shows as Minimax-M3), so
+ * catalog labels match rows case-insensitively; a case-only collision is still ambiguous.
+ */
+function labelKey(label: string): string {
+  return label.toLowerCase();
+}
+
 function normalizeTabTitle(title: string): string {
   return title.replace(/\s*\(current thread\)$/u, '').trim();
 }
@@ -99,7 +107,7 @@ export function mapRows(
 ): Map<HTMLButtonElement, string> | null {
   const byLabel = new Map<string, Set<string>>();
   for (const model of [...provider.models, ...provider.more]) {
-    const label = modelLabel(model, provider.brandPrefix);
+    const label = labelKey(modelLabel(model, provider.brandPrefix));
     const ids = byLabel.get(label) ?? new Set<string>();
     ids.add(model.id);
     byLabel.set(label, ids);
@@ -107,7 +115,7 @@ export function mapRows(
   const mapped = new Map<HTMLButtonElement, string>();
   const used = new Set<string>();
   for (const row of rows) {
-    const ids = byLabel.get(rowTitle(row));
+    const ids = byLabel.get(labelKey(rowTitle(row)));
     if (!ids || ids.size !== 1) return null;
     const id = [...ids][0]!;
     if (used.has(id)) return null;
@@ -162,7 +170,7 @@ function findOpenSubmenu(
   trigger: HTMLButtonElement,
   doc: Document,
 ): HTMLElement | null {
-  const extraLabels = new Set(provider.more.map((model) => modelLabel(model, provider.brandPrefix)));
+  const extraLabels = new Set(provider.more.map((model) => labelKey(modelLabel(model, provider.brandPrefix))));
   if (extraLabels.size === 0) return null;
 
   const controlledId = trigger.getAttribute('aria-controls');
@@ -180,7 +188,7 @@ function findOpenSubmenu(
         .filter((button) => !button.hasAttribute(CLONE_ATTR) && !button.hasAttribute(CONFIGURE_ATTR))
         .map((button) => rowTitle(button))
         .filter((title) => title.length > 0);
-      return titles.length > 0 && titles.every((title) => extraLabels.has(title));
+      return titles.length > 0 && titles.every((title) => extraLabels.has(labelKey(title)));
     });
   return candidates.length === 1 ? candidates[0]! : null;
 }

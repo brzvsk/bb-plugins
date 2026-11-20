@@ -177,6 +177,32 @@ describe('model visibility menu', () => {
     expect(document.querySelectorAll(`.${HIDDEN_CLASS}`)).toHaveLength(0);
   });
 
+  it('maps rows the picker recased, as BB does for Pi catalog names', () => {
+    document.body.innerHTML = menuMarkup({
+      rows: [row(0, 'Minimax-M3 · opencode-go'), row(1, 'Glm-5.2 · opencode-go')],
+    });
+    start({
+      providers: [provider({
+        models: [
+          model('opencode-go/minimax-m3', 'MiniMax-M3', 'opencode-go'),
+          model('opencode-go/glm-5.2', 'GLM-5.2', 'opencode-go'),
+        ],
+      })],
+      hidden: { 'provider-a': ['opencode-go/glm-5.2'] },
+    });
+    expect(clickable('Glm-5.2 · opencode-go').classList.contains(HIDDEN_CLASS)).toBe(true);
+    expect(clickable('Minimax-M3 · opencode-go').classList.contains(HIDDEN_CLASS)).toBe(false);
+  });
+
+  it('fails open when two catalog labels differ only by case', () => {
+    document.body.innerHTML = menuMarkup({ rows: [row(0, 'Same'), row(1, 'alpha')] });
+    start({
+      providers: [provider({ models: [model('one', 'Same'), model('two', 'SAME'), model('alpha')] })],
+      hidden: { 'provider-a': ['alpha'] },
+    });
+    expect(document.querySelectorAll(`.${HIDDEN_CLASS}`)).toHaveLength(0);
+  });
+
   it('fails open when an observed row is absent from the provider catalog', () => {
     document.body.innerHTML = menuMarkup({ rows: [row(0, 'alpha'), row(1, 'unknown')] });
     start({
