@@ -1,6 +1,6 @@
 {
   "name": "bb-plugin-model-visibility",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Move chosen model IDs out of the main picker into More models.",
   "license": "MIT",
   "type": "module",

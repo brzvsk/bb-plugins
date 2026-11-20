@@ -2,9 +2,9 @@
 name: model-visibility
 description: Explain or troubleshoot the Hide Models plugin, which moves chosen model IDs out of BB's main model list into More models.
 ---
-Hide Models adds a settings page under **Settings → Plugins → Hide Models**. Each enabled provider lists its live catalog; checked model IDs are hidden from the main picker list.
+Hide Models adds a settings page under **Settings → Plugins → Hide Models**. Each enabled provider lists its live catalog; checked models appear in the main picker list and unchecked model IDs are hidden from it.
 
-Hidden models remain in **More models** and in picker search. A **Configure...** row at the top of More models opens the settings page. New models are visible by default because only explicitly checked IDs are hidden.
+Hidden models remain in **More models** and in picker search. A **Configure...** row at the top of More models opens the settings page. New models are visible (checked) by default because only explicitly unchecked IDs are hidden.
 
 Settings are stored as a provider-id to model-id JSON map in plugin settings. Entries for providers that are disabled stay stored and apply again when the provider is re-enabled.
 

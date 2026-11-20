@@ -12,7 +12,7 @@ Hidden IDs are saved per provider. Disabling a provider keeps its choices, and r
 
 ## How it works
 
-The settings page reads the live provider catalogs and lists the models each enabled provider offers. Checked models move out of the main list; unchecked models stay in place. A model ID that is already an extra in More models is not duplicated.
+The settings page reads the live provider catalogs and lists the models each enabled provider offers. Checked models stay in the main list; unchecked models move out of it. A model ID that is already an extra in More models is not duplicated.
 
 The desktop picker is changed in place. The selected model, reasoning level, service tier, and provider catalogs are not changed. Hidden rows keep their original selection callbacks, and the picker keyboard skips them. Search still covers all models, including hidden ones.
 

@@ -94,9 +94,10 @@ export function ModelVisibilitySettings() {
     }
   };
 
-  const toggle = (providerId: string, modelId: string, checked: boolean) => {
+  // A checked box means the model stays in the main picker; storage keeps the hidden IDs.
+  const toggle = (providerId: string, modelId: string, shown: boolean) => {
     if (saving) return;
-    void save(withModel(hidden, providerId, modelId, checked), hidden);
+    void save(withModel(hidden, providerId, modelId, !shown), hidden);
   };
 
   const showAll = (providerId: string) => {
@@ -113,7 +114,7 @@ export function ModelVisibilitySettings() {
     <div className="flex max-w-3xl flex-col gap-4 text-sm">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="max-w-xl text-xs leading-5 text-muted-foreground">
-          Checked models leave the main picker. They stay available in <span className="font-medium text-foreground">More models</span> and search.
+          Checked models appear in the main picker. Unchecked ones move to <span className="font-medium text-foreground">More models</span> and stay in search.
         </p>
         <Input
           value={query}
@@ -178,7 +179,7 @@ export function ModelVisibilitySettings() {
                 {provider.error ? <p className="mt-1 text-xs text-destructive">{provider.error}</p> : null}
                 <ul className="mt-1 flex flex-col">
                   {models.map((model, modelIndex) => {
-                    const checked = hiddenForProvider.has(model.id);
+                    const checked = !hiddenForProvider.has(model.id);
                     const id = `mv-${providerIndex}-${modelIndex}`;
                     return (
                       <li
