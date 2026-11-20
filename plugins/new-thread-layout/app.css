@@ -10,8 +10,16 @@
 }
 /* Project home: the list fills the screen from the bottom up, the composer stays at the bottom
    like a thread's, and the list scrolls away under it. The heading gives way to the top-bar crumb. */
+/* bb 0.50 wraps the home in an auto-height `@container/page` div, where min-height: 100% resolves
+   to nothing; that wrapper becomes a full-height column and the home grows inside it. */
+:has(> [data-testid="root-compose-compact-home"] [data-ph-board]) {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
 [data-testid="root-compose-compact-home"]:has([data-ph-board]) {
   min-height: 100%;
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
   padding-top: 0.5rem;
