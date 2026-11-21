@@ -22,6 +22,8 @@ const familySchema = z.object({
   calls: count,
   /** Some of the total is a list-price estimate. */
   estimated: z.boolean(),
+  childCount: count,
+  reportedChildCount: count,
   children: z.array(
     z.object({
       threadId: z.string(),

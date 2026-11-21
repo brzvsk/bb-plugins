@@ -1,4 +1,9 @@
+import type { Family } from "./contract.js";
 import type { ThreadRow } from "./directory.js";
+
+export function childUsageCount({ childCount, reportedChildCount }: Pick<Family, "childCount" | "reportedChildCount">): string {
+  return reportedChildCount === childCount ? String(childCount) : `${reportedChildCount} of ${childCount}`;
+}
 
 /** BB descendants follow parentThreadId; workflow workers instead have a lifecycle owner.
  * Close over both edges, once per thread, including nested workflows and cycles.

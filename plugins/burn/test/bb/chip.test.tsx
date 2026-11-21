@@ -65,6 +65,8 @@ const FAMILY = {
   total: 49.97,
   calls: 581,
   estimated: false,
+  childCount: 2,
+  reportedChildCount: 2,
   children: [
     { threadId: "thr_cccccccc", title: "Kevin", cost: 8.92, calls: 105, running: false, model: null, estimated: false },
     { threadId: "thr_dddddddd", title: "Pedro", cost: 14.11, calls: 172, running: false, model: null, estimated: false },
@@ -98,7 +100,7 @@ describe("chipView", () => {
   });
 
   it("uses combined spending for a shared budget's tone, progress and tooltip", () => {
-    const got = view(answer({ budget: { amount: 6, source: "thread", includeChildren: true }, family: { total: 6.64, calls: 46, estimated: false, children: [] } }));
+    const got = view(answer({ budget: { amount: 6, source: "thread", includeChildren: true }, family: { ...FAMILY, total: 6.64, calls: 46 } }));
     expect(got).toMatchObject({ tone: "over", progress: 1 });
     expect(got.title).toContain("$6.64 of $6 including children");
   });
@@ -518,6 +520,20 @@ describe("the chip's popover", () => {
     expect(card.queryByTestId("estimated")).toBeNull();
   });
 
+  it.each([
+    [115, "115"],
+    [60, "60 of 115"],
+  ])("uses the family count when %i children have usage", async (reportedChildCount, count) => {
+    const family = {
+      ...FAMILY,
+      childCount: 115,
+      reportedChildCount,
+      children: Array.from({ length: 50 }, (_, i) => ({ ...FAMILY.children[0]!, threadId: `thr_${String(i).padStart(8, "0")}` })),
+    };
+    const card = await openCard(await renderChip(backend(() => answer({ family }))));
+    expect(card.getByTestId("with-children").textContent).toBe(`$49.97 with ${count} child threads`);
+  });
+
   it("marks a list-price estimate in the total and the family line, and says why", async () => {
     const slot = await renderChip(backend(() => answer({ report: sampleReport({ estimated: true }), family: { ...FAMILY, estimated: true } })));
     const card = await openCard(slot);
@@ -636,6 +652,8 @@ it("shows native-agent spend as part of the thread total, and hides it when the 
 
 it("refreshes the card when only a known child thread reports", async () => {
   const current = answer();
+  current.family.childCount = 1;
+  current.family.reportedChildCount = 1;
   current.family.children = [{ threadId: "thr_child000", title: "Worker", cost: 1, calls: 1, running: false, model: null, estimated: false }];
   current.family.total = 5.82;
   const server = backend(() => current);

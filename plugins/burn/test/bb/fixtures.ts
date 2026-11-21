@@ -16,7 +16,7 @@ export function answer(over: Partial<UsageAnswer> = {}): UsageAnswer {
     title: "burn UX polish",
     budget: null,
     policy: QUIET,
-    family: { total: 4.82, calls: 23, estimated: false, children: [] },
+    family: { total: 4.82, calls: 23, estimated: false, childCount: 0, reportedChildCount: 0, children: [] },
     ...over,
   };
 }

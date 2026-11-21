@@ -1,4 +1,4 @@
-import { open, stat } from "node:fs/promises";
+import { open, readdir, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { buildReport, type EntryLike, forkedAt, slimEntry, type UsageReport } from "../../../src/report.js";
@@ -6,6 +6,8 @@ import { buildReport, type EntryLike, forkedAt, slimEntry, type UsageReport } fr
 const NEWLINE = 0x0a;
 const CHUNK_BYTES = 1024 * 1024;
 const FILES_MAX = 1000;
+/** Expire discovery on the next read after a minute, without scanning on every warm read. */
+const OMP_DISCOVERY_TTL_MS = 60_000;
 /** Entries kept per log; a longer session is read from its newest entries, as opencode's reader caps its messages. */
 const ENTRIES_FILE_MAX = 50_000;
 /** Entries kept across every log, so a host with many long sessions stays bounded; an evicted log is read again when asked for. */
@@ -23,6 +25,13 @@ export function sessionDir(home = homedir()): string {
   return join(home, ".bb", "pi-bridge-sessions");
 }
 
+/** OMP's native session tree, grouped by working directory. */
+export function ompSessionDir(home = homedir()): string {
+  return join(home, ".omp", "agent", "sessions");
+}
+
+const OMP_ID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/;
+
 /** The file name stem bb's pi bridge uses for a session id (provider-pi's sanitizeSessionKey). */
 export const sessionStem = (id: string): string => id.replace(/[^A-Za-z0-9._-]/g, "_");
 
@@ -35,6 +44,8 @@ interface FileState {
   carry: Buffer;
   firstLine: string | null;
   header: unknown;
+  /** Complete parsed entries before trimming, so capped snapshots still compare by history length. */
+  parsedEntries: number;
   entries: EntryLike[];
 }
 
@@ -45,7 +56,7 @@ export interface PiSessions {
   sessionIdOf(path: string): string | null;
 }
 
-const fresh = (): FileState => ({ offset: 0, mtimeMs: 0, carry: Buffer.alloc(0), firstLine: null, header: null, entries: [] });
+const fresh = (): FileState => ({ offset: 0, mtimeMs: 0, carry: Buffer.alloc(0), firstLine: null, header: null, parsedEntries: 0, entries: [] });
 
 function consumeLine(state: FileState, line: string): void {
   if (line.trim() === "") return;
@@ -57,12 +68,15 @@ function consumeLine(state: FileState, line: string): void {
   } catch {
     return;
   }
-  if (first && (value as { type?: unknown } | null)?.type === "session") {
+  if (state.header === null && (value as { type?: unknown } | null)?.type === "session") {
     state.header = value;
     return;
   }
   const entry = slimEntry(value);
-  if (entry) state.entries.push(entry);
+  if (entry) {
+    state.entries.push(entry);
+    state.parsedEntries++;
+  }
 }
 
 /** Drops the oldest entries past the per-file cap; the newest matter most for a live chip. */
@@ -124,7 +138,7 @@ const isMissing = (err: unknown): boolean => (err as NodeJS.ErrnoException).code
  * entries, and later reads parse only the bytes pi appended. A file that shrank
  * or whose first line changed (pi rewrote it) is read again from the start.
  */
-export function createPiSessions(opts: { dir: string; limits?: Partial<Limits> }): PiSessions {
+export function createPiSessions(opts: { dir: string; layout?: "pi" | "omp"; limits?: Partial<Limits> }): PiSessions {
   const limits: Limits = {
     entriesFileMax: opts.limits?.entriesFileMax ?? ENTRIES_FILE_MAX,
     entriesTotalMax: opts.limits?.entriesTotalMax ?? ENTRIES_TOTAL_MAX,
@@ -132,6 +146,21 @@ export function createPiSessions(opts: { dir: string; limits?: Partial<Limits> }
   };
   const files = new Map<string, FileState>();
   const busy = new Map<string, Promise<FileState | null>>();
+  // Keep every known copy of an OMP identity, but do not rescan unrelated history on warm reads.
+  const ompPaths = new Map<string, { paths: string[]; at: number }>();
+  const warned = new Set<string>();
+
+  function unavailable(path: string, err: unknown): boolean {
+    if (isMissing(err)) return true;
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code !== "EACCES" && code !== "EPERM") return false;
+    if (!warned.has(path)) {
+      if (warned.size >= FILES_MAX) warned.clear();
+      warned.add(path);
+      console.warn(`[burn] cannot read OMP session path ${path}: ${code}; its sessions may be unavailable`);
+    }
+    return true;
+  }
 
   /** Entries held across every file; recomputed at a keep, which runs once per file read. */
   function heldEntries(): number {
@@ -192,13 +221,114 @@ export function createPiSessions(opts: { dir: string; limits?: Partial<Limits> }
     return run;
   }
 
+  async function discover(ids: ReadonlySet<string>): Promise<{ found: Map<string, string[]>; incomplete: boolean }> {
+    const discovered = new Map<string, string[]>();
+    const at = Date.now();
+    let incomplete = false;
+    try {
+      const projects = await readdir(opts.dir, { withFileTypes: true });
+      for (const project of projects) {
+        if (!project.isDirectory()) continue;
+        const dir = join(opts.dir, project.name);
+        let entries;
+        try {
+          entries = await readdir(dir, { withFileTypes: true });
+        } catch (err) {
+          if (unavailable(dir, err)) {
+            incomplete = true;
+            continue;
+          }
+          throw err;
+        }
+        for (const file of entries) {
+          if (!file.isFile() || !file.name.endsWith(EXTENSION)) continue;
+          const id = file.name.slice(file.name.lastIndexOf("_") + 1, -EXTENSION.length);
+          if (!ids.has(id)) continue;
+          const paths = discovered.get(id) ?? [];
+          paths.push(join(dir, file.name));
+          discovered.set(id, paths);
+        }
+      }
+    } catch (err) {
+      if (!unavailable(opts.dir, err)) throw err;
+      incomplete = true;
+    }
+    // Never cache a partially enumerated tree: later reads must retry the inaccessible buckets.
+    for (const id of ids) {
+      const paths = discovered.get(id);
+      if (paths && !incomplete) ompPaths.set(id, { paths, at });
+      else ompPaths.delete(id);
+    }
+    while (ompPaths.size > FILES_MAX) {
+      const oldest = ompPaths.keys().next().value;
+      if (oldest === undefined) break;
+      ompPaths.delete(oldest);
+    }
+    return { found: discovered, incomplete };
+  }
+
+  async function pathsOf(ids: ReadonlySet<string>): Promise<{ paths: { path: string; id: string }[]; incomplete: boolean }> {
+    if (opts.layout !== "omp") return { paths: [...ids].map((id) => ({ path: sessionFile(opts.dir, id), id })), incomplete: false };
+    const now = Date.now();
+    const missing = new Set([...ids].filter((id) => {
+      const cached = ompPaths.get(id);
+      return !cached || now < cached.at || now - cached.at >= OMP_DISCOVERY_TTL_MS;
+    }));
+    const scan = missing.size > 0 ? await discover(missing) : null;
+    const paths = [...ids].flatMap((id) => {
+      const cached = ompPaths.get(id);
+      const known = scan?.found.get(id) ?? cached?.paths;
+      if (!known) return [];
+      if (cached) {
+        ompPaths.delete(id);
+        ompPaths.set(id, cached);
+      }
+      return known.map((path) => ({ path, id }));
+    });
+    return { paths, incomplete: scan?.incomplete ?? false };
+  }
+
   return {
     async reportOf(sessionIds, timeZone) {
-      const found: FileState[] = [];
-      for (const id of new Set(sessionIds)) {
-        const state = await refresh(sessionFile(opts.dir, id));
-        if (state) found.push(state);
+      const foundById = new Map<string, FileState>();
+      const ids = new Set(sessionIds.filter((id) => opts.layout !== "omp" || OMP_ID.test(id)));
+      const missing = new Set<string>();
+      let unreadable = false;
+      async function collect(paths: { path: string; id: string }[]): Promise<void> {
+        for (const { path, id } of paths) {
+          let state: FileState | null;
+          try {
+            state = await refresh(path);
+          } catch (err) {
+            if (opts.layout === "omp" && unavailable(path, err)) {
+              unreadable = true;
+              continue;
+            }
+            throw err;
+          }
+          if (!state || (opts.layout === "omp" && (state.header as { id?: unknown } | null)?.id !== id)) {
+            missing.add(id);
+            continue;
+          }
+          const previous = foundById.get(id);
+          // Inspect every known copy; a newer filesystem timestamp can still carry stale content.
+          if (!previous || state.parsedEntries > previous.parsedEntries ||
+            (state.parsedEntries === previous.parsedEntries && state.mtimeMs > previous.mtimeMs)) {
+            foundById.set(id, state);
+          }
+        }
       }
+      const initial = await pathsOf(ids);
+      unreadable ||= initial.incomplete;
+      await collect(initial.paths);
+      if (opts.layout === "omp" && missing.size > 0) {
+        // A session can move between project buckets. Rediscover only identities whose path disappeared.
+        for (const id of missing) ompPaths.delete(id);
+        const retried = await pathsOf(missing);
+        unreadable ||= retried.incomplete;
+        await collect(retried.paths);
+      }
+      const found = [...foundById.values()];
       if (found.length === 0) return null;
       const began = (s: FileState): number => {
         const at = Date.parse((s.header as { timestamp?: string } | null)?.timestamp ?? "");
@@ -210,7 +340,12 @@ export function createPiSessions(opts: { dir: string; limits?: Partial<Limits> }
           const cut = forkedAt(s.header);
           return cut === null ? s.entries : s.entries.filter((e) => !(Date.parse(e.timestamp) < cut));
         });
-      return { report: buildReport(entries, null, { timeZone }), at: Math.max(...found.map((s) => s.mtimeMs)) };
+      const report = buildReport(entries, null, { timeZone });
+      if (opts.layout === "omp" && (unreadable || foundById.size < ids.size)) {
+        report.coverage = "partial";
+        report.coverageNote = "Partial OMP session history: some recorded sessions are unavailable.";
+      }
+      return { report, at: Math.max(...found.map((s) => s.mtimeMs)) };
     },
     sessionIdOf(path) {
       const name = basename(path);

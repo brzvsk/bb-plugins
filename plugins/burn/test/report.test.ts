@@ -47,6 +47,20 @@ describe("buildReport", () => {
     expect(r.series).toHaveLength(1);
   });
 
+  it.each(["raw", "slim"])("counts OMP supplemental usage once in %s reports without counting other tools' detail metadata", (format) => {
+    const side = { ...usageEntry(0.05, "p", "side"), type: "model_usage" };
+    const task = { ...toolResult(2), message: { role: "toolResult", toolName: "task", details: { usage: toolResult(2).message.usage } } };
+    const repeated = { ...toolResult(3), message: { ...toolResult(3).message, toolName: "task", details: { usage: toolResult(3).message.usage } } };
+    const other = { ...task, message: { ...task.message, toolName: "read" } };
+    const entries = [user(), assistant(1), side, task, repeated, other];
+    const report = buildReport(format === "slim" ? entries.map((entry) => slimEntry(entry)!) : entries, null);
+    expect(report.cost.total).toBeCloseTo(6.05);
+    expect(report.lastTurnCost).toBeCloseTo(6.05);
+    expect(report.byModel.find((row) => row.key === "p/side")?.cost).toBeCloseTo(0.05);
+    expect(report.calls).toBe(1);
+    expect(report.series).toHaveLength(1);
+  });
+
   it("lastTurnCost covers every usage entry after the last user message", () => {
     const r = buildReport([user(), assistant(5), user(), assistant(1), toolResult(0.5), compaction(0.25)], undefined);
     expect(r.lastTurnCost).toBeCloseTo(1.75);

@@ -18,6 +18,8 @@ const FAMILY = {
   total: 6.64,
   calls: 46,
   estimated: false,
+  childCount: 2,
+  reportedChildCount: 2,
   children: [
     { threadId: CHILD, title: "Investigate footer selector", cost: 1.1, calls: 14, running: true, model: "p/claude-sonnet", estimated: false },
     { threadId: "thr_dddddddd", title: "Write chip tests", cost: 0.72, calls: 9, running: false, model: null, estimated: false },
@@ -139,6 +141,27 @@ describe("the Burn panel", () => {
     expect(slot.getByTestId("family-total").textContent).toBe("Total46 calls$6.64");
     fireEvent.click(family.getByRole("button", { name: /Open Investigate footer selector/ }));
     expect(slot.inspection.navigateCalls).toContainEqual({ method: "toThread", threadId: CHILD });
+  });
+
+  it("distinguishes the family's full counts from the displayed child rows", async () => {
+    const family = {
+      ...FAMILY,
+      childCount: 115,
+      reportedChildCount: 60,
+      children: Array.from({ length: 50 }, (_, i) => ({ ...FAMILY.children[0]!, threadId: `thr_${String(i).padStart(8, "0")}` })),
+    };
+    const slot = await renderPanel(backend(() => answer({ family })));
+    expect(slot.getByTestId("kpis").textContent).toContain("With 60 of 115 children");
+    expect(within(slot.getByTestId("family")).getAllByRole("button")).toHaveLength(50);
+    expect(slot.getByText("Showing 50 of 60 child threads with usage, ordered by cost.")).toBeTruthy();
+  });
+
+  it("shows the known child count even when no child has usage", async () => {
+    const current = answer();
+    const family = { ...current.family, childCount: 115 };
+    const slot = await renderPanel(backend(() => answer({ family })));
+    expect(slot.getByTestId("kpis").textContent).toContain("Children115No child thread has reported");
+    expect(slot.queryByTestId("family")).toBeNull();
   });
 
   it("refetches when the thread or one of its children reports", async () => {

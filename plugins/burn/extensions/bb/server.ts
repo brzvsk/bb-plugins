@@ -26,7 +26,7 @@ export { rpcContract } from "./contract.js";
 const REPORT_MAX_BYTES = 240 * 1024;
 const MAX_THREADS = 500;
 const TITLE_TTL_MS = 60_000;
-const CHILDREN_MAX = 50;
+const CHILD_DETAIL_LIMIT = 50;
 const UNTITLED = "Untitled thread";
 /** A pi report this recent means the thread's Burn pi extension is reporting. */
 const PI_FRESH_MS = 2 * 60_000;
@@ -430,11 +430,11 @@ export default async function plugin(bb: BbPluginApi): Promise<void> {
     }
   }
 
-  async function familyOf(report: UsageReport | null, reported: { id: string; report: UsageReport }[]): Promise<Family> {
+  async function familyOf(report: UsageReport | null, reported: { id: string; report: UsageReport }[], childCount: number): Promise<Family> {
     const total = reported.reduce((sum, c) => sum + c.report.cost.total, report?.cost.total ?? 0);
     const calls = reported.reduce((sum, c) => sum + c.report.calls, report?.calls ?? 0);
     const estimated = (report?.estimated ?? false) || reported.some((c) => c.report.estimated);
-    const costliest = reported.sort((a, b) => b.report.cost.total - a.report.cost.total).slice(0, CHILDREN_MAX);
+    const costliest = reported.sort((a, b) => b.report.cost.total - a.report.cost.total).slice(0, CHILD_DETAIL_LIMIT);
     const children = await Promise.all(
       costliest.map(async ({ id, report: r }) => ({
         threadId: id,
@@ -454,7 +454,7 @@ export default async function plugin(bb: BbPluginApi): Promise<void> {
     // Family consumers need only a total; individual rows stay with each displayed thread.
     const agentRows = rows.length ? [{ id: "family-total", calls: rows.reduce((n, r) => n + r.calls, 0), cost, estimated: rows.some(r => r.estimated) }] : [];
     const agents = { coverage: all.every(r => r?.agents?.coverage === "available") ? "available" as const : "partial" as const, rows: agentRows, count: rows.length };
-    return { total, calls, estimated, children, agents };
+    return { total, calls, estimated, childCount, reportedChildCount: reported.length, children, agents };
   }
 
   async function costRow(threadId: string, report: UsageReport | null, children: { id: string; report: UsageReport }[], values: Values): Promise<CostRow> {
@@ -694,7 +694,7 @@ export default async function plugin(bb: BbPluginApi): Promise<void> {
         budgetOf(threadId, report),
         policyOf(threadId),
         titleOf(threadId),
-        familyOf(report, reportsIn(resolved, descendants)),
+        familyOf(report, reportsIn(resolved, descendants), descendants.length),
       ]);
       if (report) {
         family.lastTurnCost = spawnedTurnCost(threadId, report.turns.at(-1)?.at, report.lastTurnCost,

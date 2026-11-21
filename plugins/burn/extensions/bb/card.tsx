@@ -19,6 +19,7 @@ import { budgetWords, type EffectiveBudget } from "./budgets.js";
 import { CallChart, callPoints, Meter, StackedBar } from "./charts.js";
 import { Button } from "./components/ui/button.js";
 import type { UsageAnswer } from "./contract.js";
+import { childUsageCount } from "./family.js";
 import { CheckIcon, CopyIcon, FlameIcon, GaugeIcon, PanelIcon } from "./icon.js";
 import { cn } from "./lib/utils.js";
 
@@ -189,9 +190,8 @@ export function Models({ report }: { report: UsageReport }): ReactNode {
 /** "$49.97 with 3 child threads", when any child thread has cost something. */
 export function familyLine(answer: UsageAnswer): string | null {
   const { family, report } = answer;
-  const count = family.children.length;
-  if (count === 0 || report === null || family.total <= report.cost.total) return null;
-  return `${formatAmount(family.total, family.estimated)} with ${count} child ${count === 1 ? "thread" : "threads"}`;
+  if (family.reportedChildCount === 0 || report === null || family.total <= report.cost.total) return null;
+  return `${formatAmount(family.total, family.estimated)} with ${childUsageCount(family)} child ${family.childCount === 1 ? "thread" : "threads"}`;
 }
 
 const meta = (report: UsageReport): string =>

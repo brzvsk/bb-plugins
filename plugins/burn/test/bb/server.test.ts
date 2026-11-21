@@ -529,6 +529,24 @@ describe("costs, overBudget and family", () => {
     ]);
   });
 
+  it("keeps full child counts and totals when the detail rows are capped", async () => {
+    const reporting = Array.from({ length: 60 }, (_, i) => `thr_${String(i).padStart(8, "0")}`);
+    const missing = Array.from({ length: 55 }, (_, i) => `thr_${String(i + 60).padStart(8, "0")}`);
+    const s = await setup({
+      descendants: { [THREAD]: [...reporting.slice(0, -1), ...missing] },
+      owners: { [reporting[0]!]: THREAD, [reporting.at(-1)!]: THREAD },
+      logs: Object.fromEntries([
+        [THREAD, [user(), assistant(1)]],
+        ...reporting.map((id, i) => [id, [user(), assistant(i + 1)]]),
+      ]),
+    });
+    const { family } = await s.usage();
+    expect(family.total).toBe(1831);
+    expect(family.calls).toBe(61);
+    expect(family.children.map((child: { threadId: string }) => child.threadId)).toEqual(reporting.slice(10).reverse());
+    expect(family).toMatchObject({ childCount: 115, reportedChildCount: 60 });
+  });
+
   it("answers costs per thread with its family total, budget and state", async () => {
     const s = await setup({ settings: { threadBudget: 10 }, descendants: { [THREAD]: [CHILD] } });
     await s.post(envelope(1, costOf(4.82)));
