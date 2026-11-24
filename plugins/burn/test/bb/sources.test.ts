@@ -12,7 +12,7 @@ import type { EventRow } from "../../extensions/bb/ledger.js";
 import { createThreadDirectory } from "../../extensions/bb/directory.js";
 import { createReportSource } from "../../extensions/bb/sources.js";
 import { assistant, sampleReport, user } from "../helpers.js";
-import { CODEX_1, CODEX_1_2, CODEX_2, listEvents, requestEvent, usageEvent } from "./fixtures.js";
+import { CODEX_1, CODEX_1_2, CODEX_2, event, listEvents, requestEvent, usageEvent } from "./fixtures.js";
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -31,7 +31,7 @@ type Thread = { host: string | null; provider?: string; status?: "active" | "idl
 /** A source over fake threads; each host answers with `costs[threadId]`, or throws when listed in `offline`. */
 function setup(
   threads: Record<string, Thread>,
-  opts: { offline?: string[]; disconnected?: string[]; listFails?: boolean; directory?: boolean; coverageNote?: string; retryMs?: number; retryMax?: number; hostWaitStepsMs?: number[] } = {},
+  opts: { offline?: string[]; disconnected?: string[]; listFails?: boolean; directory?: boolean; coverageNote?: string; retryMs?: number; retryMax?: number; hostWaitStepsMs?: number[]; denied?: Set<string>; searched?: string[]; sessionFileOf?: (threadId: string) => Promise<string | null> } = {},
 ) {
   const costs: Record<string, number> = {};
   const rows: EventRow[] = [];
@@ -119,13 +119,15 @@ function setup(
       return {
         dir: "/home/me/.bb/pi-bridge-sessions",
         reports: input.threads.map(({ threadId }) =>
-          threadId in costs
+          opts.denied?.has(threadId)
+            ? { threadId, report: null, at: null, error: `EACCES: permission denied, stat '/home/me/.bb/pi-bridge-sessions/pi_${threadId}.jsonl'` }
+            : threadId in costs
             ? {
                 threadId,
                 report: { ...costOf(costs[threadId]!), ...(opts.coverageNote ? { coverageNote: opts.coverageNote, coverage: "partial" } : {}) },
                 at: 1000 * costs[threadId]!,
               }
-            : { threadId, report: null, at: null },
+            : { threadId, report: null, at: null, ...(opts.searched ? { searched: opts.searched } : {}) },
         ),
       };
     },
@@ -138,6 +140,7 @@ function setup(
     ...(opts.retryMs === undefined ? {} : { retryMs: opts.retryMs }),
     ...(opts.retryMax === undefined ? {} : { retryMax: opts.retryMax }),
     ...(opts.hostWaitStepsMs === undefined ? {} : { hostWaitStepsMs: opts.hostWaitStepsMs }),
+    ...(opts.sessionFileOf === undefined ? {} : { sessionFileOf: opts.sessionFileOf }),
   });
   const asked = (hostId?: string) =>
     calls
@@ -627,7 +630,8 @@ describe("createReportSource", () => {
     expect(sent).toEqual([[id(1)], ["pi_started", id(1)]]);
     await s.source.forget(id(1));
     await s.source.reportsOf([id(1)]);
-    expect(s.harness.inspection.sdk.callsTo("threads.events.list")).toHaveLength(3);
+    const identityLists = s.harness.inspection.sdk.callsTo("threads.events.list").filter(([a]) => (a as { types?: string[] }).types?.includes("thread/identity"));
+    expect(identityLists).toHaveLength(3);
   });
 
   it("reads every page of a thread's session identities, so a thread resumed many times still finds its newest session", async () => {
@@ -1138,6 +1142,153 @@ describe("createReportSource and a host that fails", () => {
   });
 });
 
+describe("pi threads with no session log", () => {
+  const SEARCHED = ["/data/bb/plugins/provider-pi/bridge-data/sessions", "/home/me/.bb/pi-bridge-sessions"];
+
+  it("flags one that finished a turn, with the folders searched, and logs its machine once", async () => {
+    const s = setup({ [id(1)]: { host: A }, [id(2)]: { host: A }, [id(3)]: { host: A } }, { searched: SEARCHED });
+    s.rows.push(event(id(1), "turn/completed", {}), event(id(2), "turn/completed", {}));
+    expect(await s.cost(id(1), id(2), id(3))).toEqual([null, null, null]);
+    await vi.waitFor(() => expect(s.source.missingLog(id(2))).toEqual({ searched: SEARCHED }));
+    expect(s.source.missingLog(id(1))).toEqual({ searched: SEARCHED });
+    expect(s.source.missingLog(id(3))).toBeNull();
+    const warned = s.warnings().filter((w) => w.includes("has finished a turn"));
+    expect(warned).toHaveLength(1);
+    expect(warned[0]).toContain(A);
+    expect(warned[0]).toContain(SEARCHED.join(", "));
+    expect(s.changed.flat().sort()).toEqual([id(1), id(2)]);
+    await s.harness.lifecycle.dispose();
+  });
+
+  it("asks bb once per thread, and again for one that had not run once its status changes", async () => {
+    const s = setup({ [id(1)]: { host: A } }, { searched: SEARCHED });
+    await s.cost(id(1));
+    const turnLists = () => s.harness.inspection.sdk.callsTo("threads.events.list").filter(([a]) => (a as { types?: string[] }).types?.includes("turn/completed"));
+    await vi.waitFor(() => expect(turnLists()).toHaveLength(1));
+    s.tick(60_000);
+    await s.cost(id(1));
+    await new Promise((r) => setTimeout(r, 10));
+    expect(turnLists()).toHaveLength(1);
+    s.rows.push(event(id(1), "turn/completed", {}));
+    await s.harness.behavior.emitThreadEvent("thread.idle", { thread: makeThreadResponse({ id: id(1), providerId: "pi", status: "idle" }), lastAssistantText: null });
+    s.tick(60_000);
+    await s.cost(id(1));
+    await vi.waitFor(() => expect(s.source.missingLog(id(1))).not.toBeNull());
+    expect(turnLists()).toHaveLength(2);
+    await s.harness.lifecycle.dispose();
+  });
+
+  it("marks the last figures it read once the log is gone, and clears the flag when a log appears", async () => {
+    const s = setup({ [id(1)]: { host: A } }, { searched: SEARCHED });
+    s.costs[id(1)] = 4;
+    expect(await s.cost(id(1))).toEqual([4]);
+    delete s.costs[id(1)];
+    s.rows.push(event(id(1), "turn/completed", {}));
+    s.tick(60_000);
+    expect(await s.cost(id(1))).toEqual([4]);
+    await vi.waitFor(() => expect(s.source.missingLog(id(1))).not.toBeNull());
+    s.tick(60_000);
+    const kept = (await s.source.reportsOf([id(1)])).get(id(1));
+    expect(kept?.report).toMatchObject({ cost: { total: 4 }, coverage: "partial", coverageNote: expect.stringContaining("can no longer find") });
+    s.costs[id(1)] = 6;
+    s.tick(60_000);
+    expect(await s.cost(id(1))).toEqual([6]);
+    expect(s.source.missingLog(id(1))).toBeNull();
+    await s.harness.lifecycle.dispose();
+  });
+
+  it("flags a thread whose only session bb named after the thread itself", async () => {
+    const s = setup({ [id(1)]: { host: A, sessions: [id(1)] } }, { searched: SEARCHED });
+    s.rows.push(event(id(1), "turn/completed", {}));
+    await s.cost(id(1));
+    await vi.waitFor(() => expect(s.source.missingLog(id(1))).toEqual({ searched: SEARCHED }));
+    await s.harness.lifecycle.dispose();
+  });
+
+  it("flags nothing when the host did not say where it looked, or knew the thread only by its id", async () => {
+    const s = setup({ [id(1)]: { host: A }, [id(2)]: { host: A, sessions: [] } });
+    s.rows.push(event(id(1), "turn/completed", {}), event(id(2), "turn/completed", {}));
+    expect(await s.cost(id(1), id(2))).toEqual([null, null]);
+    await new Promise((r) => setTimeout(r, 20));
+    expect([s.source.missingLog(id(1)), s.source.missingLog(id(2))]).toEqual([null, null]);
+    expect(s.warnings().filter((w) => w.includes("has finished a turn"))).toEqual([]);
+    await s.harness.lifecycle.dispose();
+  });
+
+  it("flags a thread as soon as it goes idle after its first turn, without waiting for the held answer to expire", async () => {
+    const s = setup({ [id(1)]: { host: A, status: "active" } }, { searched: SEARCHED });
+    await s.cost(id(1));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(s.source.missingLog(id(1))).toBeNull();
+    s.rows.push(event(id(1), "turn/completed", {}));
+    await s.harness.behavior.emitThreadEvent("thread.idle", { thread: makeThreadResponse({ id: id(1), providerId: "pi", status: "idle" }), lastAssistantText: null });
+    await s.cost(id(1));
+    await vi.waitFor(() => expect(s.source.missingLog(id(1))).toEqual({ searched: SEARCHED }));
+    await s.harness.lifecycle.dispose();
+  });
+
+  it("keeps nothing from a read that a new session file outdated while it looked the file up", async () => {
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((r) => (release = r));
+    let slow = true;
+    let lookingUp = false;
+    const s = setup({ [id(1)]: { host: A } }, {
+      sessionFileOf: async () => {
+        lookingUp = true;
+        if (slow) await held;
+        return "/custom/pi_one.jsonl";
+      },
+    });
+    s.costs[id(1)] = 2;
+    const first = s.cost(id(1));
+    await vi.waitFor(() => expect(lookingUp).toBe(true));
+    s.source.invalidate(id(1));
+    release();
+    expect(await first).toEqual([2]);
+    expect(await s.bb.storage.kv.get(`log:${id(1)}`)).toBeUndefined();
+    slow = false;
+    s.costs[id(1)] = 6;
+    expect(await s.cost(id(1))).toEqual([6]);
+    expect(await s.bb.storage.kv.get(`log:${id(1)}`)).toMatchObject({ report: { cost: { total: 6 } } });
+    await s.harness.lifecycle.dispose();
+  });
+
+  it("gives the host the session file the thread's pi named, and reads again when told to", async () => {
+    const files: Record<string, string> = { [id(1)]: "/custom/pi_one.jsonl" };
+    const s = setup({ [id(1)]: { host: A }, [id(2)]: { host: A } }, { sessionFileOf: async (t) => files[t] ?? null });
+    s.costs[id(1)] = 2;
+    await s.cost(id(1), id(2));
+    const threads = (s.calls[0]?.input as { threads: { threadId: string; sessionFile?: string }[] }).threads;
+    expect(threads.find((t) => t.threadId === id(1))?.sessionFile).toBe("/custom/pi_one.jsonl");
+    expect(threads.find((t) => t.threadId === id(2))).not.toHaveProperty("sessionFile");
+    await s.cost(id(1));
+    expect(s.calls).toHaveLength(1);
+    s.source.invalidate(id(1));
+    await s.cost(id(1));
+    expect(s.calls).toHaveLength(2);
+    await s.harness.lifecycle.dispose();
+  });
+});
+
+it("keeps the last figures of a thread whose log the host may not read, and logs that host once", async () => {
+  const denied = new Set<string>();
+  const s = setup({ [id(1)]: { host: A }, [id(2)]: { host: A }, [id(3)]: { host: A } }, { denied });
+  s.costs[id(1)] = 4;
+  s.costs[id(3)] = 2;
+  expect(await s.cost(id(1), id(2), id(3))).toEqual([4, null, 2]);
+  denied.add(id(1));
+  denied.add(id(2));
+  s.costs[id(3)] = 5;
+  s.tick(60_000);
+  expect(await s.cost(id(1), id(2), id(3))).toEqual([4, null, 5]);
+  s.tick(60_000);
+  expect(await s.cost(id(1), id(2), id(3))).toEqual([4, null, 5]);
+  const denials = s.warnings().filter((w) => w.includes("EACCES"));
+  expect(denials).toHaveLength(1);
+  expect(denials[0]).toContain(A);
+  await s.harness.lifecycle.dispose();
+});
+
 describe("createReportSource with the real host entry", () => {
   it("reads a pi session log on the host and updates as soon as the host signals a change", async () => {
     const dir = mkdtempSync(join(tmpdir(), "burn-sources-"));
@@ -1147,7 +1298,7 @@ describe("createReportSource with the real host entry", () => {
     const header = { type: "session", version: 3, id: "s", timestamp: "2026-10-18T12:00:00.000Z", cwd: "/tmp" };
     writeFileSync(file, [header, user(), assistant(1.5)].map((e) => `${JSON.stringify(e)}\n`).join(""));
     let listener: ExperimentalHostWatchListener | null = null;
-    const host = experimental_createHostEntryHarness(createHostEntry({ dir }), {
+    const host = experimental_createHostEntryHarness(createHostEntry({ piDirs: () => [dir] }), {
       experimental_watch: (_options, l) => {
         listener = l;
         return { dispose: async () => undefined };
@@ -1203,6 +1354,35 @@ describe("Claude transcript source selection", () => {
     expect(got?.report.calls).toBe(1);
     await s.harness.lifecycle.dispose();
   });
+});
+
+it("keeps a saved pi report with more spend over a partial one, also once the host is offline", async () => {
+  const opts: { coverageNote?: string; offline?: string[] } = {};
+  const s = setup({ [id(1)]: { host: A } }, opts);
+  s.costs[id(1)] = 9;
+  expect(await s.cost(id(1))).toEqual([9]);
+  opts.coverageNote = "Partial pi session history: Burn may not read some of this thread's session logs.";
+  s.costs[id(1)] = 3;
+  s.tick(60_000);
+  const got = (await s.source.reportsOf([id(1)])).get(id(1));
+  expect(got?.report).toMatchObject({ cost: { total: 9 }, coverage: "partial", coverageNote: expect.stringContaining("last saved session report") });
+  s.offline.add(A);
+  s.tick(60_000);
+  expect(await s.cost(id(1))).toEqual([9]);
+  s.offline.delete(A);
+  s.costs[id(1)] = 12;
+  s.tick(60_000);
+  expect((await s.source.reportsOf([id(1)])).get(id(1))?.report).toMatchObject({ cost: { total: 12 }, coverage: "partial" });
+  // A partial report, even one with more spend, never replaces the complete one saved with its days.
+  const saved = (await s.bb.storage.kv.get(`log:${id(1)}`)) as { report: { cost: { total: number }; coverage?: string } };
+  expect(saved.report.cost.total).toBe(9);
+  expect(saved.report.coverage).toBeUndefined();
+  delete opts.coverageNote;
+  s.costs[id(1)] = 13;
+  s.tick(60_000);
+  expect(await s.cost(id(1))).toEqual([13]);
+  expect(((await s.bb.storage.kv.get(`log:${id(1)}`)) as { report: { cost: { total: number } } }).report.cost.total).toBe(13);
+  await s.harness.lifecycle.dispose();
 });
 
 it("preserves a saved Claude report when a later read has missing session identities", async () => {
